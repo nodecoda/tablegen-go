@@ -1199,10 +1199,19 @@ func (l *Lowerer) parseTimeList(v syntax.Value, env *Env) bool {
 		if t.Op == syntax.XListConcat && len(t.Args) == 2 {
 			return l.parseTimeList(t.Args[0], env) && l.parseTimeList(t.Args[1], env)
 		}
-		if t.Op == syntax.XRange && len(t.Args) == 1 {
-			// `!range` only needs the list's size, which is known as soon as
-			// the list is.
-			return l.parseTimeKnown(t.Args[0], env)
+		if t.Op == syntax.XRange && len(t.Args) == 3 {
+			// TGParser fills the bounds while parsing, so a one-argument
+			// `!range(x)` is already (0, x, 1) here — or (0, !size(x), 1) for
+			// a list (TGParser.cpp:2008-2044). The range's size is known as
+			// soon as the list (or the bound) is.
+			if !l.parseTimeKnown(t.Args[0], env) || !l.parseTimeKnown(t.Args[2], env) {
+				return false
+			}
+			if size, ok := t.Args[1].(*syntax.BangValue); ok &&
+				size.Op == syntax.XSize && len(size.Args) == 1 {
+				return l.parseTimeKnown(size.Args[0], env)
+			}
+			return l.parseTimeKnown(t.Args[1], env)
 		}
 	}
 	return false
@@ -1632,6 +1641,12 @@ func (k *Keeper) implicitCast(want *Ty, v syntax.Value, self *Record) syntax.Val
 	}
 	got := k.staticTy(st, self)
 	if got == nil || got.Kind == AnyTy || sameRecTy(got, want) {
+		return v
+	}
+	// TypedInit::getCastTo returns `this` when the value's type already is a
+	// subtype of the destination (Record.cpp:2262), so a subclass instance
+	// assigned to a parent-typed field keeps its Init with no cast node.
+	if got.IsA(want) {
 		return v
 	}
 	// TypedInit::convertInitializerTo covers bit -> bits<1> without a cast.

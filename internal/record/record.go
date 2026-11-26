@@ -501,12 +501,41 @@ func (r *Record) DumpText() (string, error) {
 	return b.String(), nil
 }
 
+// printTypeText is RecordVal::getPrintType (Record.cpp:2746): a value of the
+// string type prints as `code` when its current value is a code-formatted
+// StringInit. Classes have no resolved value yet, so the parsed initialiser
+// decides; defs use the evaluated value, which `val` may already carry.
+func (r *Record) printTypeText(v *RecordVal, val Value) string {
+	if v.Ty.Kind != StringTy {
+		return v.Ty.String()
+	}
+	code := false
+	if r.IsClass {
+		// A class field's Value is the Init stored by setValue, which is the
+		// initialiser as printed: only a code literal keeps the code format.
+		code = strings.HasPrefix(r.exprText(v), "[{")
+	} else {
+		if val == nil {
+			if evaluated, err := r.evalVal(v); err == nil {
+				val = evaluated
+			}
+		}
+		if sv, ok := val.(*Str); ok && sv.Code {
+			code = true
+		}
+	}
+	if code {
+		return "code"
+	}
+	return "string"
+}
+
 // TemplateArgText renders one template argument the way RecordVal::print
 // does: TGParser stores the qualified name, so `class P<int i>` prints
 // `int P:i = ?`.
 func (r *Record) TemplateArgText(ta *RecordVal) string {
 	var b strings.Builder
-	b.WriteString(ta.Ty.String())
+	b.WriteString(r.printTypeText(ta, nil))
 	b.WriteString(" ")
 	if r.IsClass {
 		b.WriteString(r.Name)
@@ -534,27 +563,7 @@ func (r *Record) ValueText(v *RecordVal) (string, error) {
 			return "", err
 		}
 	}
-	// RecordVal::getPrintType follows the value: a string field holding a
-	// code literal prints as `code`.
-	tyText := v.Ty.String()
-	if v.Ty.Kind == StringTy {
-		code := false
-		if r.IsClass {
-			if e, ok := v.Expr.(*AstExpr); ok {
-				if sv, ok := e.V.(*syntax.StringValue); ok && sv.Code {
-					code = true
-				}
-			}
-		} else if sv, ok := val.(*Str); ok {
-			code = sv.Code
-		}
-		if code {
-			tyText = "code"
-		} else {
-			tyText = "string"
-		}
-	}
-	b.WriteString(tyText)
+	b.WriteString(r.printTypeText(v, val))
 	b.WriteString(" ")
 	b.WriteString(v.Name)
 	b.WriteString(" = ")

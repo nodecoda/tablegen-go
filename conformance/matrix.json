@@ -4,10 +4,10 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 77,
+    "status:err-diff": 76,
     "status:err-wording": 26,
     "status:out-diff": 1,
-    "status:same": 210,
+    "status:same": 211,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -4611,10 +4611,10 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "e843f47b38ab005947595f02f0ebf279cbd571a8d54abc218f76093a19d0262a",
+        "out_sha256": "aa8d79cc4a998b65e9f43576322bbd041068e95e7baba351b012292905fe458f",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 63650007
+        "out_len": 63641739
       },
       "status": "out-diff",
       "out_len": 63660222
@@ -5144,14 +5144,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "d4ee9cd1bc7c0454cc4e2c7cd402eca3581d81bccfe0520c522128d5bfa22736",
+        "err_sha256": "1ee39e3f577bb3291f6573239a29eb80b339fa0f549d8d695ab467e380894e79",
         "Msgs": [
-          "error: Zero does not have any true condition in:!cond(!lt(0, 0): \"negative\", !gt(0, 0): \"positive\")"
+          "error: Zero does not have any true condition in:!cond(0: \"negative\", 0: \"positive\")"
         ],
-        "err_head": "\u003cfile\u003e:9:5: error: Zero does not have any true condition in:!cond(!lt(0, 0): \"negative\", !gt(0, 0): \"positive\")"
+        "err_head": "\u003cfile\u003e:9:5: error: Zero does not have any true condition in:!cond(0: \"negative\", 0: \"positive\")"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:9:5: error: Zero does not have any true condition in:!cond(!lt(0, 0): \"negative\", !gt(0, 0): \"positive\")\ndef Zero : C\u003c0\u003e;\n    ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-empty-list-arg.td",
@@ -9939,12 +9938,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1323939858/inc",
-        "/tmp/tblgen-split-1323939858/main.td",
+        "/tmp/tblgen-split-1309447268/inc",
+        "/tmp/tblgen-split-1309447268/main.td",
         "-o",
-        "/tmp/tblgen-split-1323939858/out.td",
+        "/tmp/tblgen-split-1309447268/out.td",
         "-d",
-        "/tmp/tblgen-split-1323939858/out.d"
+        "/tmp/tblgen-split-1309447268/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9964,12 +9963,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-1323939858/inc",
-        "/tmp/tblgen-split-1323939858/main.td",
+        "/tmp/tblgen-split-1309447268/inc",
+        "/tmp/tblgen-split-1309447268/main.td",
         "-o",
-        "/tmp/tblgen-split-1323939858/out.td",
+        "/tmp/tblgen-split-1309447268/out.td",
         "-d",
-        "/tmp/tblgen-split-1323939858/out2.d"
+        "/tmp/tblgen-split-1309447268/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9990,10 +9989,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1323939858/inc",
-        "/tmp/tblgen-split-1323939858/main.td",
+        "/tmp/tblgen-split-1309447268/inc",
+        "/tmp/tblgen-split-1309447268/main.td",
         "-d",
-        "/tmp/tblgen-split-1323939858/out.d"
+        "/tmp/tblgen-split-1309447268/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10080,8 +10079,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1580003910",
-        "/tmp/tblgen-split-1580003910/main.td"
+        "/tmp/tblgen-split-1711769855",
+        "/tmp/tblgen-split-1711769855/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10105,8 +10104,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1580003910",
-        "/tmp/tblgen-split-1580003910/multi.td"
+        "/tmp/tblgen-split-1711769855",
+        "/tmp/tblgen-split-1711769855/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10713,14 +10712,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "627dda3fbf4e6f59bd4e82096d16f32fc55ab244059c6fe9c622eb1e182e89cd",
+        "err_sha256": "2f5b39e2cdf1c9ecdb67bd4c5067aa8f726f5102e77adcaba0099ac5faee964e",
         "Msgs": [
-          "error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, mydag, !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'"
+          "error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, (myop), !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'"
         ],
-        "err_head": "\u003cfile\u003e:61:22: error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, mydag, !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'"
+        "err_head": "\u003cfile\u003e:61:22: error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, (myop), !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:61:22: error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, mydag, !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'\n  list\u003cstring\u003e bad = !sort(x, mydag, !cast\u003cstring\u003e(x));\n                     ^"
+      "err_text": "\u003cfile\u003e:61:22: error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, (myop), !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'\n  list\u003cstring\u003e bad = !sort(x, mydag, !cast\u003cstring\u003e(x));\n                     ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/sort.td",

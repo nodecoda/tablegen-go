@@ -128,6 +128,13 @@ func resolveVar(x *syntax.VarValue, env *Env) (string, syntax.Value, *Env) {
 		return "", x.Lit, env
 	}
 	if x.GlobalRef {
+		// TGParser::ParseIDValue returns the Init stored for a global
+		// (RecordKeeper::getGlobal), so a reference to a defvar is the
+		// defvar's value, not a VarInit naming it. A def keeps its name: the
+		// DefInit prints as the record reference. See TGParser.cpp:1180-1216.
+		if x.Lit != nil {
+			return "", x.Lit, env
+		}
 		return x.Name, nil, nil
 	}
 	if x.Lexical {
@@ -231,7 +238,7 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		}
 		return varBits(text, x.Type(), w)
 	case *syntax.FieldValue:
-		if x.Lit != nil && concreteInit(x.Lit) {
+		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
 			return bitTexts(x.Lit, env, w, depth+1)
 		}
 		text := rawText(v, env)
@@ -383,6 +390,16 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 		}
 		if x.Lexical && x.Lit != nil {
 			return foldIntV(x.Lit, env, depth+1)
+		}
+		if x.GlobalRef && x.Lit != nil {
+			// Same textual substitution as resolveVar (TGParser.cpp:1180).
+			return foldIntV(x.Lit, env, depth+1)
+		}
+		// A class instance's fields hold the caller's Init once the class is
+		// applied; resolveVar is the one place that decides whether a name is
+		// still a VarInit (a class's own template arg) or already substituted.
+		if _, sub, subEnv := resolveVar(x, env); sub != nil && sub != v {
+			return foldIntV(sub, subEnv, depth+1)
 		}
 		return 0, false
 	case *syntax.FieldValue:
@@ -731,8 +748,10 @@ func rawText(v syntax.Value, env *Env) string {
 	case *syntax.FieldValue:
 		// FieldInit::Fold (Record.cpp:2498): at parse time a reference to a
 		// field of a def whose value is already concrete is replaced by that
-		// value, so the Init tree shows the literal.
-		if x.Lit != nil && concreteInit(x.Lit) {
+		// value, so the Init tree shows the literal. Fold only looks at a
+		// DefInit base; `vt.isVector` on a template argument stays a
+		// FieldInit even when the class default is known.
+		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
 			// SetValue stored the field's value converted to its declared
 			// type, so a `bits<4> = 11` field yields the BitsInit literal.
 			if text, ok := literalAs(x.Lit, x.Type(), env); ok {
@@ -755,7 +774,21 @@ func rawText(v syntax.Value, env *Env) string {
 	case *syntax.PasteValue:
 		if x.LHS.Type().Kind == syntax.ListType {
 			// `#` on lists is BinOpInit::LISTCONCAT, not dag CONCAT.
+			// BinOpInit::resolveReferences folds it as soon as both operands
+			// are ListInits (Record.cpp:1297-1307), which is how a
+			// superclass's `intr_properties # [...]` becomes one list once the
+			// caller's argument is substituted.
+			if la, ok := constList(x.LHS, env, 0); ok {
+				if lb, ok := constList(x.RHS, env, 0); ok {
+					return listText(append(append([]syntax.Value{}, la...), lb...), env)
+				}
+			}
 			return "!listconcat(" + rawText(x.LHS, env) + ", " + rawText(x.RHS, env) + ")"
+		}
+		if lt, lc, ok := constStrCode(x.LHS, env, 0); ok {
+			if rt, rc, ok := constStrCode(x.RHS, env, 0); ok {
+				return stringLiteral(lt+rt, lc || rc)
+			}
 		}
 		if ls, ok := x.LHS.(*syntax.StringValue); ok && !ls.Code {
 			if rs, ok := x.RHS.(*syntax.StringValue); ok && !rs.Code {
@@ -792,6 +825,25 @@ func rawText(v syntax.Value, env *Env) string {
 		return b.String()
 	case *syntax.BangValue:
 		// TGParser folds these at parse time, so the Init tree holds a literal.
+		// A cast to the operand's own type is a no-op (UnOpInit::Fold).
+		if x.Op == syntax.XCast && len(x.Args) == 1 && castIsIdentity(x.Args[0], x.TypeArg) {
+			return rawText(x.Args[0], env)
+		}
+		// TernOpInit::Fold's IF case returns the taken branch unchanged
+		// (Record.cpp:1806-1816), so any branch type folds, not just the ones
+		// the typed helpers below understand.
+		if x.Op == syntax.XIf && len(x.Args) == 3 {
+			if c, ok := foldIntV(x.Args[0], env, 0); ok {
+				return rawText(x.Args[boolIdx(c)], env)
+			}
+		}
+		// CondOpInit::Fold returns the value of the first true condition
+		// (Record.cpp:2580-2597).
+		if x.Op == syntax.XCond {
+			if v, ok := condArm(x, env, 0); ok {
+				return rawText(v, env)
+			}
+		}
 		if str, ok := constStr(x, env, 0); ok {
 			return `"` + str + `"`
 		}
@@ -809,6 +861,283 @@ func rawText(v syntax.Value, env *Env) string {
 		return bangText(x, env)
 	}
 	return "?"
+}
+
+// boolIdx maps an int condition to the index picking between the two arms of
+// `!if(cond, then, else)`: TernOpInit::Fold returns MHS (args[1]) for a true
+// condition and RHS (args[2]) otherwise (Record.cpp:1806-1816).
+func boolIdx(n int64) int {
+	if n != 0 {
+		return 1
+	}
+	return 2
+}
+
+// condArm returns the value of the first condition that folds to a true int,
+// mirroring CondOpInit::Fold (Record.cpp:2580). A nil key is the default arm
+// and is always taken.
+func condArm(b *syntax.BangValue, env *Env, depth int) (syntax.Value, bool) {
+	for _, c := range b.Cases {
+		if c.Key == nil {
+			return c.Value, true
+		}
+		k, ok := foldIntV(c.Key, env, depth+1)
+		if !ok {
+			// An unresolved condition stops the fold: CondOpInit::Fold
+			// returns the operator itself (Record.cpp:2587).
+			return nil, false
+		}
+		if k != 0 {
+			return c.Value, true
+		}
+	}
+	return nil, false
+}
+
+// substValue replaces a lexical loop variable with a value, the substitution
+// ForeachHelper performs per element while folding (Record.cpp:1958).
+func substValue(v syntax.Value, name string, repl syntax.Value, depth int) syntax.Value {
+	if v == nil || depth > 32 {
+		return v
+	}
+	switch x := v.(type) {
+	case *syntax.VarValue:
+		if x.Name == name && (x.Lexical || x.Subst) {
+			return repl
+		}
+		return v
+	case *syntax.BangValue:
+		cp := *x
+		if x.Args != nil {
+			cp.Args = make([]syntax.Value, len(x.Args))
+			for i, a := range x.Args {
+				cp.Args[i] = substValue(a, name, repl, depth+1)
+			}
+		}
+		if x.Cases != nil {
+			cp.Cases = make([]*syntax.BangCase, len(x.Cases))
+			for i, c := range x.Cases {
+				nc := *c
+				nc.Key = substValue(c.Key, name, repl, depth+1)
+				nc.Value = substValue(c.Value, name, repl, depth+1)
+				cp.Cases[i] = &nc
+			}
+		}
+		return &cp
+	case *syntax.ListValue:
+		cp := *x
+		cp.Elems = make([]syntax.Value, len(x.Elems))
+		for i, e := range x.Elems {
+			cp.Elems[i] = substValue(e, name, repl, depth+1)
+		}
+		return &cp
+	case *syntax.BitsValue:
+		cp := *x
+		cp.Elems = make([]syntax.Value, len(x.Elems))
+		for i, e := range x.Elems {
+			cp.Elems[i] = substValue(e, name, repl, depth+1)
+		}
+		return &cp
+	case *syntax.DagValue:
+		cp := *x
+		cp.Op = substValue(x.Op, name, repl, depth+1)
+		cp.Args = make([]*syntax.DagArg, len(x.Args))
+		for i, a := range x.Args {
+			na := *a
+			na.Value = substValue(a.Value, name, repl, depth+1)
+			cp.Args[i] = &na
+		}
+		return &cp
+	case *syntax.FieldValue:
+		base := substValue(x.Base, name, repl, depth+1)
+		if base == x.Base {
+			return v
+		}
+		cp := *x
+		cp.Base = base
+		return &cp
+	case *syntax.SliceValue:
+		base := substValue(x.Base, name, repl, depth+1)
+		if base == x.Base {
+			return v
+		}
+		cp := *x
+		cp.Base = base
+		return &cp
+	case *syntax.PasteValue:
+		lhs := substValue(x.LHS, name, repl, depth+1)
+		rhs := substValue(x.RHS, name, repl, depth+1)
+		if lhs == x.LHS && rhs == x.RHS {
+			return v
+		}
+		cp := *x
+		cp.LHS, cp.RHS = lhs, rhs
+		return &cp
+	case *syntax.ClassApplyValue:
+		cp := *x
+		cp.Args = make([]*syntax.Arg, len(x.Args))
+		for i, a := range x.Args {
+			na := *a
+			na.Value = substValue(a.Value, name, repl, depth+1)
+			cp.Args[i] = &na
+		}
+		return &cp
+	}
+	return v
+}
+
+// constAny folds an expression to the concrete Init the parser would store.
+// It is the general form of the typed helpers: any literal, a foldable
+// operator, or a lexical binding created by !foreach/!filter/!sort.
+func constAny(v syntax.Value, env *Env, depth int) (syntax.Value, bool) {
+	if v == nil || depth > 32 {
+		return nil, false
+	}
+	switch x := v.(type) {
+	case *syntax.IntValue, *syntax.StringValue, *syntax.BitsValue,
+		*syntax.ListValue, *syntax.DagValue:
+		return v, true
+	case *syntax.VarValue:
+		if x.Lit != nil && (x.Subst || x.Lexical || x.GlobalRef) {
+			return constAny(x.Lit, env, depth+1)
+		}
+		return nil, false
+	case *syntax.FieldValue:
+		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
+			return constAny(x.Lit, env, depth+1)
+		}
+		return nil, false
+	case *syntax.BangValue:
+		switch x.Op {
+		case syntax.XIf:
+			if len(x.Args) == 3 {
+				if c, ok := foldIntV(x.Args[0], env, depth+1); ok {
+					return constAny(x.Args[boolIdx(c)], env, depth+1)
+				}
+			}
+			return nil, false
+		case syntax.XCond:
+			if arm, ok := condArm(x, env, depth); ok {
+				return constAny(arm, env, depth+1)
+			}
+			return nil, false
+		case syntax.XCast:
+			if len(x.Args) == 1 && castIsIdentity(x.Args[0], x.TypeArg) {
+				return constAny(x.Args[0], env, depth+1)
+			}
+		}
+		if n, ok := foldIntV(x, env, depth+1); ok {
+			return intNode(n, x.Span()), true
+		}
+		if str, ok := constStr(x, env, depth+1); ok {
+			return &syntax.StringValue{
+				ValueBase: syntax.ValueBase{Base: syntax.Base{At: x.Span()}, Ty: syntax.StringTy},
+				Text:      str,
+			}, true
+		}
+		if elems, ok := constList(x, env, depth+1); ok {
+			return listNode(elems, x.Span(), elemTypeOf(x)), true
+		}
+		return nil, false
+	}
+	return nil, false
+}
+
+// fieldBaseIsDef reports whether a field reference's base is a DefInit, the
+// only shape FieldInit::Fold folds (Record.cpp:2498). A template argument or
+// any other VarInit keeps its FieldInit even when the class default is known.
+func fieldBaseIsDef(v syntax.Value) bool {
+	for depth := 0; depth < 32; depth++ {
+		x, ok := v.(*syntax.VarValue)
+		if !ok {
+			return false
+		}
+		if x.GlobalRef && !x.GlobalVar {
+			return true
+		}
+		if x.Lit != nil && (x.Subst || x.Lexical || x.GlobalRef) {
+			v = x.Lit
+			continue
+		}
+		return false
+	}
+	return false
+}
+
+// derefInit follows the bindings the parser substituted textually (defvars,
+// loop variables) to the value the Init tree really holds.
+func derefInit(v syntax.Value) syntax.Value {
+	for depth := 0; depth < 32; depth++ {
+		x, ok := v.(*syntax.VarValue)
+		if !ok {
+			return v
+		}
+		if x.Lit == nil || !(x.Subst || x.Lexical || x.GlobalRef) {
+			return v
+		}
+		v = x.Lit
+	}
+	return v
+}
+
+// castIsIdentity reports whether `!cast<T>(v)` folds away: UnOpInit::Fold's
+// CAST case ends with LHS->convertInitializerTo(getType()), which returns LHS
+// unchanged when the value already has that type (Record.cpp:803-856).
+func castIsIdentity(v syntax.Value, want syntax.Type) bool {
+	v = derefInit(v)
+	if v == nil || want.Kind == syntax.InvalidType {
+		return false
+	}
+	got := v.Type()
+	if want.Kind == syntax.ListType {
+		if got.Kind != syntax.ListType || got.Elem == nil || want.Elem == nil {
+			return false
+		}
+		return sameSyntaxType(*got.Elem, *want.Elem)
+	}
+	return sameSyntaxType(got, want)
+}
+
+// sameSyntaxType compares parsed types the way RecTy::typeIsA does for the
+// identity conversions: `code` and `string` are the same StringRecTy, and a
+// record type is an unordered intersection of class names.
+func sameSyntaxType(a, b syntax.Type) bool {
+	isString := func(t syntax.Type) bool {
+		return t.Kind == syntax.StringType || t.Kind == syntax.CodeType
+	}
+	if isString(a) || isString(b) {
+		return isString(a) && isString(b)
+	}
+	if a.Kind != b.Kind {
+		return false
+	}
+	switch a.Kind {
+	case syntax.BitsType:
+		return a.Bits == b.Bits
+	case syntax.ListType:
+		if a.Elem == nil || b.Elem == nil {
+			return a.Elem == nil && b.Elem == nil
+		}
+		return sameSyntaxType(*a.Elem, *b.Elem)
+	case syntax.RecordType:
+		if len(a.Recs) != len(b.Recs) {
+			return false
+		}
+		for _, r := range a.Recs {
+			found := false
+			for _, o := range b.Recs {
+				if r == o {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		return true
+	}
+	return true
 }
 
 // sliceText renders the inside of `base[...]`. A single index reads as `i`; a
@@ -853,6 +1182,58 @@ func literalBounds(el *syntax.SliceElem) (int64, int64, bool) {
 		return 0, 0, false
 	}
 	return int64(lo.Num), int64(hi.Num), true
+}
+
+// stringLiteral renders a folded string with the format ConcatStringInits
+// keeps: a code operand makes the result code (Record.cpp:1064).
+func stringLiteral(text string, code bool) string {
+	if code {
+		return "[{" + text + "}]"
+	}
+	return `"` + text + `"`
+}
+
+// constStrCode folds a string expression to its text and format, following the
+// substitutions rawText would print (defvars, loop variables, a caller's
+// substituted arguments).
+func constStrCode(v syntax.Value, env *Env, depth int) (string, bool, bool) {
+	if v == nil || depth > 32 {
+		return "", false, false
+	}
+	switch x := v.(type) {
+	case *syntax.StringValue:
+		return x.Text, x.Code, true
+	case *syntax.VarValue:
+		if x.Lit != nil && (x.Subst || x.Lexical || x.GlobalRef) {
+			if t, c, ok := constStrCode(x.Lit, env, depth+1); ok && (x.Subst || x.GlobalRef) {
+				return t, c, ok
+			}
+		}
+		if _, sub, subEnv := resolveVar(x, env); sub != nil && sub != v {
+			return constStrCode(sub, subEnv, depth+1)
+		}
+	case *syntax.BangValue:
+		if x.Op == syntax.XStrConcat {
+			var out string
+			code := false
+			for _, a := range x.Args {
+				t, c, ok := constStrCode(a, env, depth+1)
+				if !ok {
+					return "", false, false
+				}
+				out += t
+				code = code || c
+			}
+			return out, code, true
+		}
+	case *syntax.PasteValue:
+		lt, lc, ok1 := constStrCode(x.LHS, env, depth+1)
+		rt, rc, ok2 := constStrCode(x.RHS, env, depth+1)
+		if ok1 && ok2 {
+			return lt + rt, lc || rc, true
+		}
+	}
+	return "", false, false
 }
 
 // stringOperand renders a paste operand: non-string operands are cast to
@@ -963,6 +1344,17 @@ func foldBin(op syntax.Kind, a, b syntax.Value, env *Env, depth int) syntax.Valu
 	return nil
 }
 
+// sortRange is a stable insertion sort over the parallel slices the caller
+// keeps in sync; the corpus has tiny lists, and stability matches
+// llvm::stable_sort in SortHelper.
+func sortRange(n int, less func(i, j int) bool, swap func(i, j int)) {
+	for i := 1; i < n; i++ {
+		for j := i; j > 0 && less(j, j-1); j-- {
+			swap(j, j-1)
+		}
+	}
+}
+
 func elemTypeOf(v syntax.Value) *syntax.Type {
 	if t := v.Type(); t.Kind == syntax.ListType {
 		return t.Elem
@@ -1004,9 +1396,100 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 		if (x.Subst || x.Lexical) && x.Lit != nil {
 			return constList(x.Lit, env, depth+1)
 		}
+		if x.GlobalRef && x.Lit != nil {
+			// A defvar reference is its value (see resolveVar).
+			return constList(x.Lit, env, depth+1)
+		}
+		if _, sub, subEnv := resolveVar(x, env); sub != nil && sub != v {
+			return constList(sub, subEnv, depth+1)
+		}
+		return nil, false
+	case *syntax.FieldValue:
+		// FieldInit::Fold replaced a reference into a concrete def field with
+		// its value while parsing (Record.cpp:2498).
+		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
+			return constList(x.Lit, env, depth+1)
+		}
 		return nil, false
 	case *syntax.BangValue:
 		switch x.Op {
+		case syntax.XForEach:
+			// ForeachHelper evaluates the expression once per element
+			// (Record.cpp:1958), so both the list and every result must fold.
+			if len(x.Args) == 2 && len(x.VarNames) == 1 {
+				l, ok := constList(x.Args[0], env, depth+1)
+				if !ok {
+					return nil, false
+				}
+				out := make([]syntax.Value, 0, len(l))
+				for _, e := range l {
+					cv, ok := constAny(substValue(x.Args[1], x.VarNames[0], e, 0), env, depth+1)
+					if !ok {
+						return nil, false
+					}
+					out = append(out, cv)
+				}
+				return out, true
+			}
+		case syntax.XFilter:
+			// FilterHelper keeps the elements whose predicate folds to a
+			// nonzero int (Record.cpp:1968).
+			if len(x.Args) == 2 && len(x.VarNames) == 1 {
+				l, ok := constList(x.Args[0], env, depth+1)
+				if !ok {
+					return nil, false
+				}
+				var out []syntax.Value
+				for _, e := range l {
+					pred := substValue(x.Args[1], x.VarNames[0], e, 0)
+					n, ok := foldIntV(pred, env, depth+1)
+					if !ok {
+						return nil, false
+					}
+					if n != 0 {
+						out = append(out, e)
+					}
+				}
+				return out, true
+			}
+		case syntax.XSort:
+			// SortHelper orders the list by the folded key (Record.cpp:1985).
+			if len(x.Args) == 2 && len(x.VarNames) == 1 {
+				l, ok := constList(x.Args[0], env, depth+1)
+				if !ok {
+					return nil, false
+				}
+				keys := make([]int64, len(l))
+				strs := make([]string, len(l))
+				useInt := true
+				for i, e := range l {
+					key, ok := constAny(substValue(x.Args[1], x.VarNames[0], e, 0), env, depth+1)
+					if !ok {
+						return nil, false
+					}
+					if n, ok := foldIntV(key, env, depth+1); ok {
+						keys[i] = n
+					} else {
+						useInt = false
+					}
+					if sv, ok := key.(*syntax.StringValue); ok {
+						strs[i] = sv.Text
+					} else {
+						useInt = false
+					}
+				}
+				out := append([]syntax.Value{}, l...)
+				sortRange(len(out), func(i, j int) bool {
+					if useInt {
+						return keys[i] < keys[j]
+					}
+					return strs[i] < strs[j]
+				}, func(i, j int) {
+					keys[i], keys[j] = keys[j], keys[i]
+					strs[i], strs[j] = strs[j], strs[i]
+				})
+				return out, true
+			}
 		case syntax.XListConcat:
 			if len(x.Args) == 2 {
 				la, ok1 := constList(x.Args[0], env, depth+1)
@@ -1080,8 +1563,10 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 			}
 		case syntax.XIf:
 			if len(x.Args) == 3 {
+				// TernOpInit::Fold returns MHS for a true condition and RHS
+				// otherwise (Record.cpp:1810-1816).
 				if c, ok := foldIntV(x.Args[0], env, depth+1); ok && (c == 0 || c == 1) {
-					return constList(x.Args[1+int(c)], env, depth+1)
+					return constList(x.Args[2-int(c)], env, depth+1)
 				}
 			}
 		case syntax.XCond:
@@ -1117,6 +1602,13 @@ func constStr(v syntax.Value, env *Env, depth int) (string, bool) {
 		if (x.Subst || x.Lexical) && x.Lit != nil {
 			return constStr(x.Lit, env, depth+1)
 		}
+		if x.GlobalRef && x.Lit != nil {
+			// A defvar reference is its value (see resolveVar).
+			return constStr(x.Lit, env, depth+1)
+		}
+		if _, sub, subEnv := resolveVar(x, env); sub != nil && sub != v {
+			return constStr(sub, subEnv, depth+1)
+		}
 	case *syntax.BangValue:
 		switch x.Op {
 		case syntax.XStrConcat:
@@ -1131,8 +1623,9 @@ func constStr(v syntax.Value, env *Env, depth int) (string, bool) {
 			return out, true
 		case syntax.XIf:
 			if len(x.Args) == 3 {
+				// Same branch order as constList (Record.cpp:1810-1816).
 				if c, ok := foldIntV(x.Args[0], env, depth+1); ok && (c == 0 || c == 1) {
-					return constStr(x.Args[1+int(c)], env, depth+1)
+					return constStr(x.Args[2-int(c)], env, depth+1)
 				}
 			}
 		case syntax.XCond:

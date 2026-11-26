@@ -838,6 +838,16 @@ func (p *Parser) finishUnary(v *BangValue, rec *recordInfo) Value {
 	}
 	_ = argLoc
 
+	if v.Op == XCast && p.castIsIdentity(at, v.TypeArg) {
+		// TGParser folds a unary operator right after building it
+		// (`UnOpInit::get(...)->Fold(CurRec)`, TGParser.cpp:1419). The CAST
+		// case ends with LHS->convertInitializerTo(getType()), and every
+		// convertInitializerTo returns the operand itself when it already has
+		// the target type (Record.cpp:681 ListInit, 803-856 UnOpInit CAST),
+		// so an identity cast leaves no node in the Init tree.
+		return arg
+	}
+
 	var ret Type
 	switch v.Op {
 	case XNot, XLog2, XSize, XEmpty, XInitialized:
@@ -873,6 +883,34 @@ func (p *Parser) finishUnary(v *BangValue, rec *recordInfo) Value {
 	}
 	v.Args = []Value{arg}
 	return v.withType(ret)
+}
+
+// castIsIdentity reports whether `!cast<to>(v)` of type from is the operand
+// itself. convertInitializerTo returns `this` when the value already converts
+// without changing anything: the same string type, a record that already is a
+// subclass of the target, or a list whose elements all convert unchanged
+// (Record.cpp:681-705). Other conversions still fold, but into a different
+// literal, which the printer renders from the declared type instead.
+func (p *Parser) castIsIdentity(from, to Type) bool {
+	if to.Kind == InvalidType || from.Kind == InvalidType || from.Kind == UnsetType {
+		return false
+	}
+	switch to.Kind {
+	case StringType:
+		return from.Kind == StringType || from.Kind == CodeType
+	case ListType:
+		if from.Kind != ListType || from.Elem == nil || to.Elem == nil {
+			return false
+		}
+		return p.castIsIdentity(*from.Elem, *to.Elem)
+	case RecordType:
+		return from.Kind == RecordType && p.typeConvertible(from, to)
+	case BitsType:
+		return from.Kind == BitsType && from.Bits == to.Bits
+	case DagType:
+		return from.Kind == DagType
+	}
+	return false
 }
 
 func argIsEmptyList(v Value) bool {
@@ -1072,6 +1110,32 @@ func (p *Parser) finishRange(v *BangValue, rec *recordInfo) Value {
 	if !p.eat(RParen) {
 		p.errTok("E_PARSE_BANG_RPAREN", "expected ')' in operator")
 		return nil
+	}
+	// TGParser fills the missing bounds before building the operator
+	// (TGParser.cpp:2008-2044): `!range(x)` is (0, x, 1) — or (0, !size(x), 1)
+	// for a list — and `!range(lo, hi)` is (lo, hi, 1).
+	at := v.OpSpan
+	switch len(args) {
+	case 1:
+		if args[0].Type().Kind == ListType {
+			args = []Value{
+				&IntValue{ValueBase: ValueBase{Base: Base{At: at}, Ty: IntTy}, Num: 0},
+				&BangValue{ValueBase: ValueBase{Base: Base{At: at}, Ty: IntTy}, Op: XSize, Args: []Value{args[0]}},
+				&IntValue{ValueBase: ValueBase{Base: Base{At: at}, Ty: IntTy}, Num: 1},
+			}
+		} else {
+			args = []Value{
+				&IntValue{ValueBase: ValueBase{Base: Base{At: at}, Ty: IntTy}, Num: 0},
+				args[0],
+				&IntValue{ValueBase: ValueBase{Base: Base{At: at}, Ty: IntTy}, Num: 1},
+			}
+		}
+	case 2:
+		args = []Value{
+			args[0],
+			args[1],
+			&IntValue{ValueBase: ValueBase{Base: Base{At: at}, Ty: IntTy}, Num: 1},
+		}
 	}
 	v.Args = args
 	return v.withType(listOf(IntTy))
