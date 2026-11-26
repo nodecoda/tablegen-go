@@ -4611,10 +4611,10 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "3c54e5101cf3e2cd88d4407f70d6c2af04cacbb075726dbdddd443db85bf7550",
+        "out_sha256": "a9736df3751727dabb31ce287061037a2ab63bc8fa929da27af2db95e0a44abe",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 63641793
+        "out_len": 63635073
       },
       "status": "out-diff",
       "out_len": 63660222
@@ -9938,12 +9938,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-4099553075/inc",
-        "/tmp/tblgen-split-4099553075/main.td",
+        "/tmp/tblgen-split-1510160028/inc",
+        "/tmp/tblgen-split-1510160028/main.td",
         "-o",
-        "/tmp/tblgen-split-4099553075/out.td",
+        "/tmp/tblgen-split-1510160028/out.td",
         "-d",
-        "/tmp/tblgen-split-4099553075/out.d"
+        "/tmp/tblgen-split-1510160028/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9963,12 +9963,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-4099553075/inc",
-        "/tmp/tblgen-split-4099553075/main.td",
+        "/tmp/tblgen-split-1510160028/inc",
+        "/tmp/tblgen-split-1510160028/main.td",
         "-o",
-        "/tmp/tblgen-split-4099553075/out.td",
+        "/tmp/tblgen-split-1510160028/out.td",
         "-d",
-        "/tmp/tblgen-split-4099553075/out2.d"
+        "/tmp/tblgen-split-1510160028/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9989,10 +9989,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-4099553075/inc",
-        "/tmp/tblgen-split-4099553075/main.td",
+        "/tmp/tblgen-split-1510160028/inc",
+        "/tmp/tblgen-split-1510160028/main.td",
         "-d",
-        "/tmp/tblgen-split-4099553075/out.d"
+        "/tmp/tblgen-split-1510160028/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10079,8 +10079,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2284112186",
-        "/tmp/tblgen-split-2284112186/main.td"
+        "/tmp/tblgen-split-762311916",
+        "/tmp/tblgen-split-762311916/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10104,8 +10104,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2284112186",
-        "/tmp/tblgen-split-2284112186/multi.td"
+        "/tmp/tblgen-split-762311916",
+        "/tmp/tblgen-split-762311916/multi.td"
       ],
       "oracle": {
         "exit": 0,

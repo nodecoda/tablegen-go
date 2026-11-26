@@ -1638,6 +1638,12 @@ func (k *Keeper) implicitCast(want *Ty, v syntax.Value, self *Record) syntax.Val
 	if want == nil || v == nil || want.Kind == AnyTy {
 		return v
 	}
+	// TGParser resolves a name while parsing, so a reference to a defvar (or
+	// any other binding it inlined) is that Init when the value is stored:
+	// getCastTo then converts the literal itself (TGParser.cpp:1180-1216).
+	if lit := inlinedLit(v, 0); lit != nil && lit != v {
+		return k.implicitCast(want, lit, self)
+	}
 	st := v.Type()
 	if st.Kind == syntax.InvalidType || st.Kind == syntax.UnsetType {
 		return v
@@ -1666,6 +1672,27 @@ func (k *Keeper) implicitCast(want *Ty, v syntax.Value, self *Record) syntax.Val
 		TypeArg:   syntaxTypeOf(want),
 		Args:      []syntax.Value{v},
 	}
+}
+
+// inlinedLit returns the Init TGParser would have substituted for a name at
+// parse time. Only bindings the parser resolved eagerly carry one: a defvar
+// (GlobalRef), a substituted template argument, or a lexical binding. A
+// class's own template argument stays a VarInit and has no literal.
+func inlinedLit(v syntax.Value, depth int) syntax.Value {
+	if depth > 16 {
+		return nil
+	}
+	x, ok := v.(*syntax.VarValue)
+	if !ok || x.Lit == nil {
+		return nil
+	}
+	if !x.Subst && !x.Lexical && !x.GlobalRef {
+		return nil
+	}
+	if next := inlinedLit(x.Lit, depth+1); next != nil {
+		return next
+	}
+	return x.Lit
 }
 
 // concreteInit reports whether a parsed value is already a concrete Init, the

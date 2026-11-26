@@ -84,7 +84,16 @@ func (p *Parser) parseValue(rec *recordInfo, item *Type, mode idMode) Value {
 				p.errAt(brace, "E_NOTE_BRACE", "to match this '{'")
 				return nil
 			}
-			lhs = &BitRangeValue{ValueBase: ValueBase{Base: Base{At: p.span(start)}, Ty: bitsOf(len(bits))}, Base: lhs, Bits: bits}
+			base := lhs
+			lhs = &BitRangeValue{ValueBase: ValueBase{Base: Base{At: p.span(start)}, Ty: bitsOf(len(bits))}, Base: base, Bits: bits}
+			// Init::convertInitializerBitRange runs right here in the parser
+			// (TGParser.cpp:3257): slicing a literal BitsInit selects the
+			// bits and yields another concrete BitsInit.
+			if bv, ok := base.(*BitsValue); ok {
+				if folded, ok := foldBitRangeLiteral(bv, bits); ok {
+					lhs = folded
+				}
+			}
 		case LSquare:
 			next, ok := p.parseSlice(lhs, start)
 			if !ok {
@@ -472,6 +481,24 @@ func (p *Parser) parseValueList(rec *recordInfo, item *Type, allowTrailing bool)
 	}
 }
 
+// foldBitRangeLiteral is BitsInit's convertInitializerBitRange for a concrete
+// literal: bits lists the selected indices high-to-low, and a BitsInit stores
+// its bits high-to-low as well.
+func foldBitRangeLiteral(b *BitsValue, bits []int32) (Value, bool) {
+	n := len(b.Elems)
+	if n == 0 {
+		return nil, false
+	}
+	elems := make([]Value, len(bits))
+	for i, idx := range bits {
+		if idx < 0 || int(idx) >= n {
+			return nil, false
+		}
+		elems[i] = b.Elems[n-1-int(idx)]
+	}
+	return &BitsValue{ValueBase: ValueBase{Base: b.Base, Ty: bitsOf(len(bits))}, Elems: elems}, true
+}
+
 func (p *Parser) parseSlice(base Value, start int) (Value, bool) {
 	lhsLoc := base.Span()
 	bt := base.Type()
@@ -847,6 +874,11 @@ func (p *Parser) finishUnary(v *BangValue, rec *recordInfo) Value {
 		// so an identity cast leaves no node in the Init tree.
 		return arg
 	}
+	if v.Op == XCast {
+		if folded := foldCastLiteral(arg, v.TypeArg); folded != nil {
+			return folded
+		}
+	}
 
 	var ret Type
 	switch v.Op {
@@ -885,6 +917,63 @@ func (p *Parser) finishUnary(v *BangValue, rec *recordInfo) Value {
 	return v.withType(ret)
 }
 
+// foldCastLiteral applies the literal conversions of
+// IntInit::convertInitializerTo (Record.cpp:577-600) and
+// BitsInit::convertInitializerTo (Record.cpp:447-451): an int cast to
+// bits<N> becomes a concrete bit list, and a 1-bit list cast to bit becomes
+// that bit. Values that do not convert are left as a cast node.
+func foldCastLiteral(arg Value, to Type) Value {
+	if to.Kind == BitType {
+		if b, ok := arg.(*BitsValue); ok && b.Ty.Kind == BitsType && b.Ty.Bits == 1 && len(b.Elems) == 1 {
+			return &IntValue{ValueBase: ValueBase{Base: Base{At: arg.Span()}, Ty: BitTy}, Num: bitNum(b.Elems[0])}
+		}
+	}
+	if to.Kind != BitType && to.Kind != BitsType && to.Kind != IntType {
+		return nil
+	}
+	n, ok := constInt(arg)
+	if !ok {
+		return nil
+	}
+	at := Base{At: arg.Span()}
+	switch to.Kind {
+	case IntType:
+		return &IntValue{ValueBase: ValueBase{Base: at, Ty: IntTy}, Num: uint64(n)}
+	case BitType:
+		if n != 0 && n != 1 {
+			return nil
+		}
+		return &IntValue{ValueBase: ValueBase{Base: at, Ty: BitTy}, Num: uint64(n)}
+	default:
+		if !canFitInBits(n, to.Bits) {
+			return nil
+		}
+		elems := make([]Value, 0, to.Bits)
+		for i := to.Bits - 1; i >= 0; i-- {
+			var bit uint64
+			if i < 64 {
+				bit = uint64(n) >> uint(i) & 1
+			}
+			elems = append(elems, &IntValue{ValueBase: ValueBase{Base: at, Ty: BitTy}, Num: bit})
+		}
+		return &BitsValue{ValueBase: ValueBase{Base: at, Ty: bitsOf(to.Bits)}, Elems: elems}
+	}
+}
+
+// bitNum reads the value of a literal bit element.
+func bitNum(v Value) uint64 {
+	if n, ok := constInt(v); ok {
+		return uint64(n)
+	}
+	return 0
+}
+
+// canFitInBits mirrors canFitInBitfield (Record.cpp:571): with NumBits == 4,
+// values from -7 to 15 fit.
+func canFitInBits(n int64, bits int) bool {
+	return bits >= 64 || n>>uint(bits) == 0 || n>>uint(bits-1) == -1
+}
+
 // castIsIdentity reports whether `!cast<to>(v)` of type from is the operand
 // itself. convertInitializerTo returns `this` when the value already converts
 // without changing anything: the same string type, a record that already is a
@@ -903,8 +992,12 @@ func (p *Parser) castIsIdentity(from, to Type) bool {
 			return false
 		}
 		return p.castIsIdentity(*from.Elem, *to.Elem)
+	case IntType:
+		return from.Kind == IntType
 	case RecordType:
 		return from.Kind == RecordType && p.typeConvertible(from, to)
+	case BitType:
+		return from.Kind == BitType
 	case BitsType:
 		return from.Kind == BitsType && from.Bits == to.Bits
 	case DagType:
