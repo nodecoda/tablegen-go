@@ -81,7 +81,7 @@ type Binding struct {
 // concrete arguments of whichever def finally inherits it. Frames are searched
 // from the innermost (last) outward.
 type Env struct {
-	frames []map[string]Binding
+	frames []Frame
 	// kv is the single binding WithBinding pushed, kept out of frames: it is
 	// called once per Class* or loop iteration, and a one-entry map plus a
 	// copied frame slice was the largest allocation in --dump-json. It is a
@@ -121,23 +121,125 @@ type kvBinding struct {
 
 // fold builds one frame holding the whole chain, oldest first, so a later
 // entry shadows an earlier one inside the frame exactly as the chain does.
-func (kv *kvBinding) fold(vars map[string]Binding) []map[string]Binding {
-	frames := make([]map[string]Binding, 0, 2)
-	if kv != nil {
-		var order []*kvBinding
-		for n := kv; n != nil; n = n.next {
-			order = append(order, n)
-		}
-		m := make(map[string]Binding, len(order))
-		for i := len(order) - 1; i >= 0; i-- {
-			m[order[i].name] = order[i].b
-		}
-		frames = append(frames, m)
+func (kv *kvBinding) fold() []Frame {
+	if kv == nil {
+		return nil
 	}
-	if vars != nil {
-		frames = append(frames, vars)
+	var m map[string]Binding
+	// Walk newest first and keep the first hit: that is the binding Lookup
+	// would return from the chain.
+	for n := kv; n != nil; n = n.next {
+		if _, ok := m[n.name]; ok {
+			continue
+		}
+		if m == nil {
+			m = make(map[string]Binding, 2)
+		}
+		m[n.name] = n.b
 	}
-	return frames
+	return []Frame{frameFromMap(m)}
+}
+
+// Frame is one immutable environment frame. Up to smallFrame names live in a
+// plain slice: Env.WithBinding and class application made maps holding one or
+// two Bindings the dominant allocation, and a Go map with one entry costs a
+// whole bucket (~1KB here). Larger frames index the same entries with a map.
+type Frame struct {
+	entries []frameEntry
+	m       map[string]Binding
+}
+
+type frameEntry struct {
+	name string
+	b    Binding
+}
+
+// smallFrame is the cutoff where a map beats a linear scan. 82% of the class
+// applications in dag-isel-subregs.td have one or two template arguments.
+const smallFrame = 8
+
+// frameFromMap copies a map-backed frame. It splits at smallFrame so a caller
+// that built a map for convenience (class bodies, !foldl) still gets the
+// compact form.
+func frameFromMap(vars map[string]Binding) Frame {
+	if len(vars) == 0 {
+		return Frame{}
+	}
+	if len(vars) > smallFrame {
+		return Frame{m: vars}
+	}
+	e := make([]frameEntry, 0, len(vars))
+	for k, v := range vars {
+		e = append(e, frameEntry{name: k, b: v})
+	}
+	return Frame{entries: e}
+}
+
+// get looks a name up in the frame. A frame may be nil (rebind passes nil when
+// a class has no defaults).
+func (f *Frame) get(name string) (Binding, bool) {
+	if f == nil {
+		return Binding{}, false
+	}
+	if f.m != nil {
+		b, ok := f.m[name]
+		return b, ok
+	}
+	for i := range f.entries {
+		if f.entries[i].name == name {
+			return f.entries[i].b, true
+		}
+	}
+	return Binding{}, false
+}
+
+// set adds or replaces a name while a frame is being built. Once a frame is
+// installed in an Env it is never written again.
+func (f *Frame) set(name string, b Binding) {
+	if f.m != nil {
+		f.m[name] = b
+		return
+	}
+	for i := range f.entries {
+		if f.entries[i].name == name {
+			f.entries[i].b = b
+			return
+		}
+	}
+	f.entries = append(f.entries, frameEntry{name: name, b: b})
+	if len(f.entries) > smallFrame {
+		m := make(map[string]Binding, len(f.entries))
+		for _, e := range f.entries {
+			m[e.name] = e.b
+		}
+		f.m, f.entries = m, nil
+	}
+}
+
+// each visits every name once; order is unspecified for larger frames.
+func (f *Frame) each(fn func(name string, b Binding)) {
+	if f == nil {
+		return
+	}
+	if f.m != nil {
+		for k, v := range f.m {
+			fn(k, v)
+		}
+		return
+	}
+	for _, e := range f.entries {
+		fn(e.name, e.b)
+	}
+}
+
+func (f *Frame) len() int {
+	if f == nil {
+		return 0
+	}
+	if f.m != nil {
+		return len(f.m)
+	}
+	return len(f.entries)
 }
 
 // hasVal reports whether the record declares a field with this name.
@@ -160,7 +262,7 @@ func (e *Env) Lookup(name string) (Binding, bool) {
 		}
 	}
 	for i := len(e.frames) - 1; i >= 0; i-- {
-		if v, ok := e.frames[i][name]; ok {
+		if v, ok := e.frames[i].get(name); ok {
 			return v, true
 		}
 	}
@@ -168,35 +270,43 @@ func (e *Env) Lookup(name string) (Binding, bool) {
 }
 
 func (e *Env) With(vars map[string]Binding) *Env {
+	if len(vars) == 0 {
+		return e.WithFrame(nil)
+	}
+	f := frameFromMap(vars)
+	return e.WithFrame(&f)
+}
+
+// WithFrame pushes a prepared frame. The frame must not be written afterwards:
+// envs are copied by value and share the slice.
+func (e *Env) WithFrame(f *Frame) *Env {
 	if e == nil {
-		if vars == nil {
+		if f == nil {
 			return &Env{}
 		}
-		return &Env{frames: []map[string]Binding{vars}}
+		return &Env{frames: []Frame{*f}}
 	}
 	out := *e
 	// Frames are read-only once built (only this method appends, and it always
 	// appends to a fresh slice), so a nil frame can share the slice and the
-	// hidden set. An empty but non-nil map is still pushed: lower.go installs a
-	// class's template-argument frame before filling it in
-	// (TGParser::ParseClass, TGParser.cpp:880-920), and a map is reached
-	// through the slice rather than copied.
-	if vars == nil {
+	// hidden set.
+	if f == nil {
 		return &out
 	}
 	// The new frame must shadow the pending single bindings, so fold that
-	// chain into one frame below vars.
+	// chain into one frame below it.
 	if out.kv != nil {
-		frames := make([]map[string]Binding, 0, len(e.frames)+2)
+		kvs := out.kv.fold()
+		frames := make([]Frame, 0, len(e.frames)+1+len(kvs))
 		frames = append(frames, e.frames...)
-		frames = append(frames, out.kv.fold(nil)...)
-		out.frames = append(frames, vars)
+		frames = append(frames, kvs...)
+		out.frames = append(frames, *f)
 		out.kv = nil
 		return &out
 	}
-	frames := make([]map[string]Binding, 0, len(e.frames)+1)
+	frames := make([]Frame, 0, len(e.frames)+1)
 	frames = append(frames, e.frames...)
-	out.frames = append(frames, vars)
+	out.frames = append(frames, *f)
 	return &out
 }
 
@@ -222,8 +332,8 @@ func (e *Env) StackOn(base *Env) *Env {
 		return e
 	}
 	out := &Env{}
-	baseFrames := base.kv.fold(nil)
-	out.frames = make([]map[string]Binding, 0, len(base.frames)+len(e.frames)+len(baseFrames))
+	baseFrames := base.kv.fold()
+	out.frames = make([]Frame, 0, len(base.frames)+len(e.frames)+len(baseFrames))
 	out.frames = append(out.frames, base.frames...)
 	out.frames = append(out.frames, baseFrames...)
 	out.frames = append(out.frames, e.frames...)
@@ -276,18 +386,14 @@ func (e *Env) LexicalOnly() *Env {
 	lexical := func(k string, b Binding) bool {
 		return b.Owner == nil && b.Self == "" && !strings.Contains(k, ":")
 	}
-	for _, f := range e.frames {
-		var keep map[string]Binding
-		for k, b := range f {
-			if !lexical(k, b) {
-				continue
+	for i := range e.frames {
+		var keep Frame
+		e.frames[i].each(func(k string, b Binding) {
+			if lexical(k, b) {
+				keep.set(k, b)
 			}
-			if keep == nil {
-				keep = make(map[string]Binding, len(f))
-			}
-			keep[k] = b
-		}
-		if keep != nil {
+		})
+		if keep.len() > 0 {
 			out.frames = append(out.frames, keep)
 		}
 	}
@@ -319,34 +425,34 @@ func (e *Env) Qualify(name string) (string, bool) {
 }
 
 // rebindAssert prepends a template-argument frame to a deferred assertion.
-func rebindAssert(a Assertion, vars map[string]Binding) Assertion {
+func rebindAssert(a Assertion, vars *Frame) Assertion {
 	return rebindAssertFrames(a, nil, vars)
 }
 
-func rebindAssertFrames(a Assertion, defaults, vars map[string]Binding) Assertion {
+func rebindAssertFrames(a Assertion, defaults, vars *Frame) Assertion {
 	env := a.Env
-	if len(defaults) > 0 {
-		env = env.With(defaults)
+	if defaults.len() > 0 {
+		env = env.WithFrame(defaults)
 	}
-	return Assertion{Cond: a.Cond, Message: a.Message, Env: env.With(vars)}
+	return Assertion{Cond: a.Cond, Message: a.Message, Env: env.WithFrame(vars)}
 }
 
-func rebindDump(d Dump, vars map[string]Binding) Dump {
+func rebindDump(d Dump, vars *Frame) Dump {
 	return rebindDumpFrames(d, nil, vars)
 }
 
-func rebindDumpFrames(d Dump, defaults, vars map[string]Binding) Dump {
+func rebindDumpFrames(d Dump, defaults, vars *Frame) Dump {
 	env := d.Env
-	if len(defaults) > 0 {
-		env = env.With(defaults)
+	if defaults.len() > 0 {
+		env = env.WithFrame(defaults)
 	}
-	return Dump{Loc: d.Loc, Msg: d.Msg, Env: env.With(vars)}
+	return Dump{Loc: d.Loc, Msg: d.Msg, Env: env.WithFrame(vars)}
 }
 
 // rebind prepends a template-argument frame to every expression in e. It is
 // how a class body is instantiated for a concrete def: the class's own
 // defaults stay in the chain, the caller's arguments win.
-func rebind(e Expr, vars map[string]Binding) Expr {
+func rebind(e Expr, vars *Frame) Expr {
 	return rebindFrames(e, nil, vars)
 }
 
@@ -357,15 +463,15 @@ func rebind(e Expr, vars map[string]Binding) Expr {
 // defaults frame a reference like Versioned's `min` has no binding at all and
 // only the parser's inlined literal keeps it alive (which the strict pre-fold
 // path rejects, allocating an anonymous name for an instance that then fails).
-func rebindFrames(e Expr, defaults, vars map[string]Binding) Expr {
-	if len(defaults) == 0 && len(vars) == 0 {
+func rebindFrames(e Expr, defaults, vars *Frame) Expr {
+	if defaults.len() == 0 && vars.len() == 0 {
 		return e
 	}
 	with := func(env *Env) *Env {
-		if len(defaults) > 0 {
-			env = env.With(defaults)
+		if defaults.len() > 0 {
+			env = env.WithFrame(defaults)
 		}
-		return env.With(vars)
+		return env.WithFrame(vars)
 	}
 	switch x := e.(type) {
 	case *AstExpr:
@@ -979,13 +1085,12 @@ func (e *Env) HideOwnArgs(r *Record) *Env {
 		}
 		hidden[k] = true
 	}
-	for _, f := range e.frames {
-		for k, b := range f {
-			if b.Owner != r || b.Self == "" {
-				continue
+	for i := range e.frames {
+		e.frames[i].each(func(k string, b Binding) {
+			if b.Owner == r && b.Self != "" {
+				hide(k)
 			}
-			hide(k)
-		}
+		})
 	}
 	for kv := e.kv; kv != nil; kv = kv.next {
 		if kv.b.Owner == r && kv.b.Self != "" {

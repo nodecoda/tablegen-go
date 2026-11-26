@@ -400,9 +400,8 @@ func (l *Lowerer) class(st *syntax.ClassStmt, lets []*syntax.LetBind) error {
 		}
 		rec.TArgs = append(rec.TArgs, rv)
 	}
-	env = env.With(frame)
-	env.owner = rec
-	env.ownerSep = ":"
+	// Fill the frame before With: a Frame is immutable once installed, and
+	// Env copies share it.
 	for i, d := range st.TemplateArgs {
 		if d.Value != nil {
 			frame[st.Name+":"+d.Name] = Binding{
@@ -411,6 +410,9 @@ func (l *Lowerer) class(st *syntax.ClassStmt, lets []*syntax.LetBind) error {
 			}
 		}
 	}
+	env = env.With(frame)
+	env.owner = rec
+	env.ownerSep = ":"
 	rec.Env = env
 	// Rebind defaults now that the frame exists.
 	for _, rv := range rec.TArgs {

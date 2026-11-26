@@ -137,12 +137,28 @@ func TestEnvHideOwnArgsSingleBinding(t *testing.T) {
 	}
 }
 
-// lower.go pushes a class's argument frame before filling it in; an empty but
-// non-nil map must therefore stay reachable through the environment.
-func TestEnvEmptyFrameFilledLater(t *testing.T) {
-	env := (&Env{}).With(map[string]Binding{})
-	env.frames[0]["C:n"] = Binding{Val: &Int{N: 9}}
-	if got := intOf(env, "C:n", t); got != 9 {
-		t.Errorf("late-filled frame lost, got %d", got)
+// With converts a small map into a slice frame, so the caller must fill the
+// map before the call (lower.go does). A large frame keeps the map.
+func TestEnvFrameForms(t *testing.T) {
+	vars := map[string]Binding{"x": {Val: &Int{N: 1}}}
+	env := (&Env{}).With(vars)
+	vars["y"] = Binding{Val: &Int{N: 2}}
+	if _, ok := env.Lookup("y"); ok {
+		t.Error("small frame aliases the caller's map")
+	}
+	if got := intOf(env, "x", t); got != 1 {
+		t.Errorf("small frame lost its entry: %d", got)
+	}
+
+	big := map[string]Binding{}
+	for i := 0; i < smallFrame+2; i++ {
+		big[string(rune('a'+i))] = Binding{Val: &Int{N: int64(i)}}
+	}
+	env = (&Env{}).With(big)
+	if env.frames[0].m == nil {
+		t.Error("large frame must use a map")
+	}
+	if got := intOf(env, "c", t); got != 2 {
+		t.Errorf("large frame lookup: %d", got)
 	}
 }

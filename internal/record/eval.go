@@ -775,7 +775,8 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 			name = class.TArgs[i].Name
 			pos = strconv.Itoa(i)
 		}
-		v, err := k.evalBinding(provided[class.Name+":"+name], env, caller)
+		pb, _ := provided.get(class.Name + ":" + name)
+		v, err := k.evalBinding(pb, env, caller)
 		if err != nil {
 			return nil, err
 		}
@@ -875,39 +876,31 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 // parent class keeps the environment it was written in, which does not contain
 // this class's frame; without these bindings `class Spelling<...> : Versioned<min>`
 // cannot resolve `min` during a strict pre-fold.
-func classDefaultBindings(class *Record, provided map[string]Binding) map[string]Binding {
+func classDefaultBindings(class *Record, provided *Frame) *Frame {
 	if class.Env == nil {
 		return nil
 	}
-	var out map[string]Binding
+	out := &Frame{}
 	prefix := class.Name + ":"
-	for _, f := range class.Env.frames {
-		for k, b := range f {
-			if !strings.HasPrefix(k, prefix) {
-				continue
-			}
-			if _, ok := provided[k]; ok {
-				continue
-			}
-			if out == nil {
-				out = map[string]Binding{}
-			}
-			out[k] = b
+	collect := func(k string, b Binding) {
+		if !strings.HasPrefix(k, prefix) {
+			return
 		}
+		if _, ok := provided.get(k); ok {
+			return
+		}
+		out.set(k, b)
+	}
+	for i := range class.Env.frames {
+		class.Env.frames[i].each(collect)
 	}
 	// Env keeps a lone binding outside frames (Env.WithBinding). Classes are
 	// built with With, but collect it too so the scan cannot go stale.
 	for kv := class.Env.kv; kv != nil; kv = kv.next {
-		if !strings.HasPrefix(kv.name, prefix) {
-			continue
-		}
-		if _, ok := provided[kv.name]; ok {
-			continue
-		}
-		if out == nil {
-			out = map[string]Binding{}
-		}
-		out[kv.name] = kv.b
+		collect(kv.name, kv.b)
+	}
+	if out.len() == 0 {
+		return nil
 	}
 	return out
 }
@@ -925,10 +918,10 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	// `Child:NAME`. A def maps NAME to its record name instead, which the
 	// evaluator already handles when it sees a bare NAME reference.
 	if target.IsClass {
-		provided[class.Name+":NAME"] = Binding{
+		provided.set(class.Name+":NAME", Binding{
 			V:   qualifiedNameValue(target.Name),
 			Env: env,
-		}
+		})
 	}
 	for _, f := range class.Vals {
 		nv := &RecordVal{Name: f.Name, Ty: f.Ty, Nonconcrete: f.Nonconcrete, Loc: f.Loc}
@@ -984,10 +977,10 @@ func qualifiedNameValue(name string) syntax.Value {
 // of an Env frame) lets references resolve even when they were captured in a
 // different environment, e.g. inside the argument expression of a parent
 // class applied while the class itself was parsed.
-func (k *Keeper) preFoldArgs(name string, class *Record, provided map[string]Binding) *Record {
+func (k *Keeper) preFoldArgs(name string, class *Record, provided *Frame) *Record {
 	rec := &Record{Name: name, keeper: k}
 	for _, ta := range class.TArgs {
-		b, ok := provided[class.Name+":"+ta.Name]
+		b, ok := provided.get(class.Name + ":" + ta.Name)
 		if !ok {
 			continue
 		}
@@ -1140,11 +1133,11 @@ func castTemplateArg(v syntax.Value, want *Ty) syntax.Value {
 	}
 }
 
-func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *Record, loc diag.Pos, dynamic bool) (map[string]Binding, error) {
+func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *Record, loc diag.Pos, dynamic bool) (*Frame, error) {
 	if len(args) > len(class.TArgs) {
 		return nil, &EvalError{Msg: "Too many template arguments for class '" + class.Name + "'", Span: diag.Span{Start: loc, End: loc}}
 	}
-	provided := make(map[string]Binding, len(class.TArgs))
+	provided := &Frame{}
 	for i, a := range args {
 		name := a.Name
 		if name == "" {
@@ -1157,7 +1150,7 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		if name != class.TArgs[i].Name {
 			key = class.Name + ":" + name
 		}
-		if _, dup := provided[key]; dup {
+		if _, dup := provided.get(key); dup {
 			return nil, &EvalError{Msg: "We can only specify the template argument '" + name + "' once", Span: a.Span()}
 		}
 		b := Binding{V: a.Value, Env: env, Rec: caller, Dynamic: dynamic, Ty: class.TArgs[i].Ty}
@@ -1188,10 +1181,10 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 				b.Val = val
 			}
 		}
-		provided[key] = b
+		provided.set(key, b)
 	}
 	for _, ta := range class.TArgs {
-		if _, ok := provided[ta.Qual]; ok {
+		if _, ok := provided.get(ta.Qual); ok {
 			continue
 		}
 		// Defaults are resolved when the class is inherited, so an anonymous
@@ -1202,7 +1195,7 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 				if err != nil {
 					return nil, err
 				}
-				provided[ta.Qual] = Binding{Val: val, Ty: ta.Ty}
+				provided.set(ta.Qual, Binding{Val: val, Ty: ta.Ty})
 				continue
 			}
 		}
@@ -1221,11 +1214,11 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		// incomplete). A field inherited through this class therefore sees the
 		// default value -- `class Leaf : Mid<r>` prints Mid's `p = []`, not
 		// `Mid:p`.
-		provided[ta.Qual] = Binding{
+		provided.set(ta.Qual, Binding{
 			V: ax.V, Env: ax.Env, Dynamic: true, Ty: ta.Ty,
 			Owner: class, Sep: ":", Self: ta.Qual,
 			Mapped: true,
-		}
+		})
 	}
 	return provided, nil
 }
