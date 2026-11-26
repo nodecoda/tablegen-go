@@ -166,6 +166,19 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 	case *syntax.MultiClassStmt:
 		l.mcs[t.Name] = t
 		l.mcLets[t.Name] = lets
+		// A multiclass definition resolves its parents before its body is
+		// parsed (AddParentMultiClass -> resolve, TGParser.cpp:388-404). That
+		// substitution unrolls every foreach whose list becomes concrete, so a
+		// class application inside the inherited entries - SchedSEWSet<mx,
+		// isF, isWidening> after mx comes from a concrete MxList - is
+		// instantiated, and takes its anonymous number, when the inheriting
+		// multiclass is defined rather than when a defm expands it
+		// (VarDefInit::get, Record.cpp:2374).
+		for _, p := range t.Parents {
+			if pm := l.mcs[p.Name]; pm != nil {
+				l.preExpandMC(pm, p.Args)
+			}
+		}
 		// TGParser parses a multiclass body statement by statement: a `def`
 		// takes its anonymous name when ParseDef runs, and a foreach whose
 		// list is already concrete is unrolled the moment its closing brace is

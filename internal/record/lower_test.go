@@ -1,6 +1,8 @@
 package record_test
 
 import (
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -456,5 +458,96 @@ defm foo : M;
 				t.Errorf("got  %s\nwant %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// TestMulticlassInheritanceInstantiatesConcreteParentEntries pins the anonymous
+// numbering of a class application written in an inherited multiclass body.
+// TGParser::AddParentMultiClass resolves the parent's entries while the
+// inheriting multiclass is parsed (TGParser.cpp:388-404), so every instance
+// whose arguments are already concrete takes its anonymous number there - in
+// multiclass-definition order, and even for a multiclass no defm ever expands.
+// Recording them at defm-expansion time instead renumbers every later
+// anonymous record; RISCVScheduleV.td's SchedSEWSet<mx, isF, isWidening> is
+// this shape.
+func TestMulticlassInheritanceInstantiatesConcreteParentEntries(t *testing.T) {
+	src := `defvar MxList = ["MF8", "MF4", "MF2", "M1", "M2", "M4", "M8"];
+defvar MxListF = !listremove(MxList, ["MF8"]);
+defvar MxListW = !listremove(MxList, ["M8"]);
+class SchedSEWSet<string mx, bit isF = 0, bit isWidening = 0> {
+  defvar t = !cond(!eq(mx, "MF8"): [8], !eq(mx, "MF4"): [8, 16],
+                   !eq(mx, "MF2"): [8, 16, 32], 1: [8, 16, 32, 64]);
+  defvar remove8 = !if(isF, !listremove(t, [8]), t);
+  list<int> val = !if(isWidening, !listremove(remove8, [64]), remove8);
+}
+multiclass Impl<string name, list<string> MxList, bit isF = 0, bit isWidening = 0> {
+  foreach mx = MxList in
+    foreach sew = SchedSEWSet<mx, isF, isWidening>.val in
+      def name # "_" # mx # "_E" # sew;
+}
+multiclass A<string name> : Impl<name, MxList>;
+multiclass C<string name> : Impl<name, MxListF, isF=1>;
+multiclass B<string name> : Impl<name, MxListW, isWidening=1>;
+defm "" : A<"W0">;
+`
+	file, diags := syntax.Parse("t.td", src, nil, nil)
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("parse: %v", errs)
+	}
+	k, diags := record.Lower(file, "t.td")
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("lower: %v", errs)
+	}
+	// Keeper.Defs sorts by name, which puts anonymous_10 before anonymous_2;
+	// the numbering is what this test is about, so order by the number.
+	defs := k.Defs()
+	sort.Slice(defs, func(i, j int) bool {
+		a, _ := strconv.Atoi(strings.TrimPrefix(defs[i].Name, "anonymous_"))
+		b, _ := strconv.Atoi(strings.TrimPrefix(defs[j].Name, "anonymous_"))
+		return a < b
+	})
+	var got []string
+	for _, r := range defs {
+		if !r.IsAnonymous {
+			continue
+		}
+		v, err := r.Field("val")
+		if err != nil {
+			t.Fatalf("%s: %v", r.Name, err)
+		}
+		ls, ok := v.(*record.List)
+		if !ok {
+			t.Fatalf("%s: val is %T", r.Name, v)
+		}
+		var b strings.Builder
+		b.WriteString(r.Name + "=[")
+		for i, e := range ls.Elems {
+			if i > 0 {
+				b.WriteString(",")
+			}
+			n, ok := e.(*record.Int)
+			if !ok {
+				t.Fatalf("%s: element %T", r.Name, e)
+			}
+			b.WriteString(strconv.FormatInt(n.N, 10))
+		}
+		b.WriteString("]")
+		got = append(got, b.String())
+	}
+	// The seven A instances come from the defm; C and B are created only
+	// because their multiclass definitions resolve Impl's body.
+	want := []string{
+		"anonymous_0=[8]", "anonymous_1=[8,16]", "anonymous_2=[8,16,32]",
+		"anonymous_3=[8,16,32,64]", "anonymous_4=[8,16,32,64]",
+		"anonymous_5=[8,16,32,64]", "anonymous_6=[8,16,32,64]",
+		"anonymous_7=[16]", "anonymous_8=[16,32]",
+		"anonymous_9=[16,32,64]", "anonymous_10=[16,32,64]",
+		"anonymous_11=[16,32,64]", "anonymous_12=[16,32,64]",
+		"anonymous_13=[8]", "anonymous_14=[8,16]", "anonymous_15=[8,16,32]",
+		"anonymous_16=[8,16,32]", "anonymous_17=[8,16,32]",
+		"anonymous_18=[8,16,32]",
+	}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("anonymous instances\n got: %v\nwant: %v", got, want)
 	}
 }
