@@ -594,7 +594,7 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			if opTy := d.Op.Type(); !opTy.IsA(target) {
 				return nil, &EvalError{
 					Msg: "Expected type '" + target.String() + "', got '" + opTy.String() +
-						"' in: !getdagop" + d.String() + "\n",
+						"' in: !getdagop(" + d.String() + ")\n",
 					AtRecord: true,
 				}
 			}
@@ -1187,11 +1187,18 @@ func (k *Keeper) evalDagCtor(b *syntax.BangValue, env *Env, rec *Record) (Value,
 	return d, nil
 }
 
-func dagArgIndex(d *Dag, key Value) (int, error) {
+// dagArgIndex mirrors getDagArgNoByKey (Record.cpp:1187-1220) together with
+// the "!getdagarg "/"!setdagarg "/"!setdagname " prefix each caller adds
+// (Record.cpp:1410, 1914, 1932).
+func dagArgIndex(d *Dag, key Value, op string) (int, error) {
 	switch x := key.(type) {
 	case *Int:
-		if x.N < 0 || int(x.N) >= len(d.Args) {
-			return 0, &EvalError{Msg: "dag argument index out of range"}
+		if x.N < 0 {
+			return 0, &EvalError{Msg: op + " index " + itoa(int(x.N)) + " is negative"}
+		}
+		if int(x.N) >= len(d.Args) {
+			return 0, &EvalError{Msg: op + " index " + itoa(int(x.N)) + " is out of range (dag has " +
+				itoa(len(d.Args)) + " arguments)"}
 		}
 		return int(x.N), nil
 	case *Str:
@@ -1200,9 +1207,10 @@ func dagArgIndex(d *Dag, key Value) (int, error) {
 				return i, nil
 			}
 		}
-		return 0, &EvalError{Msg: "dag argument key '" + x.S + "' not found"}
+		return 0, &EvalError{Msg: op + " key '" + x.S + "' is not found"}
 	}
-	return 0, &EvalError{Msg: "dag argument key must be an int or string"}
+	// TGParser rejects a non int/string key while parsing (TGParser.cpp:2195).
+	return 0, &EvalError{Msg: "expected integer index or string name, got type '" + key.Type().String() + "'"}
 }
 
 // softError records a diagnostic that llvm-tblgen prints without failing the
@@ -1236,7 +1244,7 @@ func (k *Keeper) evalGetDagArg(b *syntax.BangValue, env *Env, rec *Record) (Valu
 	if !ok {
 		return nil, &EvalError{Msg: "!getdagarg expects a dag", Span: b.Span()}
 	}
-	idx, err := dagArgIndex(d, key)
+	idx, err := dagArgIndex(d, key, "!getdagarg")
 	if err != nil {
 		return nil, err
 	}
@@ -1268,7 +1276,11 @@ func (k *Keeper) evalSetDagArgName(b *syntax.BangValue, env *Env, rec *Record) (
 	if !ok {
 		return nil, &EvalError{Msg: "operator expects a dag", Span: b.Span()}
 	}
-	idx, err := dagArgIndex(d, key)
+	op := "!setdagarg"
+	if b.Op == syntax.XSetDagName {
+		op = "!setdagname"
+	}
+	idx, err := dagArgIndex(d, key, op)
 	if err != nil {
 		return nil, err
 	}

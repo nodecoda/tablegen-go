@@ -1716,17 +1716,20 @@ func (p *Parser) parseDeclaration(rec *recordInfo, isArg bool) (*Decl, bool) {
 	}
 	if p.eat(Equal) {
 		v := p.parseValue(rec, &ty, parseValueMode)
-		if v == nil {
-			return nil, false
-		}
-		d.Value = v
-		if !isArg && rec != nil {
-			if b, ok := rec.fields[nt.Text]; ok {
-				b.lit = v
-				rec.fields[nt.Text] = b
-			}
-			if isLiteral(v) {
-				p.defineLocal(nt.Text, binding{ty: ty, lit: v})
+		// "Errors in the value do not stop parsing, so that we can continue to
+		// make some progress." (TGParser.cpp:3649-3656) The declaration is
+		// kept without a value, so the caller still expects the ';' and
+		// reports it when the failed value left the lexer elsewhere.
+		if v != nil {
+			d.Value = v
+			if !isArg && rec != nil {
+				if b, ok := rec.fields[nt.Text]; ok {
+					b.lit = v
+					rec.fields[nt.Text] = b
+				}
+				if isLiteral(v) {
+					p.defineLocal(nt.Text, binding{ty: ty, lit: v})
+				}
 			}
 		}
 	}
@@ -1984,7 +1987,7 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 					"The value of named argument should be initialized, but we got '?'")
 			}
 			named[nameTok.Text] = true
-			p.checkTemplateArgValue(v, hint, owner, nameTok.Text)
+			p.checkTemplateArgValue(v, hint, owner, nameTok.Text, sep)
 			args = append(args, &Arg{Base: Base{At: p.span(start)}, Name: nameTok.Text, NameSpan: nameTok.Span, Value: v})
 		} else {
 			var hint *Type
@@ -2009,7 +2012,7 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 				p.errAt(v.Span(), "E_PARSE_ARG_NAME", "The name of named argument should be a valid identifier")
 			}
 			positional++
-			p.checkTemplateArgValue(v, hint, owner, argName)
+			p.checkTemplateArgValue(v, hint, owner, argName, sep)
 			args = append(args, &Arg{Base: Base{At: p.span(start)}, Value: v})
 		}
 		if !p.eat(Comma) {
@@ -2027,7 +2030,7 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 // argument must be convertible to the declared parameter type. LLVM also
 // inserts casts for convertible values; expression typing already produces the
 // right type for literals, so only the diagnostic matters here.
-func (p *Parser) checkTemplateArgValue(v Value, formal *Type, owner, name string) {
+func (p *Parser) checkTemplateArgValue(v Value, formal *Type, owner, name, sep string) {
 	if v == nil || formal == nil || name == "" || owner == "" {
 		return
 	}
@@ -2038,9 +2041,12 @@ func (p *Parser) checkTemplateArgValue(v Value, formal *Type, owner, name string
 	if p.typeConvertible(vt, *formal) {
 		return
 	}
+	// TGParser stores the qualified name in the argument RecordVal
+	// (QualifyName uses "::" inside a multiclass, ":" otherwise) and appends
+	// the offending value (TGParser.cpp:4778).
 	p.errAt(v.Span(), "E_PARSE_ARG_TYPE",
-		"Value specified for template argument '"+owner+":"+name+"' is of type "+
-			vt.String()+"; expected type "+formal.String())
+		"Value specified for template argument '"+owner+sep+name+"' is of type "+
+			vt.String()+"; expected type "+formal.String()+": "+InitText(v))
 }
 
 // typeConvertible resolves record types through the class hierarchy, which

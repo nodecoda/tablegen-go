@@ -1187,14 +1187,14 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 			}
 		}
 		if ta.Expr == nil {
-			return nil, &EvalError{Msg: "value not specified for template argument '" + ta.Name + "'", Span: diag.Span{Start: loc, End: loc}}
+			return nil, &EvalError{Msg: "value not specified for template argument '" + ta.Qual + "'", Span: diag.Span{Start: loc, End: loc}}
 		}
 		ax, ok := ta.Expr.(*AstExpr)
 		if !ok {
 			continue
 		}
 		if _, unset := ax.V.(*syntax.UnsetValue); unset {
-			return nil, &EvalError{Msg: "value not specified for template argument '" + ta.Name + "'", Span: diag.Span{Start: loc, End: loc}}
+			return nil, &EvalError{Msg: "value not specified for template argument '" + ta.Qual + "'", Span: diag.Span{Start: loc, End: loc}}
 		}
 		// TGParser::resolveArguments maps every defaulted argument into the
 		// resolver (Init::isComplete is true for a VarInit; only `?` is
@@ -1368,6 +1368,12 @@ func (k *Keeper) coerce(v Value, want *Ty) (Value, error) {
 	// VarBitInit per declared bit, which is why an out-of-range literal is
 	// reported later by checkConcrete as an unresolved initializer rather than
 	// here as a type error.
+	// TypedInit::getCastTo (Record.cpp:2262-2276) falls back to a !cast node
+	// whenever the *type* is convertible even though the value does not fold
+	// today; checkConcrete reports the leftover node for a def.
+	if want.Kind != BitsTy && v.Type().ConvertibleTo(want) {
+		return &Unresolved{Text: "!cast<" + want.String() + ">(" + v.String() + ")", Ty: want}, nil
+	}
 	if want.Kind == BitsTy && v.Type().ConvertibleTo(want) {
 		text := "!cast<" + want.String() + ">(" + v.String() + ")"
 		out := &Bits{B: make([]Value, want.Bits)}

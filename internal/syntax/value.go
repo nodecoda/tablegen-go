@@ -1198,14 +1198,36 @@ func (p *Parser) finishRange(v *BangValue, rec *recordInfo) Value {
 		p.errTok("E_PARSE_BANG_LPAREN", "expected '(' after !range operator")
 		return nil
 	}
+	// TGParser.cpp:1946-2000 checks the arguments of !range while parsing:
+	// the first is a list or an int, and every later one must be an int.
 	var args []Value
+	firstIsList := false
 	for {
 		if len(args) >= 3 {
 			p.errTok("E_PARSE_RANGE_ARITY", "expected at most three values of integer")
 			return nil
 		}
+		argLoc := p.cur().Span
 		arg := p.parseValue(rec, &IntTy, parseValueMode)
 		if arg == nil {
+			return nil
+		}
+		at := arg.Type()
+		if !firstIsList || len(args) == 0 {
+			switch {
+			case len(args) == 0 && at.Kind == ListType:
+				firstIsList = true
+			case at.Kind == IntType:
+			default:
+				if len(args) != 0 {
+					p.errAt(argLoc, "E_PARSE_RANGE_ARG", "expected value of type 'int', got '"+at.String()+"'")
+				} else {
+					p.errAt(argLoc, "E_PARSE_RANGE_ARG", "expected list or int, got value of type '"+at.String()+"'")
+				}
+				return nil
+			}
+		} else {
+			p.errAt(argLoc, "E_PARSE_RANGE_LIST", "expected one list, got extra value of type '"+at.String()+"'")
 			return nil
 		}
 		args = append(args, arg)

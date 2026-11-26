@@ -738,7 +738,7 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, ext
 			// further down the body. Folding the name here mirrors
 			// ParseObjectName -> ParseValue -> VarDefInit::Fold.
 			l.preFold(st.Name, env)
-			n, err := l.evalName(st.Name, env)
+			n, err := l.evalNameAt(st.Name, env, diag.Span{Start: loc, End: loc})
 			if err != nil {
 				return nil, false, err
 			}
@@ -789,13 +789,21 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, ext
 }
 
 func (l *Lowerer) evalName(v syntax.Value, env *Env) (string, error) {
+	return l.evalNameAt(v, env, v.Span())
+}
+
+// evalNameAt is evalName with the record's own location for the failure
+// diagnostic: Record::checkName runs in the Record constructor and reports
+// there (Record.cpp:2813-2821), so a `def true` points at the `def` keyword
+// rather than at the name token.
+func (l *Lowerer) evalNameAt(v syntax.Value, env *Env, at diag.Span) (string, error) {
 	val, err := l.k.evalSyntax(v, env, nil)
 	if err != nil {
 		return "", err
 	}
 	s, ok := val.(*Str)
 	if !ok {
-		return "", &EvalError{Msg: "record name must resolve to a string", Span: v.Span()}
+		return "", &EvalError{Msg: "Record name '" + initText(v, env, nil) + "' is not a string!", Span: at}
 	}
 	return s.S, nil
 }
@@ -1114,7 +1122,7 @@ func (l *Lowerer) defm(st *syntax.DefmStmt, env *Env, lets []*syntax.LetBind) er
 			defmName = l.k.newAnonymous(st.Span().Start).Name
 		}
 	} else {
-		n, err := l.evalName(st.Name, env)
+		n, err := l.evalNameAt(st.Name, env, st.Span())
 		if err != nil {
 			return err
 		}
@@ -1268,7 +1276,9 @@ func (l *Lowerer) bindMCArgs(mc *syntax.MultiClassStmt, args []*syntax.Arg, call
 			continue
 		}
 		if d.Value == nil || isUnset(d.Value) {
-			return nil, &EvalError{Msg: "value not specified for template argument '" + d.Name + "'", Span: spanAt(loc)}
+			// resolveArguments reports the qualified argument name, which
+			// QualifyName builds with "::" for a multiclass (Record.cpp:118-127).
+			return nil, &EvalError{Msg: "value not specified for template argument '" + mc.Name + "::" + d.Name + "'", Span: spanAt(loc)}
 		}
 	}
 	return out, nil

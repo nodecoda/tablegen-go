@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 10,
+    "status:diff": 6,
     "status:msg-match": 4,
-    "status:same": 371,
+    "status:same": 375,
     "status:skipped": 7
   },
   "cases": [
@@ -399,13 +399,13 @@
           "error: Field 'D8' of type 'bits\u003c2\u003e' is incompatible with value '{ 0 }' of type bit initializer with length 1",
           "error: Field 'F2' of type 'bits\u003c7\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8",
           "error: Field 'F3' of type 'bits\u003c9\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8",
-          "error: Element #0 (3) is not convertable to a bit"
+          "error: Initializer of 'D7' in 'anonymous_0' could not be fully resolved: { !cast\u003cbit\u003e(3) }"
         ],
-        "full_sha256": "836852ff12bfba6c162a9e4b156e6988dc7cd734eb35a2be8cda9dbd7f80a921",
-        "full_len": 1877,
-        "full": "\u003cfile\u003e:9:15: error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4\n  bits\u003c2\u003e a = { opc, opc2 }; // error!\n              ^\n\u003cfile\u003e:14:16: error: Field 'B1' of type 'bits\u003c2\u003e' is incompatible with value '{ 0, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e B1 = 0b011;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:17:16: error: Field 'C1' of type 'bits\u003c2\u003e' is incompatible with value '{ 1, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e C1 = 0b111;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:20:16: error: Field 'D3' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D3 = { 0, 0 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:23:16: error: Field 'D4' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D4 = { 0b00 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:28:16: error: Field 'D8' of type 'bits\u003c2\u003e' is incompatible with value '{ 0 }' of type bit initializer with length 1\n  bits\u003c2\u003e D8 = { 0 };    // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:31:16: error: Field 'F2' of type 'bits\u003c7\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c7\u003e F2 = { 0, 1, 0b1001, 0, 0b0 }; // LHS doesn't have enough bits\n               ^\n\u003cfile\u003e:34:16: error: Field 'F3' of type 'bits\u003c9\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c9\u003e F3 = { 0, 1, 0b1001, 0, 0b0 }; // RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:25:16: error: Element #0 (3) is not convertable to a bit\n  bits\u003c1\u003e D7 = { 3 };    // type mismatch.  LHS doesn't have enough bits\n               ^"
+        "full_sha256": "d48e213416ebe5261de40860bcbe2ce7012a00a28a42abe0f237ee5eaa0662f5",
+        "full_len": 1835,
+        "full": "\u003cfile\u003e:9:15: error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4\n  bits\u003c2\u003e a = { opc, opc2 }; // error!\n              ^\n\u003cfile\u003e:14:16: error: Field 'B1' of type 'bits\u003c2\u003e' is incompatible with value '{ 0, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e B1 = 0b011;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:17:16: error: Field 'C1' of type 'bits\u003c2\u003e' is incompatible with value '{ 1, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e C1 = 0b111;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:20:16: error: Field 'D3' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D3 = { 0, 0 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:23:16: error: Field 'D4' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D4 = { 0b00 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:28:16: error: Field 'D8' of type 'bits\u003c2\u003e' is incompatible with value '{ 0 }' of type bit initializer with length 1\n  bits\u003c2\u003e D8 = { 0 };    // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:31:16: error: Field 'F2' of type 'bits\u003c7\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c7\u003e F2 = { 0, 1, 0b1001, 0, 0b0 }; // LHS doesn't have enough bits\n               ^\n\u003cfile\u003e:34:16: error: Field 'F3' of type 'bits\u003c9\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c9\u003e F3 = { 0, 1, 0b1001, 0, 0b0 }; // RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:12:1: error: Initializer of 'D7' in 'anonymous_0' could not be fully resolved: { !cast\u003cbit\u003e(3) }\ndef {\n^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitListErrors.td",
@@ -3290,13 +3290,14 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: expected value to be a typed value, got '?'"
+          "error: expected value to be a typed value, got '?'",
+          "error: expected ';' after declaration"
         ],
-        "full_sha256": "eead89de57a288143bdf9337e98f36a97ae94b5e17f4a620b7ec0f7ef36122f4",
-        "full_len": 111,
-        "full": "\u003cfile\u003e:8:15: error: expected value to be a typed value, got '?'\n  bit D = !if(!eq(?, 0), 1, 0);\n              ^"
+        "full_sha256": "b452b3c8235f72e89455046f6e1c03c9caeb6fe20018aae2f81f872d039e7be7",
+        "full_len": 215,
+        "full": "\u003cfile\u003e:8:15: error: expected value to be a typed value, got '?'\n  bit D = !if(!eq(?, 0), 1, 0);\n              ^\n\u003cfile\u003e:8:20: error: expected ';' after declaration\n  bit D = !if(!eq(?, 0), 1, 0);\n                   ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eq.td",
@@ -4521,13 +4522,14 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: expected list type argument in unary operator"
+          "error: expected list type argument in unary operator",
+          "error: expected ';' after declaration"
         ],
-        "full_sha256": "6bf00bde567601f91d74bc5d698f92a1a4102dc4fab612484d97a9f1dddbc2b0",
-        "full_len": 134,
-        "full": "\u003cfile\u003e:5:33: error: expected list type argument in unary operator\n    list\u003cint\u003e F = !listflatten(A);\n                                ^"
+        "full_sha256": "611784b6d84ec6cb5866a37e83cb7f72c183c9270c0867745eed09ffc9b763e8",
+        "full_len": 254,
+        "full": "\u003cfile\u003e:5:33: error: expected list type argument in unary operator\n    list\u003cint\u003e F = !listflatten(A);\n                                ^\n\u003cfile\u003e:5:33: error: expected ';' after declaration\n    list\u003cint\u003e F = !listflatten(A);\n                                ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listflatten.td",
@@ -5206,9 +5208,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "a0d08e65c0df90c8a5eb03fddcc07580ca0799103414febbff46200ba1ba8b82",
-        "full_len": 266,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-699470480/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "611e26d432109bdfa19fab40fbf8f1d9f4850227c506d7c255aa7d62559d9f59",
+        "full_len": 269,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3830258255/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5218,9 +5220,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "aa99c961bdeda37b03f4b974c9ff6c75d39ef9fc42aa896bfa5ed9977248604d",
-        "full_len": 1108,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full_sha256": "861377b105ca37c46c7e62a6886fbcf6610df571d2cc349a2ba4355d65acb4eb",
+        "full_len": 1120,
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },
@@ -5431,11 +5433,11 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl"
+          "error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0"
         ],
-        "full_sha256": "041d73caa3a211a3375b0f661dcd51841302ad4cf24301d72f0a0c260bf62400",
-        "full_len": 140,
-        "full": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl\ndef Rec0 : Cl\u003cRec0\u003e;\n              ^"
+        "full_sha256": "9ee43e413505b9c420471477567c3847e2348c8d65032a08030f228b15581085",
+        "full_len": 146,
+        "full": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0\ndef Rec0 : Cl\u003cRec0\u003e;\n              ^"
       },
       "status": "diff"
     },
@@ -5558,13 +5560,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: Value specified for template argument 'B:op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e"
+          "error: Value specified for template argument 'B::op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e: C::op"
         ],
-        "full_sha256": "bc625fc31c0430555e757da341ce2c98f200e55d4a21a508fa16f4f09512e4ee",
-        "full_len": 172,
-        "full": "\u003cfile\u003e:10:30: error: Value specified for template argument 'B:op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e\nmulticlass C\u003cbits\u003c4\u003e op\u003e : B\u003cop\u003e;\n                             ^"
+        "full_sha256": "acd156c9648f273dc2b587b1f2a4181beb9fac5e2ed25b8fd182d767caf1c788",
+        "full_len": 180,
+        "full": "\u003cfile\u003e:10:30: error: Value specified for template argument 'B::op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e: C::op\nmulticlass C\u003cbits\u003c4\u003e op\u003e : B\u003cop\u003e;\n                             ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/subreg-index-overflow-allowed.td",

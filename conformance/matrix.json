@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 58,
-    "status:err-wording": 15,
-    "status:same": 241,
+    "status:err-diff": 32,
+    "status:err-wording": 23,
+    "status:same": 259,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -582,7 +582,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "836852ff12bfba6c162a9e4b156e6988dc7cd734eb35a2be8cda9dbd7f80a921",
+        "err_sha256": "d48e213416ebe5261de40860bcbe2ce7012a00a28a42abe0f237ee5eaa0662f5",
         "Msgs": [
           "error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4",
           "error: Field 'B1' of type 'bits\u003c2\u003e' is incompatible with value '{ 0, 1, 1 }' of type bit initializer with length 3",
@@ -592,12 +592,11 @@
           "error: Field 'D8' of type 'bits\u003c2\u003e' is incompatible with value '{ 0 }' of type bit initializer with length 1",
           "error: Field 'F2' of type 'bits\u003c7\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8",
           "error: Field 'F3' of type 'bits\u003c9\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8",
-          "error: Element #0 (3) is not convertable to a bit"
+          "error: Initializer of 'D7' in 'anonymous_0' could not be fully resolved: { !cast\u003cbit\u003e(3) }"
         ],
         "err_head": "\u003cfile\u003e:9:15: error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:9:15: error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4\n  bits\u003c2\u003e a = { opc, opc2 }; // error!\n              ^\n\u003cfile\u003e:14:16: error: Field 'B1' of type 'bits\u003c2\u003e' is incompatible with value '{ 0, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e B1 = 0b011;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:17:16: error: Field 'C1' of type 'bits\u003c2\u003e' is incompatible with value '{ 1, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e C1 = 0b111;  // bitfield is too small, reject\n      \n... (truncated)"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitListErrors.td",
@@ -5021,13 +5020,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "39fa981503cfcbe22f05d69f34896b85af4467c9a7151ea0e877f2b9f4c5f19d",
+        "err_sha256": "f9e1bcfd029831917525de53a06d0ce6fe7b164ed937e78f5ecd8f8aa71cefa3",
         "Msgs": [
-          "error: the 'code' type is not allowed in bang operators; use 'string'"
+          "error: the 'code' type is not allowed in bang operators; use 'string'",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:45:21: error: the 'code' type is not allowed in bang operators; use 'string'"
       },
-      "status": "same"
+      "status": "err-diff",
+      "err_text": "\u003cfile\u003e:45:21: error: the 'code' type is not allowed in bang operators; use 'string'\n  code Code = !cast\u003ccode\u003e(\"i = 0;\");\n                    ^\n\u003cfile\u003e:45:21: error: expected ';' after declaration\n  code Code = !cast\u003ccode\u003e(\"i = 0;\");\n                    ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/compare.td",
@@ -5783,14 +5784,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "30a52d2f18f683456709181751cddb1a006d4bd2c0fcd5c944aea9697240592f",
+        "err_sha256": "36645756d799c8e94d78035f54ac6401578b5e706ae572411d2a702b731fd64b",
         "Msgs": [
-          "error: Variable not defined: 'myvar'"
+          "error: Variable not defined: 'myvar'",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:11:22: error: Variable not defined: 'myvar'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:11:22: error: Variable not defined: 'myvar'\ndef bad { dag x = (? myvar); }\n                     ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defvar.td",
@@ -6113,14 +6114,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "eead89de57a288143bdf9337e98f36a97ae94b5e17f4a620b7ec0f7ef36122f4",
+        "err_sha256": "b452b3c8235f72e89455046f6e1c03c9caeb6fe20018aae2f81f872d039e7be7",
         "Msgs": [
-          "error: expected value to be a typed value, got '?'"
+          "error: expected value to be a typed value, got '?'",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:8:15: error: expected value to be a typed value, got '?'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:8:15: error: expected value to be a typed value, got '?'\n  bit D = !if(!eq(?, 0), 1, 0);\n              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eq.td",
@@ -6988,14 +6989,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "00b6de2da330494de27325247f80022b5d8578f49e22dbc34aa2bc7ff9b06c85",
+        "err_sha256": "f809332e00b23aa99e135820ac1c79776c2dc8f573b82e3330107d67227deb1e",
         "Msgs": [
-          "error: Expected type 'Base', got 'OtherBase' in: !getdagop(qux \"hello\", ?:$world)"
+          "error: Expected type 'Base', got 'OtherBase' in: !getdagop((qux \"hello\", ?:$world))"
         ],
-        "err_head": "\u003cfile\u003e:25:5: error: Expected type 'Base', got 'OtherBase' in: !getdagop(qux \"hello\", ?:$world)"
+        "err_head": "\u003cfile\u003e:25:5: error: Expected type 'Base', got 'OtherBase' in: !getdagop((qux \"hello\", ?:$world))"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:5: error: Expected type 'Base', got 'OtherBase' in: !getdagop(qux \"hello\", ?:$world)\n\ndef test {\n    ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7017,14 +7017,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "5da6e39bd5404623d1fd3e1c42aba39f433b20c1714fc816662493a1ec75e1ec",
+        "err_sha256": "eb958e5e961a45701cfb888b5c308fec44b8a836beeb09830584b298385209ac",
         "Msgs": [
-          "error: Expected type 'int', got 'Base' in: !getdagop(foo 1, 2:$a, ?:$b)"
+          "error: Expected type 'int', got 'Base' in: !getdagop((foo 1, 2:$a, ?:$b))"
         ],
-        "err_head": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop(foo 1, 2:$a, ?:$b)"
+        "err_head": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop((foo 1, 2:$a, ?:$b))"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop(foo 1, 2:$a, ?:$b)\n\ndef test {\n    ^"
+      "err_text": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop((foo 1, 2:$a, ?:$b))\n\ndef test {\n    ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7045,14 +7045,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "71e06c331bf751a3d7189e14424195dae13b28e06fecdcad0cd178f1f8a9b577",
+        "err_sha256": "18dbece247a7f9a5b6fb985b8d2123da6db142e1b63968b75464ccb1083a81de",
         "Msgs": [
-          "error: dag argument index out of range"
+          "error: !getdagarg index -1 is negative"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: dag argument index out of range"
+        "err_head": "\u003cfile\u003e:25:1: error: !getdagarg index -1 is negative"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: dag argument index out of range\ndef test {\n^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:25:1: error: !getdagarg index -1 is negative\ndef test {\n^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7073,14 +7073,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "71e06c331bf751a3d7189e14424195dae13b28e06fecdcad0cd178f1f8a9b577",
+        "err_sha256": "2d1bc2b3610dbfb29f659224fb98748dd50af21e9a92fe2da88aefa43d6ac2c9",
         "Msgs": [
-          "error: dag argument index out of range"
+          "error: !getdagarg index 3 is out of range (dag has 3 arguments)"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: dag argument index out of range"
+        "err_head": "\u003cfile\u003e:25:1: error: !getdagarg index 3 is out of range (dag has 3 arguments)"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: dag argument index out of range\ndef test {\n^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:25:1: error: !getdagarg index 3 is out of range (dag has 3 arguments)\ndef test {\n^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7101,14 +7101,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "83f957d9f8a8803ec119ad0c9f88549be29ad178607380dd1f704eec9f14552c",
+        "err_sha256": "1eec8f2e8662e3775957c78c54991ec61d5fc42be8df9b8b2c108757c0bb0946",
         "Msgs": [
-          "error: dag argument key 'x' not found"
+          "error: !getdagarg key 'x' is not found"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: dag argument key 'x' not found"
+        "err_head": "\u003cfile\u003e:25:1: error: !getdagarg key 'x' is not found"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: dag argument key 'x' not found\ndef test {\n^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:25:1: error: !getdagarg key 'x' is not found\ndef test {\n^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7129,14 +7129,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "71e06c331bf751a3d7189e14424195dae13b28e06fecdcad0cd178f1f8a9b577",
+        "err_sha256": "4d1ed477058b7aaf5bd17ac67bc7f129e79cb663fe9d76161e0c3d6e9986dd23",
         "Msgs": [
-          "error: dag argument index out of range"
+          "error: !setdagarg index -1 is negative"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: dag argument index out of range"
+        "err_head": "\u003cfile\u003e:25:1: error: !setdagarg index -1 is negative"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: dag argument index out of range\ndef test {\n^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:25:1: error: !setdagarg index -1 is negative\ndef test {\n^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7157,14 +7157,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "71e06c331bf751a3d7189e14424195dae13b28e06fecdcad0cd178f1f8a9b577",
+        "err_sha256": "6aa94bec17acba06133656befcf623f35d79a4e03096c150e69d3ed4b03a4815",
         "Msgs": [
-          "error: dag argument index out of range"
+          "error: !setdagarg index 3 is out of range (dag has 3 arguments)"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: dag argument index out of range"
+        "err_head": "\u003cfile\u003e:25:1: error: !setdagarg index 3 is out of range (dag has 3 arguments)"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: dag argument index out of range\ndef test {\n^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:25:1: error: !setdagarg index 3 is out of range (dag has 3 arguments)\ndef test {\n^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7185,14 +7185,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6d52f971c8415cdeb9e2469ac60232612d530ca74def43a58d97ff980c9f4c6b",
+        "err_sha256": "250b7190f917d7f261ea8952e0d4f21ff95bf96779ddcf9bfb8eacb0f5aba35c",
         "Msgs": [
-          "error: dag argument key must be an int or string"
+          "error: expected integer index or string name, got type 'Base'"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: dag argument key must be an int or string"
+        "err_head": "\u003cfile\u003e:25:1: error: expected integer index or string name, got type 'Base'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: dag argument key must be an int or string\ndef test {\n^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:25:1: error: expected integer index or string name, got type 'Base'\ndef test {\n^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7213,14 +7213,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "3c0b6961e718e884eba3d45db0dd7810fce95ce65d40ae796024982b6379da5c",
+        "err_sha256": "9de722f4c6695fb91f0d331bae95c3c3afbf420d121de14acb18b6dfc21c5505",
         "Msgs": [
-          "error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)"
+          "error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((testInst0 foo))"
         ],
-        "err_head": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)"
+        "err_head": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((testInst0 foo))"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)\n\n  def : TestPattern\u003c(!cast\u003cTestInstruction\u003e(NAME) foo)\u003e;\n  ^\n\u003cfile\u003e:191:18: note: instantiated from multiclass\ndefm testInst0 : TestInstructionAndPattern\u003c[7]\u003e;\n                 ^"
+      "err_text": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((testInst0 foo))\n\n  def : TestPattern\u003c(!cast\u003cTestInstruction\u003e(NAME) foo)\u003e;\n  ^\n\u003cfile\u003e:191:18: note: instantiated from multiclass\ndefm testInst0 : TestInstructionAndPattern\u003c[7]\u003e;\n                 ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-empty-list-arg.td",
@@ -8300,14 +8300,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6bf00bde567601f91d74bc5d698f92a1a4102dc4fab612484d97a9f1dddbc2b0",
+        "err_sha256": "611784b6d84ec6cb5866a37e83cb7f72c183c9270c0867745eed09ffc9b763e8",
         "Msgs": [
-          "error: expected list type argument in unary operator"
+          "error: expected list type argument in unary operator",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:5:33: error: expected list type argument in unary operator"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:5:33: error: expected list type argument in unary operator\n    list\u003cint\u003e F = !listflatten(A);\n                                ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listflatten.td",
@@ -9133,14 +9133,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9168230a508f8aefa8840452d42b480a7d5eb1851afcc69d871af0929d06cef3",
+        "err_sha256": "e6230c3b0eaa0e1e7e8c9f47bccb2189bbc1b9cbb26a3ad90d15ab16ed37cf3d",
         "Msgs": [
-          "error: Unknown or reserved token when parsing a value"
+          "error: Unknown or reserved token when parsing a value",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:10:35: error: Unknown or reserved token when parsing a value"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:10:35: error: Unknown or reserved token when parsing a value\n  list\u003cstring\u003e the_list = list1 # in;\n                                  ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/paste-reserved.td",
@@ -9898,12 +9898,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-670104779/inc",
-        "/tmp/tblgen-split-670104779/main.td",
+        "/tmp/tblgen-split-3867383049/inc",
+        "/tmp/tblgen-split-3867383049/main.td",
         "-o",
-        "/tmp/tblgen-split-670104779/out.td",
+        "/tmp/tblgen-split-3867383049/out.td",
         "-d",
-        "/tmp/tblgen-split-670104779/out.d"
+        "/tmp/tblgen-split-3867383049/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9923,12 +9923,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-670104779/inc",
-        "/tmp/tblgen-split-670104779/main.td",
+        "/tmp/tblgen-split-3867383049/inc",
+        "/tmp/tblgen-split-3867383049/main.td",
         "-o",
-        "/tmp/tblgen-split-670104779/out.td",
+        "/tmp/tblgen-split-3867383049/out.td",
         "-d",
-        "/tmp/tblgen-split-670104779/out2.d"
+        "/tmp/tblgen-split-3867383049/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9949,10 +9949,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-670104779/inc",
-        "/tmp/tblgen-split-670104779/main.td",
+        "/tmp/tblgen-split-3867383049/inc",
+        "/tmp/tblgen-split-3867383049/main.td",
         "-d",
-        "/tmp/tblgen-split-670104779/out.d"
+        "/tmp/tblgen-split-3867383049/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10039,8 +10039,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2673576173",
-        "/tmp/tblgen-split-2673576173/main.td"
+        "/tmp/tblgen-split-3277137404",
+        "/tmp/tblgen-split-3277137404/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10064,8 +10064,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2673576173",
-        "/tmp/tblgen-split-2673576173/multi.td"
+        "/tmp/tblgen-split-3277137404",
+        "/tmp/tblgen-split-3277137404/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10223,14 +10223,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "ce4df7efef0e6708070c6ece84dd1eec7d6dcebbbce2a923de7ba16cbf260f1f",
+        "err_sha256": "8522a2f6521693c119400672df01c592dc8f6139ff83f120db6ab55efc4f36c0",
         "Msgs": [
-          "error: expected one list, got extra value"
+          "error: expected one list, got extra value of type 'int'"
         ],
-        "err_head": "\u003cfile\u003e:8:15: error: expected one list, got extra value"
+        "err_head": "\u003cfile\u003e:8:32: error: expected one list, got extra value of type 'int'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:8:15: error: expected one list, got extra value\ndefvar errs = !range(list_int, 42);\n              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-op-fail.td",
@@ -10251,14 +10250,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "bcc4abd9a104794f1542ade359c8aed7fbd7e3df73e610dba2a153f6afe56e0d",
+        "err_sha256": "fe8fbd2af14ca64b4f7d525828a86e70b10b021ea1ad1a6abbf065b59535a485",
         "Msgs": [
-          "error: expected int, got list\u003cint\u003e"
+          "error: expected value of type 'int', got 'list\u003cint\u003e'"
         ],
-        "err_head": "\u003cfile\u003e:14:1: error: expected int, got list\u003cint\u003e"
+        "err_head": "\u003cfile\u003e:14:25: error: expected value of type 'int', got 'list\u003cint\u003e'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:14:1: error: expected int, got list\u003cint\u003e\ndefvar errs = !range(0, list_int);\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-op-fail.td",
@@ -10306,14 +10304,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "0f80cb3301b45348b5e6d05eaeb029825729b1d55622d77f78a59f495b17d078",
+        "err_sha256": "3160af10c44481cd9e10b767ff9702497ffd7a127076da06f4c0aa06e71f297b",
         "Msgs": [
-          "error: expected int, got string"
+          "error: expected list or int, got value of type 'string'"
         ],
-        "err_head": "\u003cfile\u003e:26:1: error: expected int, got string"
+        "err_head": "\u003cfile\u003e:26:22: error: expected list or int, got value of type 'string'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:26:1: error: expected int, got string\ndefvar errs = !range(\"hoge\");\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-op-fail.td",
@@ -10334,14 +10331,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "90b9c02dd276b5f93564a4eb5e2c0ea99a2b5df11838db036f9067524c0083fb",
+        "err_sha256": "aca54eb8fb8ef1176d4c24ef29a51f1a735a9e17b67837c5ea72644cb7476171",
         "Msgs": [
-          "error: expected int, got string"
+          "error: expected list or int, got value of type 'string'"
         ],
-        "err_head": "\u003cfile\u003e:32:1: error: expected int, got string"
+        "err_head": "\u003cfile\u003e:32:22: error: expected list or int, got value of type 'string'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:32:1: error: expected int, got string\ndefvar errs = !range(\"hoge\", 42);\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-op-fail.td",
@@ -10362,14 +10358,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "10947bbf98ed858378271e6893cd81e65ecaf03bdcef68c6589183d7c11d7ba7",
+        "err_sha256": "8c6ed237b97bdeaa6d4f9dd5bbbe1bdc67447a26ae25a0e351c4b8fa26e60187",
         "Msgs": [
-          "error: expected int, got string"
+          "error: expected value of type 'int', got 'string'"
         ],
-        "err_head": "\u003cfile\u003e:38:1: error: expected int, got string"
+        "err_head": "\u003cfile\u003e:38:25: error: expected value of type 'int', got 'string'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:38:1: error: expected int, got string\ndefvar errs = !range(6, \"fuga\");\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-op-fail.td",
@@ -10564,14 +10559,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "041d73caa3a211a3375b0f661dcd51841302ad4cf24301d72f0a0c260bf62400",
+        "err_sha256": "9ee43e413505b9c420471477567c3847e2348c8d65032a08030f228b15581085",
         "Msgs": [
-          "error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl"
+          "error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0"
         ],
-        "err_head": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl"
+        "err_head": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl\ndef Rec0 : Cl\u003cRec0\u003e;\n              ^"
+      "err_text": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0\ndef Rec0 : Cl\u003cRec0\u003e;\n              ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference.td",
@@ -10846,14 +10841,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "bc625fc31c0430555e757da341ce2c98f200e55d4a21a508fa16f4f09512e4ee",
+        "err_sha256": "acd156c9648f273dc2b587b1f2a4181beb9fac5e2ed25b8fd182d767caf1c788",
         "Msgs": [
-          "error: Value specified for template argument 'B:op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e"
+          "error: Value specified for template argument 'B::op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e: C::op"
         ],
-        "err_head": "\u003cfile\u003e:10:30: error: Value specified for template argument 'B:op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e"
+        "err_head": "\u003cfile\u003e:10:30: error: Value specified for template argument 'B::op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e: C::op"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:10:30: error: Value specified for template argument 'B:op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e\nmulticlass C\u003cbits\u003c4\u003e op\u003e : B\u003cop\u003e;\n                             ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/subreg-index-overflow-allowed.td",
@@ -11021,14 +11015,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "40e5ca80c7531bebe19af286f17981253db6a2a9f80a328b00033b93c541c2b5",
+        "err_sha256": "58912e0f45b7abc24862ab48787dd8a3006d15232fd085629c36dfc7e4bec158",
         "Msgs": [
-          "error: expected ',' after case value in !switch operator"
+          "error: expected ',' after case value in !switch operator",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:116:36: error: expected ',' after case value in !switch operator"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:116:36: error: expected ',' after case value in !switch operator\n  int bad = !switch(1, 1: 10, 2: 20);\n                                   ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/switch.td",
@@ -11340,14 +11334,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "2df2b24031973b14ca69bd42dd64baa7b193b30111ff2870fd0725ced5e898fe",
+        "err_sha256": "a5d7f9dbee8a0c13b23fd4cfb264afc22f0a577127d07a32b3ab35f0a85b99b5",
         "Msgs": [
-          "error: Value specified for template argument 'Class1:nm' is of type int; expected type string"
+          "error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42"
         ],
-        "err_head": "\u003cfile\u003e:34:19: error: Value specified for template argument 'Class1:nm' is of type int; expected type string"
+        "err_head": "\u003cfile\u003e:34:19: error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:34:19: error: Value specified for template argument 'Class1:nm' is of type int; expected type string\ndef Rec2 : Class1\u003c42\u003e {\n                  ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11368,14 +11361,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "94bf57e1261507c7d8c8a9ce4120289b3a2e9c5750e73e91a59b5d0f83784d76",
+        "err_sha256": "b6fea7eee25c549002a8504b3c0d537ef3b5f58788ef6ece90c9cf2d2953deb0",
         "Msgs": [
-          "error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e"
+          "error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"oops\""
         ],
-        "err_head": "\u003cfile\u003e:61:19: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e"
+        "err_head": "\u003cfile\u003e:61:19: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"oops\""
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:61:19: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e\ndef Rec5 : Class2\u003c\"oops\"\u003e {\n                  ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11397,14 +11389,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "0d83779ff2a3611fc9423ad95e2fc255de776581657f715b76726d5ed81667f5",
+        "err_sha256": "91f4fa537101c7df17dee38a07dd65d17a8f7e7a70ff1ec3be860f942038e030",
         "Msgs": [
-          "error: Value specified for template argument 'Class1:nm' is of type int; expected type string"
+          "error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42"
         ],
-        "err_head": "\u003cfile\u003e:79:24: error: Value specified for template argument 'Class1:nm' is of type int; expected type string"
+        "err_head": "\u003cfile\u003e:79:24: error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:79:24: error: Value specified for template argument 'Class1:nm' is of type int; expected type string\n  string Name = Class1\u003c42\u003e.Name;\n                       ^"
+      "err_text": "\u003cfile\u003e:79:24: error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42\n  string Name = Class1\u003c42\u003e.Name;\n                       ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11426,14 +11418,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9364b3d7cee230379e70fbf040ec5a49a96e2236097388b481a0c9ae264a0b06",
+        "err_sha256": "b7c06f252f5b1d1b9eddca0fd3fd7b4bd98f81b879cc0307141c8e2455aa74aa",
         "Msgs": [
-          "error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e"
+          "error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"huh?\""
         ],
-        "err_head": "\u003cfile\u003e:94:32: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e"
+        "err_head": "\u003cfile\u003e:94:32: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"huh?\""
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:94:32: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e\n  list\u003cint\u003e CodeList = [Class2\u003c\"huh?\"\u003e.Code];\n                               ^"
+      "err_text": "\u003cfile\u003e:94:32: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"huh?\"\n  list\u003cint\u003e CodeList = [Class2\u003c\"huh?\"\u003e.Code];\n                               ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11454,14 +11446,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a2b6911cb5f5199d47297ca73f452ee2f6180aca82d181230fb61f0c11ad9f04",
+        "err_sha256": "9a31367cf07c35489d970d9961cb670dc289c7fb70e10aacdb432dcd79b12969",
         "Msgs": [
-          "error: Value specified for template argument 'MC1:nm' is of type int; expected type string"
+          "error: Value specified for template argument 'MC1::nm' is of type int; expected type string: 42"
         ],
-        "err_head": "\u003cfile\u003e:119:19: error: Value specified for template argument 'MC1:nm' is of type int; expected type string"
+        "err_head": "\u003cfile\u003e:119:19: error: Value specified for template argument 'MC1::nm' is of type int; expected type string: 42"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:119:19: error: Value specified for template argument 'MC1:nm' is of type int; expected type string\ndefm RecMC2 : MC1\u003c42\u003e;\n                  ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11482,14 +11473,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "635be9b730a004f52b31ccd8b672947ce8633a8684fb3d63f40c1765bc5b1764",
+        "err_sha256": "e682e434cb9b69823ea6aac524236f4e10c6c2efefe63b911bd6858367be2e9c",
         "Msgs": [
-          "error: Value specified for template argument 'MC2:cd' is of type string; expected type bits\u003c8\u003e"
+          "error: Value specified for template argument 'MC2::cd' is of type string; expected type bits\u003c8\u003e: \"Bob\""
         ],
-        "err_head": "\u003cfile\u003e:146:19: error: Value specified for template argument 'MC2:cd' is of type string; expected type bits\u003c8\u003e"
+        "err_head": "\u003cfile\u003e:146:19: error: Value specified for template argument 'MC2::cd' is of type string; expected type bits\u003c8\u003e: \"Bob\""
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:146:19: error: Value specified for template argument 'MC2:cd' is of type string; expected type bits\u003c8\u003e\ndefm RecMC4 : MC2\u003c\"Bob\"\u003e;\n                  ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11538,14 +11528,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "dfcaf7c7f52f42e78d7c098afe1ea18e59a2f4f3f7dca28764a3b38912816294",
+        "err_sha256": "e3b8e310785726bfeae867a6cc6ea6450eb5373aad0ab5d2bce88a9509331152",
         "Msgs": [
-          "error: value not specified for template argument 'nm'"
+          "error: value not specified for template argument 'Class1:nm'"
         ],
-        "err_head": "\u003cfile\u003e:160:13: error: value not specified for template argument 'nm'"
+        "err_head": "\u003cfile\u003e:160:13: error: value not specified for template argument 'Class1:nm'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:160:13: error: value not specified for template argument 'nm'\ndef error8: Class1;\n            ^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:160:13: error: value not specified for template argument 'Class1:nm'\ndef error8: Class1;\n            ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11566,14 +11556,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "e6683ce4a44188dc7f9c1ee64bc845e3528f1643fd8c9df64265e47eaeee968b",
+        "err_sha256": "888a37b3ca9ff566d2e392c41dcb9c3ee222ee4b72027e15367401096e5fab8d",
         "Msgs": [
-          "error: value not specified for template argument 'nm'"
+          "error: value not specified for template argument 'MC1::nm'"
         ],
-        "err_head": "\u003cfile\u003e:166:14: error: value not specified for template argument 'nm'"
+        "err_head": "\u003cfile\u003e:166:14: error: value not specified for template argument 'MC1::nm'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:166:14: error: value not specified for template argument 'nm'\ndefm error9: MC1;\n             ^"
+      "status": "err-wording",
+      "err_text": "\u003cfile\u003e:166:14: error: value not specified for template argument 'MC1::nm'\ndefm error9: MC1;\n             ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11595,14 +11585,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "df6f02c106e1abe7ccd159c4e432a6d70c688c66e49d4fe61292b69ac26b576f",
+        "err_sha256": "63ca62e195770e8bc77acb728e02fcdb2f823afe2d334a5c26df8f9acec92f1c",
         "Msgs": [
-          "error: value not specified for template argument 'cd'"
+          "error: value not specified for template argument 'Class2:cd'"
         ],
-        "err_head": "\u003cfile\u003e:173:15: error: value not specified for template argument 'cd'"
+        "err_head": "\u003cfile\u003e:173:15: error: value not specified for template argument 'Class2:cd'"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:173:15: error: value not specified for template argument 'cd'\n  int value = Class2\u003c\u003e.Code;\n              ^"
+      "err_text": "\u003cfile\u003e:173:15: error: value not specified for template argument 'Class2:cd'\n  int value = Class2\u003c\u003e.Code;\n              ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11626,17 +11616,16 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "d746089570fcc65f230ea6594dc1540c3255296325f01650912c306fe1221ee2",
+        "err_sha256": "71c7b8e90be076bc696272e0af1219c622ae98af766ff221ec6edcdcc5e7c967",
         "Msgs": [
           "warning: unused template argument: Foo:i",
           "warning: unused template argument: Foo:j",
-          "error: Value specified for template argument 'Foo:i' is of type string; expected type int",
-          "error: Value specified for template argument 'Foo:j' is of type string; expected type int"
+          "error: Value specified for template argument 'Foo:i' is of type string; expected type int: \"\"",
+          "error: Value specified for template argument 'Foo:j' is of type string; expected type int: \"\""
         ],
         "err_head": "\u003cfile\u003e:181:15: warning: unused template argument: Foo:i"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:181:15: warning: unused template argument: Foo:i\nclass Foo\u003cint i, int j\u003e;\n              ^\n\u003cfile\u003e:181:22: warning: unused template argument: Foo:j\nclass Foo\u003cint i, int j\u003e;\n                     ^\n\u003cfile\u003e:183:19: error: Value specified for template argument 'Foo:i' is of type string; expected type int\ndef error11 : Foo\u003c\"\", \"\"\u003e;\n                  ^\n\u003cfile\u003e:183:23: error: Value specified for template argument 'Foo:j' is of type string; expected type int\ndef error11 : Foo\u003c\"\", \"\"\u003e;\n                      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/true-false.td",
@@ -11679,14 +11668,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "48f6a3da1d34ad6cec786df3b32dbc14008b10751bc651d60d2a9abb2d14f52a",
+        "err_sha256": "c7cce8d6eb932e9fd7cbb3f52281b57ef74213debe0f4c50c8b0b43a47284bfd",
         "Msgs": [
-          "error: record name must resolve to a string"
+          "error: Record name '1' is not a string!"
         ],
-        "err_head": "\u003cfile\u003e:101:5: error: record name must resolve to a string"
+        "err_head": "\u003cfile\u003e:101:1: error: Record name '1' is not a string!"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:101:5: error: record name must resolve to a string\ndef true {}\n    ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unsetop.td",
