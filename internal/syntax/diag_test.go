@@ -33,6 +33,38 @@ multiclass M<int used> {
 	}
 }
 
+// A field shadows a template argument with the same name: TGParser keeps
+// template arguments in Record::TemplateArgs and looks a bare name up with
+// Record::getValue first (TGParser.cpp:173-183), so the argument becomes
+// unreachable and is reported unused. ARMInstrMVE.td:2965 writes
+// `let Inst{20-16} = imm{4-0}` in exactly this shape.
+func TestFieldShadowsTemplateArg(t *testing.T) {
+	f, diags := Parse("t.td", `
+class Operand;
+class A<Operand imm> {
+  bits<5> imm;
+  bits<5> inst;
+  let inst{4-0} = imm{4-0};
+}
+def O : Operand;
+def X : A<O>;
+`, nil, nil)
+	got := msgs(diags)
+	want := []string{"warning: unused template argument: A:imm"}
+	if len(got) != len(want) || got[0] != want[0] {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	class := f.Objects[1].(*ClassStmt)
+	let := class.Body[2].(*LetItem)
+	v := let.Bind.Value.(*BitRangeValue).Base.(*VarValue)
+	if v.ArgRef || v.ArgQual != "" {
+		t.Fatalf("imm is still the template argument: %+v", v)
+	}
+	if v.Ty.Kind != BitsType || v.Ty.Bits != 5 {
+		t.Fatalf("imm has type %+v, want bits<5>", v.Ty)
+	}
+}
+
 func TestNoWarnUnusedTemplateArgs(t *testing.T) {
 	_, diags := ParseWith("t.td", `class A<int dummy> {}`, nil, nil, nil,
 		Options{NoWarnUnusedTArgs: true})

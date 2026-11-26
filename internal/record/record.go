@@ -327,7 +327,13 @@ type Record struct {
 	Name        string
 	IsClass     bool
 	IsAnonymous bool
-	Locs        []diag.Pos
+	// VarDefInit marks the anonymous record a class application such as
+	// `C<...>` creates when its value is needed (VarDefInit::instantiate).
+	// Unlike `def : C` it is not an object of the block it appears in, so a
+	// defset must not collect it (TGParser.cpp:4005-4030 adds only the defs
+	// ParseObjectList created).
+	VarDefInit bool
+	Locs       []diag.Pos
 
 	TArgs []*RecordVal
 	Vals  []*RecordVal
@@ -697,6 +703,10 @@ type Keeper struct {
 	// foreach, keyed by syntax.ForeachStmt.Seq. The parser uses them to make
 	// dynamically named records visible to later statements.
 	loopDefs map[int][]LoopDef
+	// defmDefs does the same for a statement-level defm, keyed by
+	// syntax.DefmStmt.Seq: a multiclass body can name its records from a
+	// resolved argument (`def Ext.Suffix`), which the parser cannot know.
+	defmDefs map[int][]LoopDef
 
 	// shapeLoc maps a class application's parsed shape to the location of its
 	// first parse; resolvedSite maps a resolved argument fingerprint to the
@@ -727,6 +737,7 @@ func NewKeeper(file string, diags *diag.Collector) *Keeper {
 		globals:   map[string]*Global{},
 		anonCache: map[string]*Record{},
 		loopDefs:  map[int][]LoopDef{},
+		defmDefs:  map[int][]LoopDef{},
 		diags:     diags,
 		file:      file,
 	}
@@ -737,6 +748,9 @@ func (k *Keeper) Def(name string) *Record   { return k.defs[name] }
 
 // LoopDefs returns the defs each statement-level foreach created, by Seq.
 func (k *Keeper) LoopDefs() map[int][]LoopDef { return k.loopDefs }
+
+// DefmDefs returns the defs each statement-level defm created, by Seq.
+func (k *Keeper) DefmDefs() map[int][]LoopDef { return k.defmDefs }
 
 func (k *Keeper) Classes() []*Record { return sortedRecords(k.classes) }
 func (k *Keeper) Defs() []*Record    { return sortedRecords(k.defs) }

@@ -66,6 +66,28 @@ defm T : Outer, Base;
 	}
 }
 
+// A field in a class body shadows a template argument of the same name.
+// TGVarScope::getVar looks the name up in the record's fields (Record::getValue)
+// before its template arguments (TGParser.cpp:173-183), so `imm{4-0}` is the
+// bits field, not the Operand argument, and the argument is reported unused.
+// ARMInstrMVE.td:2965 (`let Inst{20-16} = imm{4-0}`) is this shape; without
+// the shadow it fails with "Value is not a bits type".
+func TestFieldShadowsTemplateArgument(t *testing.T) {
+	src := `class Operand;
+class A<Operand imm> {
+  bits<5> imm;
+  bits<5> inst;
+  let inst{4-0} = imm{4-0};
+}
+def O : Operand;
+def X : A<O>;
+`
+	want := `{"!instanceof":{"A":["X"],"Operand":["O"]},"!tablegen_json_version":1,"O":{"!anonymous":false,"!fields":[],"!locs":["t.td:7"],"!name":"O","!superclasses":["Operand"]},"X":{"!anonymous":false,"!fields":[],"!locs":["t.td:8"],"!name":"X","!superclasses":["A"],"imm":[null,null,null,null,null],"inst":[{"index":0,"kind":"varbit","printable":"imm{0}","var":"imm"},{"index":1,"kind":"varbit","printable":"imm{1}","var":"imm"},{"index":2,"kind":"varbit","printable":"imm{2}","var":"imm"},{"index":3,"kind":"varbit","printable":"imm{3}","var":"imm"},{"index":4,"kind":"varbit","printable":"imm{4}","var":"imm"}]}}`
+	if got := lowerJSON(t, src); got != want {
+		t.Errorf("dump-json mismatch\n got: %s\nwant: %s", got, want)
+	}
+}
+
 func TestParseTimeAnonymousNames(t *testing.T) {
 	cases := []struct {
 		name string

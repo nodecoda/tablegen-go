@@ -79,6 +79,14 @@ def anonymous_0 {	// App
 def op {
 }
 `
+	if got := printRecords(t, src); got != want {
+		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// printRecords parses and lowers src and renders --print-records.
+func printRecords(t *testing.T, src string) string {
+	t.Helper()
 	file, pdiags := syntax.Parse("t.td", src, nil, nil)
 	for _, d := range pdiags {
 		if d.Severity == diag.Error {
@@ -95,7 +103,66 @@ def op {
 	if err != nil {
 		t.Fatalf("print-records: %v", err)
 	}
-	if string(out) != want {
-		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", out, want)
+	return string(out)
+}
+
+// A class inherits a parent with concrete arguments, and TGParser resolves the
+// copied fields right there (AddParentClass -> Record::resolveReferences,
+// TGParser.cpp:346-374): a bit-select on an int argument folds to the bit
+// (VarBitInit::resolveReferences, Record.cpp:2321-2327), !cast<string> and
+// !eq fold (UnOpInit::Fold Record.cpp:803-813), and a !strconcat of two
+// StringInits collapses (BinOpInit::Fold Record.cpp:1373-1378). The expected
+// text is llvm-tblgen 24.0.0git's.
+func TestPrintRecordsResolvedClassFields(t *testing.T) {
+	src := `class I<bits<8> o> {
+  bits<8> Op = o;
+}
+class ITy<bits<8> o, bit t> : I<{o{7}, o{6}, o{5}, o{4}, o{3}, o{2}, o{1}, !if(t, 0, o{0})}>;
+class M<bit t> : ITy<211, t>;
+class Ops { string c = ",x"; }
+def R : Ops { let c = ",y"; }
+class N<string s, Ops v> { string C = !strconcat(s, v.c); }
+class P : N<"", R>;
+class Q<string n, bit even> { bits<2> K = { even, !if(even, 0, 1) }; }
+class S<bit s> {
+  bits<4> Inst = { 0, s, 0, 0 };
+}
+class T<bits<2> size> : S<size{0}>;
+`
+	want := `------------- Classes -----------------
+class I<bits<8> I:o = { ?, ?, ?, ?, ?, ?, ?, ? }> {
+  bits<8> Op = { I:o{7}, I:o{6}, I:o{5}, I:o{4}, I:o{3}, I:o{2}, I:o{1}, I:o{0} };
+}
+class ITy<bits<8> ITy:o = { ?, ?, ?, ?, ?, ?, ?, ? }, bit ITy:t = ?> {	// I
+  bits<8> Op = { ITy:o{7}, ITy:o{6}, ITy:o{5}, ITy:o{4}, ITy:o{3}, ITy:o{2}, ITy:o{1}, !cast<bit>(!if(ITy:t, 0, { ITy:o{0} })) };
+}
+class M<bit M:t = ?> {	// I ITy
+  bits<8> Op = { 1, 1, 0, 1, 0, 0, 1, !cast<bit>(!if(M:t, 0, { 1 })) };
+}
+class N<string N:s = ?, Ops N:v = ?> {
+  string C = !strconcat(N:s, N:v.c);
+}
+class Ops {
+  string c = ",x";
+}
+class P {	// N
+  string C = ",y";
+}
+class Q<string Q:n = ?, bit Q:even = ?> {
+  bits<2> K = { Q:even, !cast<bit>(!if(Q:even, 0, 1)) };
+}
+class S<bit S:s = ?> {
+  bits<4> Inst = { 0, S:s, 0, 0 };
+}
+class T<bits<2> T:size = { ?, ? }> {	// S
+  bits<4> Inst = { 0, T:size{0}, 0, 0 };
+}
+------------- Defs -----------------
+def R {	// Ops
+  string c = ",y";
+}
+`
+	if got := printRecords(t, src); got != want {
+		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
 }

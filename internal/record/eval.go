@@ -272,14 +272,16 @@ func (k *Keeper) evalVar(t *syntax.VarValue, env *Env, rec *Record) (Value, erro
 			return &DefVal{Rec: d}, nil
 		}
 	}
-	if !t.Lexical {
+	if !t.Lexical && (t.ArgRef || t.ArgQual != "") {
 		// A class or multiclass template argument was qualified by the parser
 		// at its parse site (TGParser::QualifyName stores the owning record in
 		// the VarInit). Use that key rather than qualifying again against the
 		// current record: an instance inheriting a field must not resolve the
 		// argument to a same-named field of the instance (SubtargetFeature's
 		// `!sort(f, i, f.Name)` has a loop variable and a template argument
-		// named f).
+		// named f). An unqualified name is a record field, which
+		// TGVarScope::getVar resolves through Record::getValue before it ever
+		// considers the template arguments (TGParser.cpp:173-183).
 		q := t.ArgQual
 		if q == "" {
 			q, _ = env.Qualify(t.Name)
@@ -820,6 +822,7 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		return nil, &EvalError{Msg: "class application is not instantiated yet", Span: ca.Span()}
 	}
 	rec := k.newAnonymous(k.siteFor(ca, env, key))
+	rec.VarDefInit = true
 	k.anonCache[key] = rec
 	rec.Super = append(rec.Super, class)
 	defaults := classDefaultBindings(class, provided)
@@ -1091,11 +1094,21 @@ func castTemplateArg(v syntax.Value, want *Ty) syntax.Value {
 	if !numeric(got) || !numeric(w) {
 		return v
 	}
-	switch v.(type) {
+	switch b := v.(type) {
 	case *syntax.IntValue, *syntax.BitsValue, *syntax.StringValue:
 		// Init::getCastTo returns the folded literal for a concrete operand
 		// (Record.cpp:571-600), so no cast node survives in the Init tree.
 		return v
+	case *syntax.BitRangeValue:
+		// A one-bit range is a BitsInit of one VarBitInit; converting it to
+		// bit yields that bit, not a !cast node
+		// (BitsInit::convertInitializerTo, Record.cpp:447-451).
+		if w.Kind == syntax.BitType && got.Kind == syntax.BitsType &&
+			got.Bits == 1 && len(b.Bits) == 1 {
+			nb := *b
+			nb.Ty = syntax.BitTy
+			return &nb
+		}
 	}
 	if got.Kind == w.Kind && (got.Kind != syntax.BitsType || got.Bits == w.Bits) {
 		return v

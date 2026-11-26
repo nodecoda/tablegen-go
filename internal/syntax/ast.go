@@ -186,16 +186,30 @@ type File struct {
 	// DynLoopNames reports that some statement-level foreach creates record
 	// names the parser could not materialize (they depend on a bang
 	// expression or a class field). The driver then lowers once to learn the
-	// names and parses a second time with KnownLoops filled in.
+	// names and parses a second time with Known.Loops filled in.
 	DynLoopNames bool
+	// DynDefmNames is the same signal for a top-level defm whose records get
+	// names from a resolved multiclass expression, e.g. `def Ext.Suffix` or
+	// `def ""#x#VTI.Suffix` (RISCV and ARM). The driver fills in
+	// Known.Defms from the first lowering pass.
+	DynDefmNames bool
 }
 
-// KnownDef is a record created by a statement-level foreach, fed back into a
-// later parse so that statements after the loop can refer to it with its real
+// KnownDef is a record created by a statement-level foreach or defm, fed back
+// into a later parse so that later statements can refer to it with its real
 // type.
 type KnownDef struct {
 	Name    string
 	Parents []string
+}
+
+// Known carries the names a first lowering pass learned. Loops is keyed by
+// ForeachStmt.Seq and Defms by DefmStmt.Seq; the parser installs each entry
+// when it finishes parsing that statement, which is when LLVM's parser would
+// have added the records to the keeper.
+type Known struct {
+	Loops map[int][]KnownDef
+	Defms map[int][]KnownDef
 }
 
 // Object is any top-level (or loop/block) statement.
@@ -240,6 +254,11 @@ type DefmStmt struct {
 	// ClassStart is the index of the first non-multiclass parent. A defm may
 	// end its list with ordinary classes; everything before is a multiclass.
 	ClassStart int
+	// Seq numbers statement-level defms (nested ones are -1). A record name
+	// built from a resolved multiclass expression is unknown while parsing;
+	// Seq is the key the driver uses to feed those names back for a second
+	// parse. See File.DynDefmNames.
+	Seq int
 }
 
 // MultiClassStmt ::= MULTICLASS ID TemplateArgList? (':' MultiClassList)? '{' MultiClassObject+ '}'

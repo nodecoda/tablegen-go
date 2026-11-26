@@ -101,17 +101,21 @@ per-file.
 
 Measured with the oracle above; `make score` reproduces the corpus numbers.
 
-1. **Real targets outside the corpus.** AArch64 is byte-identical in both
-   backends (`--print-records` and `--dump-json`, 106 MB / 88073 records).
-   Two shapes are not covered yet:
-   * RISCV / ARM: a record whose name comes from a resolved multiclass
-     expression (`def Ext.Suffix : ...` under `let ... in { defm ... }`, or
-     `MVE_VMLADAVu32`) is not in the parser's name table when a *later*
-     statement references it, so these targets stop with
-     `Variable not defined`; llvm-tblgen accepts them.
-   * X86 parses fully, but 135 of 88538 records carry a different inherited
-     `ExeDomain` (and the `TSFlags` bits derived from it).
-   The 385-case test corpus does not exercise either shape.
+1. **Real targets.** AArch64 is byte-identical in both backends (sha256
+   `d973796c…` / `6b71e881…`, 106 MB / 88073 records). ARM (`52a31c5c…`) and
+   X86 (`2d66a922…`, 88538 records) are byte-identical in `--dump-json`; X86
+   `--print-records` is byte-identical (`19343d7d…`) too. Two deviations remain:
+   * RISCV parses and dumps successfully (exit 0, 266845 records vs 266770)
+     with every one of the 45906 named records present, but 1302 names differ
+     only in their `anonymous_N` suffix, 13452 records differ only in `!locs`,
+     and 172 more reference the renumbered instances. No field value, type or
+     superclass differs. SiFive7's `foreach model = [...] in defm model.Name`
+     + SchedVariant instantiation order is where the numbering starts to
+     drift; we create 75 extra anonymous instances.
+   * ARM `--print-records` differs in exactly one line: `MVE_VLDRSTR_rq_b`'s
+     `InOperandList` shows `mve_addr_rq_shift<0: 0>` where llvm-tblgen already
+     instantiated `anonymous_19464` while resolving the inherited field.
+     Display only; the JSON dump is byte-identical.
 2. **One diagnostic rendering.** `preprocess-include.td` has the same message
    and the same exit class but a different caret line; every other diagnostic
    in the corpus is byte-identical (61/62 full, 62/62 message).

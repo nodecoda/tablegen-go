@@ -35,6 +35,7 @@ func lowerWith(file *syntax.File, filename string, namesOnly bool) (*Keeper, []d
 		anonName:     map[*syntax.DefStmt]string{},
 		anonDefmName: map[*syntax.DefmStmt]string{},
 		loopSeq:      -1,
+		defmSeq:      -1,
 		namesOnly:    namesOnly,
 	}
 	l.objects(file.Objects, nil, nil)
@@ -57,6 +58,10 @@ type Lowerer struct {
 	anonName     map[*syntax.DefStmt]string
 	anonDefmName map[*syntax.DefmStmt]string
 	loopSeq      int // Seq of the statement-level loop being expanded, or -1
+	// defmSeq is the Seq of the statement-level defm whose expansion is in
+	// progress, or -1. Every record finished under it is published so the
+	// driver can re-parse with those names installed.
+	defmSeq int
 	// namesOnly skips the parts of addDefOne that only matter for the record
 	// graph (field resolution, concreteness, assertions); see LowerNames.
 	namesOnly bool
@@ -233,7 +238,7 @@ func (l *Lowerer) defset(st *syntax.DefsetStmt, env *Env, lets []*syntax.LetBind
 	}
 	out := &List{Elem: elem}
 	for _, d := range l.k.defOrder[before:] {
-		if d.IsAnonymous {
+		if d.VarDefInit {
 			// VarDefInit records (anonymous Class<...> instances) are not
 			// defs and are never members of a defset.
 			continue
@@ -733,12 +738,22 @@ func withDefmLocs(rec *Record, err error) error {
 // recordLoopDef publishes a def created by a statement-level loop so the
 // driver can re-parse with its name known.
 func (l *Lowerer) recordLoopDef(rec *Record) error {
-	if l.loopSeq >= 0 {
+	seqs := []struct {
+		seq   int
+		table map[int][]LoopDef
+	}{
+		{l.loopSeq, l.k.loopDefs},
+		{l.defmSeq, l.k.defmDefs},
+	}
+	for _, s := range seqs {
+		if s.seq < 0 {
+			continue
+		}
 		kd := LoopDef{Name: rec.Name}
 		for _, sc := range rec.Super {
 			kd.Parents = append(kd.Parents, sc.Name)
 		}
-		l.k.loopDefs[l.loopSeq] = append(l.k.loopDefs[l.loopSeq], kd)
+		s.table[s.seq] = append(s.table[s.seq], kd)
 	}
 	return nil
 }
@@ -1162,7 +1177,13 @@ func (l *Lowerer) defm(st *syntax.DefmStmt, env *Env, lets []*syntax.LetBind) er
 		}
 		defmName = n
 	}
-	return l.expandDefm(st, defmName, env, scopedLets(lets, env), nil, nil, nil)
+	prevSeq := l.defmSeq
+	if st.Seq >= 0 {
+		l.defmSeq = st.Seq
+	}
+	err := l.expandDefm(st, defmName, env, scopedLets(lets, env), nil, nil, nil)
+	l.defmSeq = prevSeq
+	return err
 }
 
 // expandDefm expands every multiclass in st's parent list. defmName is the

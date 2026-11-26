@@ -264,6 +264,11 @@ func (p *Parser) parseIdentValue(rec *recordInfo, mode idMode, start int) Value 
 		}
 	}
 	p.errAt(nt.Span, "E_PARSE_VAR_UNDEFINED", "Variable not defined: '"+nt.Text+"'")
+	if p.opts.LenientUndefinedNames {
+		// Keep the statement so the driver's lowering pass still sees the
+		// loop/defm that will create this name; see Options.
+		return &UnsetValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: Type{Kind: UnsetType}}}
+	}
 	return nil
 }
 
@@ -385,20 +390,46 @@ func (p *Parser) parseListLiteral(rec *recordInfo, item *Type, start int) Value 
 	return &ListValue{ValueBase: ValueBase{Base: Base{At: p.span(start)}, Ty: listOf(elemTy)}, Elems: elems, ElemType: explicit}
 }
 
-// unifyRecordTypes returns a type both record types can convert to: their
-// common superclass if there is exactly one, otherwise "any record". It is
-// deliberately permissive; the record phase does the real type checking.
+// unifyRecordTypes is RecordRecTy::resolveRecordTypes (Record.cpp:300-325):
+// walk a's ancestors and keep every class that b is a subclass of. Keeping the
+// whole set matters for heterogeneous lists: [LB, SB] must stay a
+// list<Instruction>, not collapse to the one immediate superclass both share
+// (`Sched`), which is not itself an Instruction.
 func (p *Parser) unifyRecordTypes(a, b Type) (Type, bool) {
 	if a.Kind != RecordType || b.Kind != RecordType {
 		return InvalidTy, false
 	}
-	as := p.ancestors(a)
-	for _, n := range p.ancestorsOrdered(b) {
-		if as[n] {
-			return recordType(n), true
+	var common []string
+	seen := map[string]bool{}
+	stack := append([]string(nil), a.Recs...)
+	for len(stack) > 0 {
+		r := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if seen[r] {
+			continue
+		}
+		seen[r] = true
+		// RecordRecTy::isSubClassOf: any of b's classes is r or derives from it.
+		match := false
+		for _, mine := range b.Recs {
+			if p.nameIsSubclass(mine, r) {
+				match = true
+				break
+			}
+		}
+		if match {
+			common = append(common, r)
+			continue
+		}
+		if ri := p.recordInfoFor(r); ri != nil {
+			stack = append(stack, ri.parents...)
 		}
 	}
-	return Type{Kind: RecordType}, true
+	if len(common) == 0 {
+		// RecordRecTy with no classes: the "any record" type.
+		return Type{Kind: RecordType}, true
+	}
+	return recordTypeSet(common), true
 }
 
 func (p *Parser) ancestors(t Type) map[string]bool {
@@ -976,6 +1007,14 @@ func (p *Parser) finishUnary(v *BangValue, rec *recordInfo) Value {
 // that bit. Values that do not convert are left as a cast node.
 func foldCastLiteral(arg Value, to Type) Value {
 	if to.Kind == BitType {
+		// A bit range is a BitsInit of VarBitInits; a one-bit range converts
+		// to that bit (BitsInit::convertInitializerTo(BitRecTy) returns
+		// getBit(0), Record.cpp:447-451).
+		if b, ok := arg.(*BitRangeValue); ok && len(b.Bits) == 1 && b.Ty.Kind == BitsType && b.Ty.Bits == 1 {
+			nb := *b
+			nb.Ty = BitTy
+			return &nb
+		}
 		if b, ok := arg.(*BitsValue); ok && b.Ty.Kind == BitsType && b.Ty.Bits == 1 && len(b.Elems) == 1 {
 			// BitsInit::convertInitializerTo(BitRecTy) returns getBit(0)
 			// (Record.cpp:447-451): the bit itself, which keeps a reference

@@ -137,22 +137,56 @@ func main() {
 	// tokens are read-only, so lex once and parse twice.
 	tokens := syntax.TokenizeFile(inputName, string(src), macros, includes)
 	file, diags := tokens.Parse(inputName, string(src), includes, nil, popts)
-	// A statement-level foreach whose record names are built by bang
-	// expressions is opaque to the parser. LLVM's parser resolves the loop
-	// immediately, so later statements see those records; ours can only learn
-	// them by lowering once, then parsing again with the names installed at
-	// the end of the same loop.
-	if file.DynLoopNames && hasUndefinedName(diags) {
-		k, _ := record.LowerNames(file, files[0])
-		if len(k.LoopDefs()) > 0 {
-			known := map[int][]syntax.KnownDef{}
-			for seq, defs := range k.LoopDefs() {
-				for _, d := range defs {
-					known[seq] = append(known[seq], syntax.KnownDef{Name: d.Name, Parents: d.Parents})
-				}
+	// A statement-level foreach or defm whose record names are built from
+	// bang expressions or resolved multiclass fields is opaque to the parser
+	// (`def "P"#Idx`, `def Ext.Suffix`). LLVM's parser resolves the statement
+	// immediately, so later statements see those records; ours lowers once to
+	// learn them and parses again with the names installed at the end of the
+	// same statement.
+	//
+	// One round is not always enough: the first AST can stop at a dynamic
+	// multiclass parent (TGParser aborts there), hiding everything after it.
+	// Each round installs the names learned so far, which moves that point
+	// later, so repeat while the undefined-name count falls.
+	if file.DynLoopNames || file.DynDefmNames {
+		strictFile, strictDiags := file, diags
+		// Re-parse with undefined names kept in place. A dynamic name used
+		// inside the very loop or let block that creates it (the SiFive and
+		// Spacemit scheduling models do this) would otherwise drop that
+		// block, hiding the loop from the lowering pass that learns the name.
+		lenient := popts
+		lenient.LenientUndefinedNames = true
+		file, diags = tokens.Parse(inputName, string(src), includes, nil, lenient)
+		loops, defms := map[int]map[string]syntax.KnownDef{}, map[int]map[string]syntax.KnownDef{}
+		var known *syntax.Known
+		for round := 0; round < 16 && hasUndefinedName(diags); round++ {
+			if !file.DynLoopNames && !file.DynDefmNames {
+				break
 			}
-			if f2, d2 := tokens.Parse(inputName, string(src), includes, known, popts); countUndefined(d2) < countUndefined(diags) {
-				file, diags = f2, d2
+			k, _ := record.Lower(file, inputName)
+			// Merge both tables before deciding: `&&` would short-circuit and
+			// leave the defm names unlearned whenever a loop also grew.
+			grewLoops := mergeKnown(loops, k.LoopDefs())
+			grewDefms := mergeKnown(defms, k.DefmDefs())
+			if !grewLoops && !grewDefms {
+				break
+			}
+			known = &syntax.Known{Loops: flattenKnown(loops), Defms: flattenKnown(defms)}
+			f2, d2 := tokens.Parse(inputName, string(src), includes, known, lenient)
+			if countUndefined(d2) >= countUndefined(diags) {
+				break
+			}
+			file, diags = f2, d2
+		}
+		// The lenient parse exists only to feed the lowering pass. Report from
+		// a strict parse with the names learned, so the diagnostics match the
+		// normal path when something is still unresolved.
+		if known == nil {
+			file, diags = strictFile, strictDiags
+		} else {
+			f3, d3 := tokens.Parse(inputName, string(src), includes, known, popts)
+			if countUndefined(d3) <= countUndefined(diags) {
+				file, diags = f3, d3
 			}
 		}
 	}
@@ -352,6 +386,42 @@ func hasUndefinedName(diags []diag.Diagnostic) bool {
 		}
 	}
 	return false
+}
+
+// mergeKnown adds one lowering pass's learned names to the per-statement
+// tables, keeping the first occurrence of a name. It reports whether anything
+// new was added: without growth another parse cannot learn more.
+func mergeKnown(dst map[int]map[string]syntax.KnownDef, src map[int][]record.LoopDef) bool {
+	grew := false
+	for seq, defs := range src {
+		bucket := dst[seq]
+		if bucket == nil {
+			bucket = map[string]syntax.KnownDef{}
+			dst[seq] = bucket
+		}
+		for _, d := range defs {
+			if _, ok := bucket[d.Name]; ok {
+				continue
+			}
+			bucket[d.Name] = syntax.KnownDef{Name: d.Name, Parents: d.Parents}
+			grew = true
+		}
+	}
+	return grew
+}
+
+// flattenKnown turns the accumulation tables into the parser's feedback map.
+func flattenKnown(src map[int]map[string]syntax.KnownDef) map[int][]syntax.KnownDef {
+	if len(src) == 0 {
+		return nil
+	}
+	out := make(map[int][]syntax.KnownDef, len(src))
+	for seq, bucket := range src {
+		for _, d := range bucket {
+			out[seq] = append(out[seq], d)
+		}
+	}
+	return out
 }
 
 func countUndefined(diags []diag.Diagnostic) int {

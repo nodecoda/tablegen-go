@@ -46,22 +46,29 @@ Real-target evidence, beyond the corpus:
 
 | input | `--print-records` | `--dump-json` |
 |---|---|---|
-| `lib/Target/AArch64/AArch64.td` | byte-identical (`d973796c…`) | byte-identical, 106 MB / 88073 records |
+| `lib/Target/AArch64/AArch64.td` | byte-identical (`d973796c…`) | byte-identical (`6b71e881…`, 106 MB / 88073 records) |
+| `lib/Target/ARM/ARM.td` | exactly one line differs (below) | byte-identical (`52a31c5c…`, 49200 records) |
+| `lib/Target/X86/X86.td` | byte-identical (`19343d7d…`) | byte-identical (`2d66a922…`, 88538 records) |
+| `lib/Target/RISCV/RISCV.td` | same records, different anonymous numbers | exit 0, 266845 records (oracle 266770) |
 
 The JSON run exercises `dump`, deferred `foreach`/`if` inside multiclasses,
 anonymous instantiation order and the `!locs` chain; the site rules are pinned
 by `internal/record/names_test.go`.
 
-Known gaps outside the corpus (measured, not guessed):
+Known deviations (measured, not guessed):
 
-1. **RISCV / ARM**: a record name that only exists after a multiclass
-   expression is resolved (`def Ext.Suffix` inside a `let ... in { defm ... }`,
-   `MVE_VMLADAVu32`) is not known to the parser for a later reference, so those
-   targets are rejected with `Variable not defined` where llvm-tblgen accepts
-   them. The corpus does not hit this shape.
-2. **X86** parses fully but 135 of 88538 records differ in one inherited field
-   (`ExeDomain`, `TSFlags`) — an inheritance/`let` ordering bug to isolate.
-3. `preprocess-include.td` renders one diagnostic with a different caret line.
+1. **RISCV anonymous numbering / `!locs`.** All 45906 named records exist; 1302
+   names differ only in their `anonymous_N` suffix, 13452 records differ only in
+   `!locs`, and 172 more reference the renumbered instances. No field value,
+   type, or superclass differs. The offset starts in SiFive7's
+   `foreach model = [...] in defm model.Name` + SchedVariant instantiation
+   order, where we create 75 extra anonymous instances.
+2. **ARM `--print-records`, one line.** `MVE_VLDRSTR_rq_b`'s `InOperandList`
+   prints `mve_addr_rq_shift<0: 0>` where llvm-tblgen, resolving the inherited
+   field, already instantiated `anonymous_19464`. Display only; the JSON dump is
+   byte-identical.
+3. `preprocess-include.td` renders one diagnostic with a different caret line,
+   and `make matrix` reports 19 runs whose secondary note wording differs.
 
 ## Commands
 

@@ -269,6 +269,17 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		if len(x.Bits) != w {
 			return nil, false
 		}
+		// A bit-select on a concrete integer is that bit: AddParentClass
+		// substitutes the VarInit with the caller's IntInit, and
+		// VarBitInit::resolveReferences returns its element
+		// (Record.cpp:2321-2327, IntInit::getBit at Record.h:679-681).
+		if n, ok := constIntV(x.Base, env); ok {
+			out := make([]string, w)
+			for i := 0; i < w; i++ {
+				out[i] = intBitText(n, int64(x.Bits[w-1-i]))
+			}
+			return out, true
+		}
 		// A bit-select on a already-literal bits value is that bit: the
 		// VarBitInit of a BitsInit resolves to the selected element
 		// (VarBitInit::resolveReferences -> BitsInit element).
@@ -368,6 +379,12 @@ func bitListCandidates(x *syntax.BitsValue, env *Env, depth int) ([]string, bool
 	for _, e := range x.Elems {
 		switch el := e.(type) {
 		case *syntax.BitRangeValue:
+			if n, ok := constIntV(el.Base, env); ok {
+				for _, bit := range el.Bits {
+					out = append(out, intBitText(n, int64(bit)))
+				}
+				continue
+			}
 			for _, bit := range el.Bits {
 				out = append(out, rawText(el.Base, env)+"{"+strconv.FormatInt(int64(bit), 10)+"}")
 			}
@@ -390,7 +407,26 @@ func bitListCandidates(x *syntax.BitsValue, env *Env, depth int) ([]string, bool
 				}
 				continue
 			}
+			if t.Kind == syntax.BitType {
+				// A bit element that AddParentClass substituted with a bit
+				// range is that VarBitInit, not a nested `{ ... }` literal:
+				// BitsInit stores one Init per bit (TGParser.cpp:2650-2660).
+				if _, sub, subEnv := resolveVar(el, env); sub != nil {
+					if bits, ok := bitTexts(sub, subEnv, 1, depth+1); ok {
+						out = append(out, bits[0])
+						continue
+					}
+				}
+			}
 			out = append(out, rawText(e, env))
+		case *syntax.IntValue:
+			// IntInit::convertInitializerTo accepts 0 and 1 for a bit;
+			// everything else keeps the cast node (Record.cpp:577-600).
+			if n := int64(el.Num); n == 0 || n == 1 {
+				out = append(out, strconv.FormatInt(n, 10))
+			} else {
+				out = append(out, "!cast<bit>("+strconv.FormatInt(n, 10)+")")
+			}
 		case *syntax.BitsValue:
 			inner, ok := bitListCandidates(el, env, depth+1)
 			if !ok {
@@ -398,10 +434,33 @@ func bitListCandidates(x *syntax.BitsValue, env *Env, depth int) ([]string, bool
 			}
 			out = append(out, inner...)
 		default:
-			out = append(out, rawText(e, env))
+			// Every element of a `{ ... }` literal is cast to bit when the
+			// literal is built (TGParser::ParseValue passes BitRecTy to the
+			// element). An operator, field or paste of type bits<1>/int keeps
+			// the cast node TypedInit::getCastTo adds (Record.cpp:2262-2276);
+			// IntInits and bit lists convert above.
+			text := rawText(e, env)
+			if t := e.Type(); t.Kind == syntax.BitsType && t.Bits == 1 ||
+				t.Kind == syntax.IntType {
+				text = "!cast<bit>(" + text + ")"
+			}
+			out = append(out, text)
 		}
 	}
 	return out, true
+}
+
+// intBitText is IntInit::getBit (Record.h:679-681): the Init of one bit of a
+// concrete integer. A substituted bit-select on an int template argument prints
+// as this literal.
+func intBitText(n int64, bit int64) string {
+	if bit < 0 || bit > 63 {
+		return "?"
+	}
+	if (uint64(n)>>uint(bit))&1 != 0 {
+		return "1"
+	}
+	return "0"
 }
 
 func reverseBits(hi []string) []string {
@@ -1175,6 +1234,17 @@ func rawText(v syntax.Value, env *Env) string {
 	case *syntax.SliceValue:
 		return rawText(x.Base, env) + "[" + sliceText(x, env) + "]"
 	case *syntax.BitRangeValue:
+		// A bit-select on a concrete integer is that bit: AddParentClass
+		// substitutes the VarInit with the caller's IntInit and
+		// VarBitInit::resolveReferences returns its element
+		// (Record.cpp:2321-2327, IntInit::getBit at Record.h:679-681).
+		if n, ok := constIntV(x.Base, env); ok {
+			bits := make([]string, len(x.Bits))
+			for i, bit := range x.Bits {
+				bits[i] = intBitText(n, int64(bit))
+			}
+			return "{ " + strings.Join(bits, ", ") + " }"
+		}
 		bits := make([]string, len(x.Bits))
 		for i, bit := range x.Bits {
 			bits[i] = rawText(x.Base, env) + "{" + strconv.FormatInt(int64(bit), 10) + "}"
@@ -1255,6 +1325,37 @@ func rawText(v syntax.Value, env *Env) string {
 		// A cast to the operand's own type is a no-op (UnOpInit::Fold).
 		if x.Op == syntax.XCast && len(x.Args) == 1 && castIsIdentity(x.Args[0], x.TypeArg) {
 			return rawText(x.Args[0], env)
+		}
+		// AddParentClass substitutes concrete arguments and resolves the
+		// copied fields (TGParser.cpp:346-374), so `!cast<string>(def)` and a
+		// following `!eq` leave the folded IntInit in the tree
+		// (UnOpInit::Fold Record.cpp:803-813, BinOpInit::Fold EQ).
+		if x.Op == syntax.XCast && x.TypeArg.Kind == syntax.StringType && len(x.Args) == 1 {
+			if t, c, ok := constStrCode(x, env, 0); ok {
+				return stringLiteral(t, c)
+			}
+		}
+		// UnOpInit::Fold's CAST<RecordRecTy> turns a string naming an existing
+		// def into that DefInit (Record.cpp:815-856).
+		if x.Op == syntax.XCast && x.TypeArg.Kind == syntax.RecordType && len(x.Args) == 1 {
+			if s, ok := derefInit(x.Args[0]).(*syntax.StringValue); ok && !s.Code &&
+				env != nil && env.keeper != nil && env.keeper.Def(s.Text) != nil {
+				return s.Text
+			}
+		}
+		if (x.Op == syntax.XEq || x.Op == syntax.XNe) && len(x.Args) == 2 {
+			if at, _, ok := constStrCode(x.Args[0], env, 0); ok {
+				if bt, _, ok2 := constStrCode(x.Args[1], env, 0); ok2 {
+					eq := at == bt
+					if x.Op == syntax.XNe {
+						eq = !eq
+					}
+					if eq {
+						return "1"
+					}
+					return "0"
+				}
+			}
 		}
 		// TernOpInit::Fold's IF case returns the taken branch unchanged
 		// (Record.cpp:1806-1816), so any branch type folds, not just the ones
@@ -1359,7 +1460,11 @@ func strConcatChain(x *syntax.BangValue, env *Env, depth int) string {
 func concatChain(args []syntax.Value, env *Env, depth int) string {
 	last := args[len(args)-1]
 	acc, accCode, accConst := "", false, false
-	if t, code, ok := constStrCode(last, env, depth+1); ok {
+	t, code, ok := constStrCode(last, env, depth+1)
+	if !ok {
+		t, code, ok = foldCastString(last, env, depth+1)
+	}
+	if ok {
 		acc, accCode, accConst = t, code, true
 	} else {
 		// The non-constant operand keeps its operand form: a value that is
@@ -1368,6 +1473,9 @@ func concatChain(args []syntax.Value, env *Env, depth int) string {
 	}
 	for i := len(args) - 2; i >= 0; i-- {
 		t, code, ok := constStrCode(args[i], env, depth+1)
+		if !ok {
+			t, code, ok = foldCastString(args[i], env, depth+1)
+		}
 		if ok && accConst {
 			acc, accCode = t+acc, code || accCode
 			continue
@@ -1786,7 +1894,18 @@ func constStrCode(v syntax.Value, env *Env, depth int) (string, bool, bool) {
 		if _, sub, subEnv := resolveVar(x, env); sub != nil && sub != v {
 			return constStrCode(sub, subEnv, depth+1)
 		}
+	case *syntax.FieldValue:
+		// FieldInit::Fold (Record.cpp:2498) replaces a concrete field of a
+		// def with its value, so `vpred.vpred_constraint` is the literal.
+		if lit, ok := keeperFieldLit(env, x.Base, x.Field); ok {
+			return constStrCode(lit, env, depth+1)
+		}
 	case *syntax.BangValue:
+		if x.Op == syntax.XCast && x.TypeArg.Kind == syntax.StringType && len(x.Args) == 1 {
+			if t, c, ok := foldCastString(x.Args[0], env, depth+1); ok {
+				return t, c, true
+			}
+		}
 		if x.Op == syntax.XStrConcat {
 			var out string
 			code := false
@@ -1815,14 +1934,32 @@ func constStrCode(v syntax.Value, env *Env, depth int) (string, bool, bool) {
 	return "", false, false
 }
 
-// stringOperand renders a paste operand: non-string operands are cast to
-// string while parsing (`"n" # !add(i, 1)` prints the cast).
-func stringOperand(v syntax.Value, env *Env) string {
-	text := rawText(v, env)
-	if v.Type().Kind == syntax.StringType {
-		return text
+// foldCastString applies UnOpInit::Fold's CAST<string> (Record.cpp:803-813):
+// a StringInit, a DefInit's name, or an IntInit's decimal form.
+func foldCastString(v syntax.Value, env *Env, depth int) (string, bool, bool) {
+	if t, c, ok := constStrCode(v, env, depth+1); ok {
+		return t, c, true
 	}
-	return "!cast<string>(" + text + ")"
+	if name, ok := defRefName(v, env); ok {
+		return name, false, true
+	}
+	if n, ok := constIntV(v, env); ok {
+		return strconv.FormatInt(n, 10), false, true
+	}
+	return "", false, false
+}
+
+// stringOperand renders a paste operand: non-string operands are cast to
+// string while parsing (`"n" # !add(i, 1)` prints the cast), and the cast
+// itself folds when its operand is concrete (TGParser.cpp:3377-3387).
+func stringOperand(v syntax.Value, env *Env) string {
+	if v.Type().Kind == syntax.StringType || v.Type().Kind == syntax.CodeType {
+		return rawText(v, env)
+	}
+	if t, c, ok := foldCastString(v, env, 0); ok {
+		return stringLiteral(t, c)
+	}
+	return "!cast<string>(" + rawText(v, env) + ")"
 }
 
 func listText(elems []syntax.Value, env *Env) string {
