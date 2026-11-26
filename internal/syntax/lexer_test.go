@@ -171,6 +171,9 @@ func TestAllBangOperatorsLex(t *testing.T) {
 	}
 	if _, ds := lex(t, "!nope"); !hasCode(ds, "E_LEX_BANG") {
 		t.Errorf("unknown bang operator not rejected: %v", codes(ds))
+	} else if len(ds) == 1 && ds[0].Message != "unknown operator" {
+		// TGLexer.cpp:701 prints the message without the operator name.
+		t.Errorf("unknown bang operator message = %q", ds[0].Message)
 	}
 	if _, ds := lex(t, "!"); !hasCode(ds, "E_LEX_BANG") {
 		t.Errorf("bare ! not rejected: %v", codes(ds))

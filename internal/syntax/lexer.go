@@ -729,7 +729,9 @@ func (l *Lexer) lexExclaim(from diag.Pos) {
 	name := l.src[l.startOff+1 : l.i]
 	k, ok := LookupBangOp(name)
 	if !ok {
-		l.errorf("E_LEX_BANG", "unknown operator !"+name, from)
+		// TGLexer.cpp:701 reports the operator name nowhere: the message is
+		// exactly "unknown operator".
+		l.errorf("E_LEX_BANG", "unknown operator", from)
 		return
 	}
 	l.emit(k, name, from, 0)
