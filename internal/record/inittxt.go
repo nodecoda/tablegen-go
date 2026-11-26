@@ -255,6 +255,14 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
 			return bitTexts(x.Lit, env, w, depth+1)
 		}
+		// FieldInit::Fold returns the field's concrete Init (Record.cpp:
+		// 2498), so a def reference whose value is already a bits literal is
+		// that literal, not a VarBitInit of the printed text.
+		if lit, ok := keeperFieldLit(env, x.Base, x.Field); ok {
+			if bits, ok := bitTexts(lit, env, w, depth+1); ok {
+				return bits, true
+			}
+		}
 		text := rawText(v, env)
 		return varBits(text, x.Type(), w)
 	case *syntax.BitRangeValue:
@@ -746,19 +754,7 @@ func (r *Record) renderExpr(e Expr, want *Ty) string {
 		}
 		return unsetText(want)
 	case *AppendExpr:
-		// TGParser::SetValue builds BinOpInit(LISTCONCAT/STRCONCAT/CONCAT) and
-		// folds it immediately (TGParser.cpp:266-282). BinOpInit::Fold
-		// (Record.cpp:1220) only folds when both operands are already concrete
-		// inits, so a VarInit or compound operator keeps the !con text.
-		if v, ok := r.constAppend(x); ok {
-			return v.String()
-		}
-		base := r.renderExpr(x.Base, nil)
-		add := r.renderExpr(x.Add, nil)
-		if x.Prepend {
-			base, add = add, base
-		}
-		return "!con(" + base + ", " + add + ")"
+		return r.appendText(x)
 	case *BitsExpr:
 		// ParseLet patches the field's current BitsInit in place, so the
 		// result is the base value with this range's bits replaced, printed
@@ -1034,6 +1030,60 @@ func keeperFieldLit(env *Env, base syntax.Value, field string) (syntax.Value, bo
 	return valueToSyntax(v)
 }
 
+// dagCtorText is TernOpInit::Fold's DAG case: children and names must be
+// ListInits (or unset), the lists must agree in length, and every name must be
+// a StringInit or unset.
+func dagCtorText(op, children, names syntax.Value, env *Env) (string, bool) {
+	var cl, nl []syntax.Value
+	cok, nok := false, false
+	if _, unset := children.(*syntax.UnsetValue); !unset {
+		if cl, cok = constList(children, env, 0); !cok {
+			return "", false
+		}
+	}
+	if _, unset := names.(*syntax.UnsetValue); !unset {
+		if nl, nok = constList(names, env, 0); !nok {
+			return "", false
+		}
+	}
+	if !cok && !nok {
+		return "", false
+	}
+	if cok && nok && len(cl) != len(nl) {
+		return "", false
+	}
+	size := len(cl)
+	if nok {
+		size = len(nl)
+	}
+	args := make([]string, size)
+	for i := 0; i < size; i++ {
+		child := "?"
+		if cok {
+			child = rawText(cl[i], env)
+		}
+		if nok {
+			switch n := nl[i].(type) {
+			case *syntax.StringValue:
+				child += ":$" + n.Text
+			case *syntax.UnsetValue:
+			default:
+				return "", false
+			}
+		}
+		args[i] = child
+	}
+	var b strings.Builder
+	b.WriteByte('(')
+	b.WriteString(rawText(op, env))
+	if len(args) > 0 {
+		b.WriteByte(' ')
+		b.WriteString(strings.Join(args, ", "))
+	}
+	b.WriteByte(')')
+	return b.String(), true
+}
+
 func rawText(v syntax.Value, env *Env) string {
 	switch x := v.(type) {
 	case nil:
@@ -1247,6 +1297,15 @@ func rawText(v syntax.Value, env *Env) string {
 		// so a chain nested on the right collapses to one literal.
 		if x.Op == syntax.XStrConcat {
 			return strConcatChain(x, env, 0)
+		}
+		// TernOpInit::Fold's DAG case builds a DagInit as soon as both the
+		// children and the names are lists (or unset) and every name is a
+		// string (Record.cpp:1815-1836), so `!dag(op, [1], ["a"])` prints as a
+		// dag literal.
+		if x.Op == syntax.XDag && len(x.Args) == 3 {
+			if text, ok := dagCtorText(x.Args[0], x.Args[1], x.Args[2], env); ok {
+				return text
+			}
 		}
 		if str, ok := constStr(x, env, 0); ok {
 			return `"` + str + `"`
@@ -2313,118 +2372,166 @@ func bindNames(env *Env, names []string) *Env {
 }
 
 // Text renders a top-level defvar initializer the way Init::getAsString does,
-// which is what DetailedRecordsBackend prints for global variables.
+// which is what DetailedRecordsBackend prints for global variables. A defset
+// has no Expr: DefsetStmt publishes its resolved ListInit directly, so fall
+// back to the value (ListInit::getAsString, Record.cpp:667-679).
 func (g *Global) Text() string {
+	if g.Expr == nil {
+		if g.val != nil {
+			return g.val.String()
+		}
+		return "?"
+	}
 	return (&Record{}).renderExpr(g.Expr, nil)
 }
 
-// constAppend mirrors the parse-time fold of `let append/prepend`: it evaluates
-// only syntactic literals, so a class body shows [1, 2, 3] where LLVM's Init
-// tree holds the folded list, and keeps !con(...) where LLVM keeps a BinOpInit.
-func (r *Record) constAppend(x *AppendExpr) (Value, bool) {
-	base, ok := r.constExpr(x.Base)
-	if !ok {
-		return nil, false
-	}
-	add, ok := r.constExpr(x.Add)
-	if !ok {
-		return nil, false
-	}
-	// TGParser::SetValue assigns directly when the current value is unset.
-	if _, unset := base.(*Unset); unset {
-		return add, true
-	}
+// appendText renders `let append/prepend`: TGParser::SetValue builds
+// BinOpInit(LISTCONCAT/STRCONCAT/CONCAT) and folds it immediately
+// (TGParser.cpp:266-282). BinOpInit::Fold (Record.cpp:1219-1248) merges two
+// ListInits and two DagInits even when their elements are still VarInits, so
+// those keep a single list/dag literal; STRING concat only folds two
+// StringInits and otherwise survives as !strconcat.
+func (r *Record) appendText(x *AppendExpr) string {
+	left, right := x.Base, x.Add
 	if x.Prepend {
-		base, add = add, base
+		left, right = right, left
+	}
+	// SetValue stores the operand directly when the current value is unset.
+	if isUnsetExpr(left) {
+		return r.renderExpr(right, nil)
+	}
+	if isUnsetExpr(right) {
+		return r.renderExpr(left, nil)
 	}
 	switch x.Kind {
 	case StringTy, CodeTy:
-		a, ok1 := base.(*Str)
-		b, ok2 := add.(*Str)
-		if !ok1 || !ok2 {
-			return nil, false
+		if lt, lc, ok := r.strParts(left); ok {
+			if rt, rc, ok := r.strParts(right); ok {
+				return stringLiteral(lt+rt, lc || rc)
+			}
 		}
-		return &Str{S: a.S + b.S, Code: a.Code || b.Code}, true
+		return "!strconcat(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
 	case ListTy:
-		a, ok1 := base.(*List)
-		b, ok2 := add.(*List)
-		if !ok1 || !ok2 {
-			return nil, false
+		if le, ok := r.listParts(left); ok {
+			if re, ok := r.listParts(right); ok {
+				return "[" + strings.Join(append(le, re...), ", ") + "]"
+			}
 		}
-		out := &List{Elem: a.Elem}
-		out.Elems = append(append([]Value(nil), a.Elems...), b.Elems...)
-		return out, true
+		return "!listconcat(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
+	case DagTy:
+		if lp, ok := r.dagParts(left); ok {
+			if rp, ok := r.dagParts(right); ok {
+				return dagPartsText(lp, rp)
+			}
+		}
+		return "!con(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
 	}
-	return nil, false
+	return "!con(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
 }
 
-// constExpr is constAppend's view of an expression: literals and chains of
-// append/prepend over them.
-func (r *Record) constExpr(e Expr) (Value, bool) {
+func isUnsetExpr(e Expr) bool {
+	a, ok := e.(*AstExpr)
+	if !ok {
+		return false
+	}
+	_, unset := a.V.(*syntax.UnsetValue)
+	return unset
+}
+
+// strParts folds one side of a string append chain to a literal.
+func (r *Record) strParts(e Expr) (string, bool, bool) {
 	switch x := e.(type) {
 	case *AstExpr:
-		return constLiteral(x.V)
+		return constStrCode(x.V, r.astEnv(x), 0)
 	case *AppendExpr:
-		return r.constAppend(x)
+		if x.Kind != StringTy && x.Kind != CodeTy {
+			return "", false, false
+		}
+		left, right := x.Base, x.Add
+		if x.Prepend {
+			left, right = right, left
+		}
+		lt, lc, ok := r.strParts(left)
+		if !ok {
+			return "", false, false
+		}
+		rt, rc, ok := r.strParts(right)
+		if !ok {
+			return "", false, false
+		}
+		return lt + rt, lc || rc, true
+	}
+	return "", false, false
+}
+
+// listParts renders one side of a list append chain as element texts.
+func (r *Record) listParts(e Expr) ([]string, bool) {
+	switch x := e.(type) {
+	case *AstExpr:
+		env := r.astEnv(x)
+		elems, ok := constList(x.V, env, 0)
+		if !ok {
+			return nil, false
+		}
+		out := make([]string, len(elems))
+		for i, el := range elems {
+			out[i] = rawText(el, env)
+		}
+		return out, true
+	case *AppendExpr:
+		if x.Kind != ListTy {
+			return nil, false
+		}
+		left, right := x.Base, x.Add
+		if x.Prepend {
+			left, right = right, left
+		}
+		l, ok := r.listParts(left)
+		if !ok {
+			return nil, false
+		}
+		rr, ok := r.listParts(right)
+		if !ok {
+			return nil, false
+		}
+		return append(l, rr...), true
 	}
 	return nil, false
 }
 
-// constLiteral converts the literal forms of a parsed value. Anything that
-// would need a record (a VarValue, a field reference, a class application, or
-// a compound operator) reports false: LLVM's Fold leaves those as inits.
-func constLiteral(v syntax.Value) (Value, bool) {
-	switch t := v.(type) {
-	case *syntax.UnsetValue:
-		return &Unset{}, true
-	case *syntax.IntValue:
-		return &Int{N: int64(t.Num)}, true
-	case *syntax.StringValue:
-		return &Str{S: t.Text, Code: t.Code}, true
-	case *syntax.BitsValue:
-		out := make([]Value, 0, len(t.Elems))
-		for i := len(t.Elems) - 1; i >= 0; i-- {
-			ev, ok := constLiteral(t.Elems[i])
-			if !ok {
-				return nil, false
-			}
-			if bits, ok := ev.(*Bits); ok {
-				out = append(out, bits.B...)
-				continue
-			}
-			b, ok := ev.(*Int)
-			if !ok || (b.N != 0 && b.N != 1) {
-				return nil, false
-			}
-			out = append(out, &Bit{B: b.N == 1})
+// dagParts folds one side of a dag append chain.
+func (r *Record) dagParts(e Expr) (dagParts, bool) {
+	switch x := e.(type) {
+	case *AstExpr:
+		return constDagParts(x.V, r.astEnv(x))
+	case *AppendExpr:
+		if x.Kind != DagTy {
+			return dagParts{}, false
 		}
-		return &Bits{B: out}, true
-	case *syntax.ListValue:
-		out := &List{}
-		for _, e := range t.Elems {
-			ev, ok := constLiteral(e)
-			if !ok {
-				return nil, false
-			}
-			out.Elems = append(out.Elems, ev)
+		left, right := x.Base, x.Add
+		if x.Prepend {
+			left, right = right, left
 		}
-		return out, true
-	case *syntax.PasteValue:
-		// `#` on two strings is folded by BinOpInit::getStrConcat as soon as
-		// the operands parse (TGParser.cpp:3429), before any resolver runs.
-		ls, ok1 := constLiteral(t.LHS)
-		rs, ok2 := constLiteral(t.RHS)
-		if !ok1 || !ok2 {
-			return nil, false
+		l, ok := r.dagParts(left)
+		if !ok {
+			return dagParts{}, false
 		}
-		a, ok1 := ls.(*Str)
-		b, ok2 := rs.(*Str)
-		if !ok1 || !ok2 {
-			return nil, false
+		rr, ok := r.dagParts(right)
+		if !ok {
+			return dagParts{}, false
 		}
-		return &Str{S: a.S + b.S, Code: a.Code || b.Code}, true
+		// BinOpInit::Fold merges only when the operators agree
+		// (Record.cpp:1225-1231); otherwise the !con node survives.
+		if l.op != rr.op && l.op != "?" {
+			return dagParts{}, false
+		}
+		return dagParts{
+			op:   l.op,
+			name: l.name,
+			args: append(append([]string{}, l.args...), rr.args...),
+		}, true
 	}
-	return nil, false
+	return dagParts{}, false
 }
 
 // literalAs prints a concrete literal the way RecordVal::setValue stores it
