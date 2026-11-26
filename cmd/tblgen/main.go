@@ -108,7 +108,7 @@ func main() {
 			os.Exit(1)
 		}
 		for _, d := range diags {
-			fmt.Fprint(os.Stderr, d.Render(string(src)))
+			fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName))
 		}
 		os.Exit(diagExit(diags))
 	}
@@ -144,7 +144,7 @@ func main() {
 		if d.Soft {
 			softErr = true
 		}
-		fmt.Fprint(os.Stderr, d.Render(string(src)))
+		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName))
 	}
 	if code := diagExit(diags); code != 0 {
 		os.Exit(code)
@@ -160,7 +160,7 @@ func main() {
 		if d.Soft {
 			softErr = true
 		}
-		fmt.Fprint(os.Stderr, d.Render(string(src)))
+		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName))
 	}
 	if code := diagExit(lowerDiags); code != 0 {
 		os.Exit(code)
@@ -330,7 +330,7 @@ func dumpTokensTo(path string, macros, includes []string) int {
 		fmt.Printf("%d:%d\t%s\t%s\n", t.Span.Start.Line, t.Span.Start.Col, t.Kind, text)
 	}
 	for _, d := range diags {
-		fmt.Fprint(os.Stderr, d.Render(string(src)))
+		fmt.Fprint(os.Stderr, renderDiag(d, string(src), path))
 	}
 	return diagExit(diags)
 }
@@ -353,4 +353,25 @@ func validMacroName(s string) bool {
 		}
 	}
 	return true
+}
+
+// renderDiag gives the diagnostic renderer access to included files: a
+// diagnostic can point into an include, and printing the main file's line there
+// would show the wrong source text.
+func renderDiag(d diag.Diagnostic, src, inputName string) string {
+	cache := map[string]string{}
+	return d.RenderWith(src, func(file string) (string, bool) {
+		if file == inputName || file == "-" || file == "" {
+			return src, true
+		}
+		if t, ok := cache[file]; ok {
+			return t, true
+		}
+		b, err := os.ReadFile(file)
+		if err != nil {
+			return "", false
+		}
+		cache[file] = string(b)
+		return string(b), true
+	})
 }

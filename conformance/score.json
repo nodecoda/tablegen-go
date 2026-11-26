@@ -1,30 +1,30 @@
 {
- "generated": "2026-11-26T05:35:18Z",
+ "generated": "2026-11-26T06:16:21Z",
  "oracle_version": "LLVM version 24.0.0git",
  "compare": {
-  "diff": 137,
-  "match": 196,
+  "diff": 10,
+  "match": 323,
   "oracle:invalid": 55,
   "oracle:valid": 330,
   "reject-match": 52,
   "scope:in-scope": 385,
-  "scope:skipped": 7
+  "skipped": 7
  },
  "matrix": {
   "skipped": 291,
   "status:err-diff": 79,
   "status:err-wording": 24,
-  "status:exit-diff": 14,
-  "status:out-diff": 19,
-  "status:same": 175,
+  "status:exit-diff": 11,
+  "status:out-diff": 10,
+  "status:same": 192,
   "status:skipped": 291
  },
  "stderr": {
-  "diff": 33,
+  "diff": 23,
   "full-match": 27,
-  "msg-match": 39,
+  "msg-match": 40,
   "same": 345,
-  "skipped": 0,
-  "spoken": 72
+  "skipped": 7,
+  "spoken": 63
  }
 }

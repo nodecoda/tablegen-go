@@ -4,8 +4,8 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 24,
-    "status:msg-match": 16,
+    "status:diff": 23,
+    "status:msg-match": 17,
     "status:same": 345,
     "status:skipped": 7
   },
@@ -930,9 +930,9 @@
           "error: assertion failed: The Objects and Modes lists must be the same length",
           "error: assertion failed in this record"
         ],
-        "full_sha256": "2fdfb13ee1b2b0aadabef4487e847247710cfd009ed5e30ec32e97584d5bffbc",
-        "full_len": 275,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/include/llvm/Target/Target.td:54:10: error: assertion failed: The Objects and Modes lists must be the same length\n\u003cfile\u003e:29:5: error: assertion failed in this record\ndef BadDef : ValueTypeByHwMode\u003c[TestMode1, TestMode2, DefaultMode],\n    ^"
+        "full_sha256": "c505d9d281eb827a2913f0451070f166352b961a2ca69badc6287e8fe671f871",
+        "full_len": 329,
+        "full": "/home/ubuntu/llvm/llvm-project/llvm/include/llvm/Target/Target.td:54:10: error: assertion failed: The Objects and Modes lists must be the same length\n  assert !eq(ObjectsLength, !size(Modes)),\n         ^\n\u003cfile\u003e:29:5: error: assertion failed in this record\ndef BadDef : ValueTypeByHwMode\u003c[TestMode1, TestMode2, DefaultMode],\n    ^"
       },
       "status": "msg-match"
     },
@@ -4812,9 +4812,9 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "a0f30c0e1f509327cafb382fe177bd5cf581b38909557e3d8c5f3fdeea0f617e",
-        "full_len": 311,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:1:7: error: the latest preprocessor control is here\n// RUN: not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s\n      ^"
+        "full_sha256": "8a153adc72f413a28310a2de3456a184674e5a8cd235938352992e986a4a63c5",
+        "full_len": 273,
+        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
       },
       "status": "msg-match"
     },
@@ -4835,14 +4835,13 @@
         "exit": 1,
         "msgs": [
           "error: reached EOF without matching #endif",
-          "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "69aa0375d45d8300a57bb524972a06b843ec11efe490618a48c21eb4826f1783",
-        "full_len": 363,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n// CHECK: error: reached EOF without matching #endif\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:7: error: the latest preprocessor control is here\n// RUN: not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s\n      ^"
+        "full_sha256": "4ba3b30f6db8a69b352e1d6b012ef940c77c274435121d5d49f5894248b60243",
+        "full_len": 273,
+        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
       },
-      "status": "diff"
+      "status": "msg-match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag13.td",
@@ -5215,9 +5214,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "015cada370cfbc4a65ccf2106332bc6dd48fec9dbfe5ce976fc3fe6f1bd40da2",
+        "full_sha256": "c0452abc00c4a3b0ea1e5b607e26fe6456df1ff6d194410b93ce274f5c05d20a",
         "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-1443147164/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-1443147164/a.td:2:\n/tmp/tblgen-split-1443147164/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3576827371/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3576827371/a.td:2:\n/tmp/tblgen-split-3576827371/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5227,9 +5226,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "a7c4fa739ca63b39a3af0fa620b18a9f72b434a7311ca382d32a4fa03dad3e2f",
-        "full_len": 672,
-        "full": "/tmp/tblgen-split-1443147164/b.td:5:5: error: def already exists: b\ndef from_b;\n    ^\n/tmp/tblgen-split-1443147164/b.td:5:5: note: previous definition is here\n/tmp/tblgen-split-1443147164/a.td:1:7: error: def already exists: a_first\ndef main_first; include \"a.td\"\n      ^\n/tmp/tblgen-split-1443147164/a.td:1:7: note: previous definition is here\n/tmp/tblgen-split-1443147164/b.td:5:5: error: def already exists: b\ndef from_b;\n    ^\n/tmp/tblgen-split-1443147164/b.td:5:5: note: previous definition is here\n/tmp/tblgen-split-1443147164/a.td:3:5: error: def already exists: a_last\n  include \"b.td\"\n    ^\n/tmp/tblgen-split-1443147164/a.td:3:5: note: previous definition is here"
+        "full_sha256": "305aa4ad3c04b4285f4e38b72b098f348f36ee78ce55d2f0b7d85e6290521683",
+        "full_len": 724,
+        "full": "/tmp/tblgen-split-3576827371/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\n/tmp/tblgen-split-3576827371/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\n/tmp/tblgen-split-3576827371/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\n/tmp/tblgen-split-3576827371/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },
@@ -5776,9 +5775,9 @@
           "error: unexpected character",
           "error: unexpected character"
         ],
-        "full_sha256": "52d5cf428d8ddddd5d15599b8548864d5a590462345995d4d1b0a9ffe086bc7a",
-        "full_len": 445,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n// RUN: not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
+        "full_sha256": "054f6c70074d9669566b84c5b85ebdb03b9a433c743c1a00b23f915c8a0d36db",
+        "full_len": 448,
+        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
       },
       "status": "diff"
     },
@@ -5800,9 +5799,9 @@
         "msgs": [
           "error: unterminated code block"
         ],
-        "full_sha256": "2b9f7ebe7d4e746cd78220f3d190a0660b11b4d4638b461b952b56e8c5b77dcc",
-        "full_len": 122,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block"
+        "full_sha256": "9a0f7e9ad45afc4734fc64d4843f5facc5a1aacb321a62a12f7b9f9cf0c6f6ac",
+        "full_len": 170,
+        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
       },
       "status": "diff"
     },

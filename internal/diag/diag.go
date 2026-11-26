@@ -68,32 +68,55 @@ func (d Diagnostic) String() string {
 }
 
 // Render prints the diagnostic with the offending source line and a caret,
-// matching the shape of llvm-tblgen's output closely enough to read side by side.
-func (d Diagnostic) Render(src string) string {
+// matching the shape of llvm-tblgen's output: the message line, the source
+// line, a single caret, then each note with its own source line and caret.
+// src is the main input; load resolves include files (nil means "src only").
+func (d Diagnostic) Render(src string) string { return d.RenderWith(src, nil) }
+
+func (d Diagnostic) RenderWith(src string, load func(string) (string, bool)) string {
 	var b strings.Builder
 	b.WriteString(d.String())
 	b.WriteByte('\n')
-	lines := strings.Split(src, "\n")
-	if d.Span.Start.File != "" && d.Span.Start.Line >= 1 && d.Span.Start.Line <= len(lines) {
-		line := lines[d.Span.Start.Line-1]
+	if line, ok := renderAt(src, d.Span.Start, load); ok {
 		b.WriteString(line)
-		b.WriteByte('\n')
-		col := d.Span.Start.Col
-		if col < 1 {
-			col = 1
-		}
-		b.WriteString(strings.Repeat(" ", col-1))
-		// TGParser reports at an SMLoc, not an SMRange, so llvm-tblgen always
-		// prints exactly one caret - every caret in the whole test corpus is a
-		// single '^'. Underlining the token span (as we used to) made -stderr
-		// differ on every diagnostic that pointed at a named token.
-		b.WriteByte('^')
-		b.WriteByte('\n')
 	}
 	for _, n := range d.Notes {
-		b.WriteString(fmt.Sprintf("%s: note: %s\n", n.Pos, n.Message))
+		b.WriteString(n.Pos.String())
+		b.WriteString(": note: ")
+		b.WriteString(n.Message)
+		b.WriteByte('\n')
+		if line, ok := renderAt(src, n.Pos, load); ok {
+			b.WriteString(line)
+		}
 	}
 	return b.String()
+}
+
+// renderAt prints one source line plus a caret at pos. llvm-tblgen reports at an
+// SMLoc, so the caret is always a single '^' (never a ~-range).
+func renderAt(src string, pos Pos, load func(string) (string, bool)) (string, bool) {
+	if pos.File == "" || pos.Line < 1 {
+		return "", false
+	}
+	text := src
+	if pos.File != "-" && load != nil {
+		if t, ok := load(pos.File); ok {
+			text = t
+		}
+	}
+	lines := strings.Split(text, "\n")
+	if pos.Line > len(lines) {
+		return "", false
+	}
+	line := lines[pos.Line-1]
+	col := pos.Col
+	if col < 1 {
+		col = 1
+	}
+	if col > len(line)+1 {
+		col = len(line) + 1
+	}
+	return line + "\n" + strings.Repeat(" ", col-1) + "^\n", true
 }
 
 // Collector accumulates diagnostics in order and never throws.

@@ -81,7 +81,7 @@ func (l *Lowerer) errorAt(err error, fallback diag.Span) {
 		if e.Note.File != "" {
 			l.diags.Diags = append(l.diags.Diags, diag.Diagnostic{
 				Severity: diag.Error, Code: "E_SEMANTIC", Message: e.Msg, Span: span,
-				Notes: []diag.Note{{Message: "previous definition is here", Pos: e.Note}},
+				Notes: []diag.Note{{Message: "location of previous definition", Pos: e.Note}},
 			})
 			return
 		}
