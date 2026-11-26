@@ -74,3 +74,39 @@ func TestDefvarRedeclaration(t *testing.T) {
 		}
 	}
 }
+
+// TGParser::ParseOperatorType reports the code type but keeps building the
+// operator (TGParser.cpp:2369-2390), so the value parses normally and no
+// cascade of follow-on diagnostics is produced.
+func TestCodeTypeInBangOperatorStillParses(t *testing.T) {
+	_, diags := Parse("t.td", `def Z {
+  code Code = !cast<code>("i = 0;");
+}`, nil, nil)
+	got := msgs(diags)
+	want := "error: the 'code' type is not allowed in bang operators; use 'string'"
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("got %q, want [%q]", got, want)
+	}
+	if p := diags[0].Span.Start; p.Line != 2 || p.Col != 21 {
+		t.Fatalf("diagnostic at %d:%d, want 2:21", p.Line, p.Col)
+	}
+}
+
+// TGParser.cpp:1310-1325 reports a non-record type for !getdagop but keeps
+// parsing to consume the operand; the operator still has the given type.
+func TestGetDagOpNonRecordTypeKeepsParsing(t *testing.T) {
+	_, diags := Parse("t.td", `class Base;
+def foo: Base;
+def test {
+  dag orig = (foo 1);
+  int x = !getdagop<int>(orig);
+}`, nil, nil)
+	got := msgs(diags)
+	want := "error: type for !getdagop must be a record type"
+	if len(got) == 0 || got[0] != want {
+		t.Fatalf("got %q, want first %q", got, want)
+	}
+	if p := diags[0].Span.Start; p.Line != 5 || p.Col != 25 {
+		t.Fatalf("diagnostic at %d:%d, want 5:25", p.Line, p.Col)
+	}
+}

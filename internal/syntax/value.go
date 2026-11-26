@@ -663,9 +663,11 @@ func (p *Parser) parseOperatorType() (Type, bool) {
 		return InvalidTy, false
 	}
 	if p.at(Code) {
+		// TGParser::ParseOperatorType reports but still returns the type
+		// (TGParser.cpp:2369-2390), so the operator is built and the rest of
+		// the value parses normally.
 		p.errTok("E_PARSE_OPTYPE_CODE",
 			"the 'code' type is not allowed in bang operators; use 'string'")
-		return InvalidTy, false
 	}
 	ty, ok := p.parseType()
 	if !ok {
@@ -703,6 +705,11 @@ func (p *Parser) parseBangBody(rec *recordInfo, item *Type) Value {
 			ty, ok := p.parseOperatorType()
 			if !ok {
 				return nil
+			}
+			// TGParser.cpp:1310-1325 reports a non-record type but keeps
+			// parsing to consume the operand.
+			if ty.Kind != InvalidType && ty.Kind != RecordType {
+				p.errTok("E_PARSE_GETDAGOP_TYPE", "type for !getdagop must be a record type")
 			}
 			v.TypeArg = ty
 		}

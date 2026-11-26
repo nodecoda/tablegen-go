@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 20,
+    "status:err-diff": 19,
     "status:err-wording": 19,
-    "status:same": 275,
+    "status:same": 276,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -5021,15 +5021,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "f9e1bcfd029831917525de53a06d0ce6fe7b164ed937e78f5ecd8f8aa71cefa3",
+        "err_sha256": "39fa981503cfcbe22f05d69f34896b85af4467c9a7151ea0e877f2b9f4c5f19d",
         "Msgs": [
-          "error: the 'code' type is not allowed in bang operators; use 'string'",
-          "error: expected ';' after declaration"
+          "error: the 'code' type is not allowed in bang operators; use 'string'"
         ],
         "err_head": "\u003cfile\u003e:45:21: error: the 'code' type is not allowed in bang operators; use 'string'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:45:21: error: the 'code' type is not allowed in bang operators; use 'string'\n  code Code = !cast\u003ccode\u003e(\"i = 0;\");\n                    ^\n\u003cfile\u003e:45:21: error: expected ';' after declaration\n  code Code = !cast\u003ccode\u003e(\"i = 0;\");\n                    ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/compare.td",
@@ -7017,14 +7015,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "eb958e5e961a45701cfb888b5c308fec44b8a836beeb09830584b298385209ac",
+        "err_sha256": "f3030eb3e8a153c23205a997c8eb15c68200d6ccd344c5efdaa40d944ba855c1",
         "Msgs": [
-          "error: Expected type 'int', got 'Base' in: !getdagop((foo 1, 2:$a, ?:$b))"
+          "error: type for !getdagop must be a record type"
         ],
-        "err_head": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop((foo 1, 2:$a, ?:$b))"
+        "err_head": "\u003cfile\u003e:85:38: error: type for !getdagop must be a record type"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop((foo 1, 2:$a, ?:$b))\n\ndef test {\n    ^"
+      "err_text": "\u003cfile\u003e:85:38: error: type for !getdagop must be a record type\n  int ridiculousCast = !getdagop\u003cint\u003e(orig);\n                                     ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -9898,12 +9896,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-704605600/inc",
-        "/tmp/tblgen-split-704605600/main.td",
+        "/tmp/tblgen-split-1793104463/inc",
+        "/tmp/tblgen-split-1793104463/main.td",
         "-o",
-        "/tmp/tblgen-split-704605600/out.td",
+        "/tmp/tblgen-split-1793104463/out.td",
         "-d",
-        "/tmp/tblgen-split-704605600/out.d"
+        "/tmp/tblgen-split-1793104463/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9923,12 +9921,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-704605600/inc",
-        "/tmp/tblgen-split-704605600/main.td",
+        "/tmp/tblgen-split-1793104463/inc",
+        "/tmp/tblgen-split-1793104463/main.td",
         "-o",
-        "/tmp/tblgen-split-704605600/out.td",
+        "/tmp/tblgen-split-1793104463/out.td",
         "-d",
-        "/tmp/tblgen-split-704605600/out2.d"
+        "/tmp/tblgen-split-1793104463/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9949,10 +9947,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-704605600/inc",
-        "/tmp/tblgen-split-704605600/main.td",
+        "/tmp/tblgen-split-1793104463/inc",
+        "/tmp/tblgen-split-1793104463/main.td",
         "-d",
-        "/tmp/tblgen-split-704605600/out.d"
+        "/tmp/tblgen-split-1793104463/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10038,8 +10036,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1964297590",
-        "/tmp/tblgen-split-1964297590/main.td"
+        "/tmp/tblgen-split-2569632124",
+        "/tmp/tblgen-split-2569632124/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10063,8 +10061,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1964297590",
-        "/tmp/tblgen-split-1964297590/multi.td"
+        "/tmp/tblgen-split-2569632124",
+        "/tmp/tblgen-split-2569632124/multi.td"
       ],
       "oracle": {
         "exit": 0,
