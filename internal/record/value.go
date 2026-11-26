@@ -3,6 +3,8 @@ package record
 import (
 	"strconv"
 	"strings"
+
+	"tblgen/internal/syntax"
 )
 
 // Value is a fully evaluated TableGen initializer. The set is deliberately
@@ -38,7 +40,12 @@ type List struct {
 type Dag struct {
 	Op     Value
 	OpName string
-	Args   []DagArg
+	// OpSrc keeps the operator as written when the dag came from a literal.
+	// Record.cpp:914-916 prints the Init tree, so a foldable operator such as
+	// !cast<TestInstruction>(NAME) is shown unresolved in a fatal diagnostic.
+	// Rendering is deferred to SourceString so the hot path stores a pointer.
+	OpSrc syntax.Value
+	Args  []DagArg
 }
 
 type DagArg struct {
@@ -174,9 +181,23 @@ func (v *List) String() string {
 }
 
 func (v *Dag) String() string {
+	return v.render(v.Op.String())
+}
+
+// SourceString renders the dag with the operator text as written, for
+// diagnostics that print an Init tree before it has been folded.
+func (v *Dag) SourceString() string {
+	op := v.Op.String()
+	if v.OpSrc != nil {
+		op = syntax.InitText(v.OpSrc)
+	}
+	return v.render(op)
+}
+
+func (v *Dag) render(op string) string {
 	var b strings.Builder
 	b.WriteByte('(')
-	b.WriteString(v.Op.String())
+	b.WriteString(op)
 	if v.OpName != "" {
 		b.WriteString(":$")
 		b.WriteString(v.OpName)

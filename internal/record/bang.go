@@ -481,7 +481,8 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 				return nil, err
 			}
 			if n < 0 {
-				k.softError("!substr length must be nonnegative", b.Span())
+				// Record.cpp:1880-1881 prints at CurRec->getLoc().
+				k.softErrorAt("!substr length must be nonnegative", b.Span(), rec)
 			} else if n < size-start || start < 0 {
 				end = start + n
 			}
@@ -595,8 +596,9 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			if opTy := d.Op.Type(); !opTy.IsA(target) {
 				return nil, &EvalError{
 					Msg: "Expected type '" + target.String() + "', got '" + opTy.String() +
-						"' in: !getdagop(" + d.String() + ")\n",
+						"' in: !getdagop(" + d.SourceString() + ")\n",
 					AtRecord: true,
+					Fatal:    true,
 				}
 			}
 		}

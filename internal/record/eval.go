@@ -239,7 +239,7 @@ func (k *Keeper) evalDagLiteral(t *syntax.DagValue, env *Env, rec *Record) (Valu
 	if err != nil {
 		return nil, err
 	}
-	d := &Dag{Op: op, OpName: t.OpName}
+	d := &Dag{Op: op, OpName: t.OpName, OpSrc: t.Op}
 	for _, a := range t.Args {
 		av, err := k.evalSyntax(a.Value, env, rec)
 		if err != nil {

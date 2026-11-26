@@ -755,7 +755,7 @@ func (k *Keeper) newAnonymous(loc diag.Pos) *Record {
 
 func (k *Keeper) addDef(r *Record) error {
 	if old := k.defs[r.Name]; old != nil {
-		return &EvalError{Msg: "def already exists: " + r.Name, Span: diag.Span{Start: r.Locs[0], End: r.Locs[0]}, Note: old.Locs[0]}
+		return &EvalError{Msg: "def already exists: " + r.Name, Span: diag.Span{Start: r.Locs[0], End: r.Locs[0]}, Note: old.Locs[0], Abort: true}
 	}
 	k.defs[r.Name] = r
 	k.defOrder = append(k.defOrder, r)
@@ -807,6 +807,14 @@ type EvalError struct {
 	// NoLoc marks PrintFatalError(Twine) diagnostics, which carry no source
 	// location at all ("error: invalid regex '...'").
 	NoLoc bool
+	// Fatal marks PrintFatalError paths. LLVM exits immediately, so no
+	// multiclass note chain is appended even when the record came from a
+	// defm (Error.cpp:132-145).
+	Fatal bool
+	// Abort marks errors whose parse-time counterpart propagates out of
+	// ParseObjectList (for example AddDef's duplicate-name error), so no
+	// further records are built.
+	Abort bool
 }
 
 func (e *EvalError) Error() string { return e.Msg }

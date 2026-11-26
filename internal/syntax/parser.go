@@ -111,6 +111,10 @@ type Parser struct {
 	defParents   []defParentsRec
 
 	opts Options
+	// abort stops the file after an error LLVM's caller propagates out of
+	// ParseObjectList, e.g. a bad parent reference in a multiclass header
+	// (TGParser.cpp:4467-4500, :4732-4737).
+	abort bool
 	// usedArgs records, per class/multiclass record, which template arguments
 	// were referenced while its body was parsed. LLVM marks them in
 	// TGVarScope::getVar and warns from Record::checkUnusedTemplateArgs.
@@ -341,7 +345,14 @@ func (p *Parser) lookupLocal(name string) (binding, bool) {
 				return b, true
 			}
 			if s.rec.isClass && name == "NAME" {
-				return binding{ty: StringTy}, true
+				// The implicit NAME is a VarInit named by QualifyName
+				// (TGParser.cpp:151-163); inside a multiclass the separator
+				// is "::".
+				sep := ":"
+				if p.curMulti != nil && p.curMulti.Name == s.rec.name {
+					sep = "::"
+				}
+				return binding{ty: StringTy, arg: true, qual: s.rec.name + sep + "NAME"}, true
 			}
 		}
 	}
@@ -424,7 +435,7 @@ func (p *Parser) defineClassGlobal(name string, rec *recordInfo) {
 
 func (p *Parser) parseFile() *File {
 	f := &File{}
-	for p.cur().Kind != Eof && !p.at(ErrorTok) {
+	for p.cur().Kind != Eof && !p.at(ErrorTok) && !p.abort {
 		if !p.cur().Kind.IsObjectStart() && !p.at(Include) {
 			p.errTok("E_PARSE_TOPLEVEL", "Unexpected token at top level")
 			p.advance()
@@ -1046,6 +1057,9 @@ func (p *Parser) parseMultiClass() Object {
 		for {
 			ref, ok := p.parseClassRef(true)
 			if !ok {
+				// ParseMultiClass returns true on a parent reference error,
+				// and ParseObjectList/ParseFile stop with it.
+				p.abort = true
 				p.popScope()
 				p.curMulti = nil
 				return nil

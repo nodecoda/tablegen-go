@@ -231,15 +231,37 @@ func (p *Parser) parseIdentValue(rec *recordInfo, mode idMode, start int) Value 
 		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: ty}, Name: nt.Text, Lit: b.lit, GlobalRef: true, GlobalVar: globalVar}
 	}
 	if rec != nil && rec.isClass && nt.Text == "NAME" {
-		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: StringTy}, Name: nt.Text}
+		// TGVarScope::getVar returns VarInit(QualifyName(Rec, "NAME"))
+		// (TGParser.cpp:151-163): the printable name carries its owner, with
+		// "::" inside a multiclass.
+		sep := ":"
+		if p.curMulti != nil {
+			sep = "::"
+		}
+		return &VarValue{
+			ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: StringTy},
+			Name:      nt.Text,
+			ArgRef:    true,
+			ArgQual:   rec.name + sep + "NAME",
+		}
 	}
 	if rec != nil && !rec.isClass && rec.name == nt.Text {
-		// A direct self-reference (typically in the parent list, `def F : C<F>`)
-		// is typed with the direct superclasses attached so far, matching
-		// LLVM: the parents parsed before this reference are already on the
-		// record, so `def F0 : Fa, Fb<F0>` type-checks but `def R : Cl<R>`
-		// does not (the arg is still `{}`).
-		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: recordTypeSet(rec.parents)}, Name: nt.Text}
+		// ParseIDValue turns a direct self-reference into
+		// `!cast<CurRec->getType()>("Name")` (TGParser.cpp:1206-1211). The
+		// type is the set of direct superclasses attached so far, so
+		// `def F0 : Fa, Fb<F0>` type-checks while `def R : Cl<R>` leaves the
+		// cast at `{}` and prints `!cast<{}>("R")`.
+		ty := recordTypeSet(rec.parents)
+		return &BangValue{
+			ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: ty},
+			Op:        XCast,
+			OpSpan:    nt.Span,
+			TypeArg:   ty,
+			Args: []Value{&StringValue{
+				ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: StringTy},
+				Text:      nt.Text,
+			}},
+		}
 	}
 	p.errAt(nt.Span, "E_PARSE_VAR_UNDEFINED", "Variable not defined: '"+nt.Text+"'")
 	return nil

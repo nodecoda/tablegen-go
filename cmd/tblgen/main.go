@@ -165,15 +165,22 @@ func main() {
 		}
 		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName, tokens.Includes))
 	}
-	if code := diagExit(diags); code != 0 {
-		os.Exit(code)
+	parseCode := diagExit(diags)
+	// E_UNSUPPORTED (exit 2) is a hard contract: do not interpret further.
+	if parseCode == 2 {
+		os.Exit(parseCode)
 	}
 
-	if *dumpAST {
+	if parseCode == 0 && *dumpAST {
 		fmt.Print(syntax.DumpFile(file))
 		return
 	}
 
+	// Even after a parse error, LLVM has already folded every operator it
+	// parsed (TGParser::ParseOperation calls Fold), so diagnostics a later
+	// fold would print (e.g. !substr range checks, checkConcrete's
+	// "Expected type ... in: !getdagop(...)") are still reported. Our folds
+	// run in lowering, so run it here for diagnostics only.
 	keeper, lowerDiags := record.Lower(file, inputName)
 	for _, d := range lowerDiags {
 		if d.Soft {
@@ -181,8 +188,11 @@ func main() {
 		}
 		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName, tokens.Includes))
 	}
-	if code := diagExit(lowerDiags); code != 0 {
-		os.Exit(code)
+	if lowerCode := diagExit(lowerDiags); lowerCode != 0 && parseCode == 0 {
+		os.Exit(lowerCode)
+	}
+	if parseCode != 0 {
+		os.Exit(parseCode)
 	}
 	// Main.cpp:292 returns right after parsing when ErrorsPrinted > 0: a
 	// PrintError from a folding operator still suppresses the backend output

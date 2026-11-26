@@ -1,5 +1,7 @@
 package syntax
 
+import "strings"
+
 // The AST is deliberately dull: plain structs, no closures, no evaluation.
 // Every node carries a source span, so later phases (resolution, evaluation,
 // diagnostics) can point back at the text without re-lexing.
@@ -77,14 +79,15 @@ func (t Type) String() string {
 		}
 		return "list<" + t.Elem.String() + ">"
 	case RecordType:
+		// RecordRecTy::getAsString: one class prints its name, the empty set
+		// prints "{}", and a wider set prints "{A, B}" (Record.cpp:272-284).
 		if len(t.Recs) == 0 {
-			return "record"
+			return "{}"
 		}
-		s := t.Recs[0]
-		for _, r := range t.Recs[1:] {
-			s += ":" + r
+		if len(t.Recs) == 1 {
+			return t.Recs[0]
 		}
-		return s
+		return "{" + strings.Join(t.Recs, ", ") + "}"
 	case UnsetType:
 		return "?"
 	default:

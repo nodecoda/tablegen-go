@@ -4,9 +4,8 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 2,
-    "status:msg-match": 2,
-    "status:same": 381,
+    "status:msg-match": 3,
+    "status:same": 382,
     "status:skipped": 7
   },
   "cases": [
@@ -5210,23 +5209,20 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "1893fb3d7f911f940cab77ac3e3e67bb210eb2490ce84946a350f93cea4a0f6e",
-        "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3519784328/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3519784328/a.td:2:\n/tmp/tblgen-split-3519784328/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "26ae26cad64d9e5180f2df4fa052a2e345938bfe7c59874583bbb9fccf9eeb72",
+        "full_len": 266,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-556382129/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-556382129/a.td:2:\n/tmp/tblgen-split-556382129/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: def already exists: b",
-          "error: def already exists: a_first",
-          "error: def already exists: b",
-          "error: def already exists: a_last"
+          "error: def already exists: b"
         ],
-        "full_sha256": "9d2c49975e1e779a7fe91ef9cb31a706da250f102d5a38460daf78164ab3d126",
-        "full_len": 1120,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3519784328/a.td:2:\n/tmp/tblgen-split-3519784328/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3519784328/a.td:2:\n/tmp/tblgen-split-3519784328/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3519784328/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3519784328/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3519784328/a.td:2:\n/tmp/tblgen-split-3519784328/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3519784328/a.td:2:\n/tmp/tblgen-split-3519784328/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3519784328/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3519784328/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full_sha256": "edaf63669c81bf4ee7bc31b150f82050855af444dfce9cea2a6f37e5f797c05d",
+        "full_len": 316,
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-556382129/a.td:2:\n/tmp/tblgen-split-556382129/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-556382129/a.td:2:\n/tmp/tblgen-split-556382129/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
-      "status": "diff"
+      "status": "msg-match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-macros.td",
@@ -5435,13 +5431,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0"
+          "error: Value specified for template argument 'Cl:rec' is of type {}; expected type Cl: !cast\u003c{}\u003e(\"Rec0\")"
         ],
-        "full_sha256": "9ee43e413505b9c420471477567c3847e2348c8d65032a08030f228b15581085",
-        "full_len": 146,
-        "full": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0\ndef Rec0 : Cl\u003cRec0\u003e;\n              ^"
+        "full_sha256": "7f85a5c6be8b96a21a8e6024f32add18fcc1c65e80e699a527a39a673d415208",
+        "full_len": 155,
+        "full": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type {}; expected type Cl: !cast\u003c{}\u003e(\"Rec0\")\ndef Rec0 : Cl\u003cRec0\u003e;\n              ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference.td",

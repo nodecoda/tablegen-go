@@ -44,8 +44,8 @@ func TestNoWarnUnusedTemplateArgs(t *testing.T) {
 func TestDuplicateTemplateArg(t *testing.T) {
 	_, diags := Parse("t.td", `class C<int a, int a>;`, nil, nil)
 	got := msgs(diags)
-	if len(got) == 0 || got[0] != "error: template argument with the same name has already been defined" {
-		t.Fatalf("got %q", got)
+	if len(got) != 1 || got[0] != "error: template argument with the same name has already been defined" {
+		t.Fatalf("got %q, want exactly one duplicate error", got)
 	}
 	if p := diags[0].Span.Start; p.Line != 1 || p.Col != 16 {
 		t.Fatalf("diagnostic at %d:%d, want 1:16", p.Line, p.Col)
@@ -108,5 +108,38 @@ def test {
 	}
 	if p := diags[0].Span.Start; p.Line != 5 || p.Col != 25 {
 		t.Fatalf("diagnostic at %d:%d, want 5:25", p.Line, p.Col)
+	}
+}
+
+// ParseIDValue represents a direct self-reference as !cast<{}>("Name")
+// (TGParser.cpp:1206-1211), and RecordRecTy::getAsString prints the empty
+// record type as "{}" (Record.cpp:272-284).
+func TestSelfReferencePrintsUnresolvedCast(t *testing.T) {
+	_, diags := Parse("t.td", `class Cl<Cl rec> {
+  Cl Arec = rec;
+}
+def Rec0 : Cl<Rec0>;
+`, nil, nil)
+	got := msgs(diags)
+	want := `error: Value specified for template argument 'Cl:rec' is of type {}; expected type Cl: !cast<{}>("Rec0")`
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("got %q, want [%q]", got, want)
+	}
+}
+
+// !sort type-checks the list after the comma following it has been consumed,
+// so the diagnostic points at the next token (TGParser.cpp:2649-2677).
+func TestSortRejectsNonListAtNextToken(t *testing.T) {
+	_, diags := Parse("t.td", `def myop;
+defvar mydag = (myop);
+def test {
+  list<string> bad = !sort(x, mydag, !cast<string>(x));
+}`, nil, nil)
+	got := msgs(diags)
+	if len(got) == 0 || got[0] != "error: !sort must have a list argument" {
+		t.Fatalf("got %q", got)
+	}
+	if p := diags[0].Span.Start; p.Line != 4 || p.Col != 38 {
+		t.Fatalf("diagnostic at %d:%d, want 4:38", p.Line, p.Col)
 	}
 }

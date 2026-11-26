@@ -7399,22 +7399,22 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t/inc %t/main.td -o %t/out.td -d %t/out.d ; FileCheck %s --input-file=%t/out.d --match-full-lines -DDIR=%t ; llvm-tblgen -I %t/inc %t/main.td -o %t/out.td -d %t/out2.d ; cmp %t/out.d %t/out2.d ; not llvm-tblgen -E -I %t/inc %t/main.td -d %t/out.d 2\u003e\u00261 | FileCheck %s --check-prefix=NO-OUTPUT",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-3880023973/out.td",
+      "input": "/tmp/tblgen-split-1485794754/out.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-3880023973/inc"
+        "/tmp/tblgen-split-1485794754/inc"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-3880023973/out.td': No such file or directory"
+        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-1485794754/out.td': No such file or directory"
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "./tblgen: Could not open input file '/tmp/tblgen-split-3880023973/out.td': No such file or directory"
+        "err_head": "./tblgen: Could not open input file '/tmp/tblgen-split-1485794754/out.td': No such file or directory"
       },
       "status": "reject-match"
     },
@@ -7460,23 +7460,23 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-include.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t %t/main.td | FileCheck %s --match-full-lines --strict-whitespace ; llvm-tblgen -E -I %t %t/multi.td | FileCheck %s --check-prefix=MULTI --match-full-lines --strict-whitespace",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-604573052/main.td",
+      "input": "/tmp/tblgen-split-413433950/main.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-604573052"
+        "/tmp/tblgen-split-413433950"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "Included from /tmp/tblgen-split-604573052/main.td:3:",
+        "err_head": "Included from /tmp/tblgen-split-413433950/main.td:3:",
         "err_line": 5
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "Included from /tmp/tblgen-split-604573052/main.td:7:",
+        "err_head": "Included from /tmp/tblgen-split-413433950/main.td:7:",
         "err_line": 5
       },
       "status": "reject-match"
@@ -7801,7 +7801,7 @@
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference-typeerror.td:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference-typeerror.td:13:15: error: Value specified for template argument 'Cl:rec' is of type {}; expected type Cl: !cast\u003c{}\u003e(\"Rec0\")",
         "err_line": 13
       },
       "status": "reject-match"

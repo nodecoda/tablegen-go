@@ -4,9 +4,8 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 19,
     "status:err-wording": 19,
-    "status:same": 276,
+    "status:same": 295,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -3018,14 +3017,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "be4ea1d28f640f122f5541ea46233b4829eddcbb5023ce386c243de9502a3d00",
+        "err_sha256": "8826851999b7438f56417df6682b5fc6041302f0cebd32b9c2a7841af564b261",
         "Msgs": [
-          "error: Type '?' is invalid, list expected"
+          "error: Invalid value, list expected"
         ],
-        "err_head": "\u003cfile\u003e:71:15: error: Type '?' is invalid, list expected"
+        "err_head": "\u003cfile\u003e:71:15: error: Invalid value, list expected"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:71:15: error: Type '?' is invalid, list expected\ndefvar errs = und [ 0 ] ;\n              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListSlices.td",
@@ -5071,14 +5069,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "f20205ea1d38337e5d779468401dc7b1c58bd9600ca6d271933ffb1fc6e96f42",
+        "err_sha256": "52a1b6e0c95c046c2e4206e989f90822d673129b6b7430abd32f3a1ed3f22a3e",
         "Msgs": [
-          "error: invalid operands to comparison"
+          "error: expected bit, bits, int, string, or record; got value of type 'list\u003cint\u003e'",
+          "error: expected ';' after declaration"
         ],
-        "err_head": "\u003cfile\u003e:103:18: error: invalid operands to comparison"
+        "err_head": "\u003cfile\u003e:103:22: error: expected bit, bits, int, string, or record; got value of type 'list\u003cint\u003e'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:103:18: error: invalid operands to comparison\n  bit compare1 = !eq([0, 1, 2], [0, 1, 2]);\n                 ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/compare.td",
@@ -5100,14 +5098,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "ba9a4a65f15911d6fedc2c61ac00def551deeb8144a9f808530783854beca26b",
+        "err_sha256": "89a17d0bca23fda8e3221598537098291e8940a11e71c3826ebf75573a8c4f92",
         "Msgs": [
-          "error: invalid operands to comparison"
+          "error: expected bit, bits, int, or string; got value of type 'BitCompare'",
+          "error: expected ';' after declaration"
         ],
-        "err_head": "\u003cfile\u003e:113:18: error: invalid operands to comparison"
+        "err_head": "\u003cfile\u003e:113:22: error: expected bit, bits, int, or string; got value of type 'BitCompare'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:113:18: error: invalid operands to comparison\n  bit compare1 = !lt(Bit00, Bit00);\n                 ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-bitlist.td",
@@ -7015,14 +7013,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "f3030eb3e8a153c23205a997c8eb15c68200d6ccd344c5efdaa40d944ba855c1",
+        "err_sha256": "2e2f4169bfc809282dcf373c5ad135ed4e03c18ed5dccb294146277db0246eb9",
         "Msgs": [
-          "error: type for !getdagop must be a record type"
+          "error: type for !getdagop must be a record type",
+          "error: Expected type 'int', got 'Base' in: !getdagop((foo 1, 2:$a, ?:$b))"
         ],
         "err_head": "\u003cfile\u003e:85:38: error: type for !getdagop must be a record type"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:85:38: error: type for !getdagop must be a record type\n  int ridiculousCast = !getdagop\u003cint\u003e(orig);\n                                     ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7211,14 +7209,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9de722f4c6695fb91f0d331bae95c3c3afbf420d121de14acb18b6dfc21c5505",
+        "err_sha256": "bd7482021dff3b37193dae38b4fca94ee93c4d4e8087f65be88c8c9eada90b2e",
         "Msgs": [
-          "error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((testInst0 foo))"
+          "error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((!cast\u003cTestInstruction\u003e(TestInstructionAndPattern::NAME) foo))"
         ],
-        "err_head": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((testInst0 foo))"
+        "err_head": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((!cast\u003cTestInstruction\u003e(TestInstructionAndPattern::NAME) foo))"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((testInst0 foo))\n\n  def : TestPattern\u003c(!cast\u003cTestInstruction\u003e(NAME) foo)\u003e;\n  ^\n\u003cfile\u003e:191:18: note: instantiated from multiclass\ndefm testInst0 : TestInstructionAndPattern\u003c[7]\u003e;\n                 ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-empty-list-arg.td",
@@ -7418,15 +7415,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "4113f0865b50bd66bd7eca04f8706034a0791d6f07a2a1ac08b89abd4a1856a5",
+        "err_sha256": "ad062b92add0fa7f85098deacde4942acc0852154ef35be5fe2143c5ab24ed5c",
         "Msgs": [
-          "error: Unknown token when expecting a type",
-          "warning: unused template argument: badclass:i"
+          "error: Unknown token when expecting a type"
         ],
         "err_head": "\u003cfile\u003e:88:3: error: Unknown token when expecting a type"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:88:3: error: Unknown token when expecting a type\n  if !eq(i, 5) then {\n  ^\n\u003cfile\u003e:85:20: warning: unused template argument: badclass:i\nclass badclass\u003cint i\u003e {\n                   ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/incompatible-field-override.td",
@@ -7574,16 +7569,16 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "b5167fe4731921ba56a8bb04d472bc06622bc425ca494de3719c3312f6072898",
+        "err_sha256": "faf9f5462fdad2060bbc1c990e018e062a403c6ae4a16a0c1328c59cb54bdc3c",
         "Msgs": [
           "warning: unused template argument: D:n",
           "warning: unused template argument: TestArgument:d",
-          "error: Unknown token when expecting a type"
+          "error: Unknown token when expecting a type",
+          "error: expected type name for operator"
         ],
         "err_head": "\u003cfile\u003e:97:13: warning: unused template argument: D:n"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:97:13: warning: unused template argument: D:n\nclass D\u003cint n\u003e;\n            ^\n\u003cfile\u003e:99:22: warning: unused template argument: TestArgument:d\nclass TestArgument\u003cD d = D\u003c0\u003e\u003e {\n                     ^\n\u003cfile\u003e:125:28: error: Unknown token when expecting a type\ndefvar error2 = !instances\u003c1\u003e(\"\");\n                           ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/instances.td",
@@ -7605,16 +7600,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9d18fa4cf3df3838dcc7cd949aa71b2ba1dc4dd34aa7a85f9ba894ab05eb19f8",
+        "err_sha256": "2536b5b30c406ec819bf19e444223ed250e622a89db1925e05ff7caa3032ab66",
         "Msgs": [
           "warning: unused template argument: D:n",
-          "warning: unused template argument: TestArgument:d",
-          "error: invalid regex '([)]'"
+          "warning: unused template argument: TestArgument:d"
         ],
         "err_head": "\u003cfile\u003e:97:13: warning: unused template argument: D:n"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:97:13: warning: unused template argument: D:n\nclass D\u003cint n\u003e;\n            ^\n\u003cfile\u003e:99:22: warning: unused template argument: TestArgument:d\nclass TestArgument\u003cD d = D\u003c0\u003e\u003e {\n                     ^\n\u003cfile\u003e:130:17: error: invalid regex '([)]'\ndefvar error3 = !instances\u003cA\u003e(\"([)]\");\n                ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/interleave.td",
@@ -7658,14 +7651,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "eaf9768fbea526d6cbf6dfaebf42ab14a94de95cdcd1d97e15cfa073214f1988",
+        "err_sha256": "6794ee4122af908bd831f0b866a8300c7074705274ce4f719b69ad471b62ec41",
         "Msgs": [
-          "error: !interleave element is not convertible to int"
+          "error: expected list of string, int, bits, or bit; got value of type 'list\u003cdag\u003e'",
+          "error: expected ';' after declaration"
         ],
-        "err_head": "\u003cfile\u003e:96:16: error: !interleave element is not convertible to int"
+        "err_head": "\u003cfile\u003e:96:28: error: expected list of string, int, bits, or bit; got value of type 'list\u003cdag\u003e'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:96:16: error: !interleave element is not convertible to int\n  string Bad = !interleave([(op), (op \"hello\")], \" = \");\n               ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-arginfo.td",
@@ -8412,14 +8405,11 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "033dd078f9c6f26685f9b5f5324192b025029d23b6ff5d80280374d8d3bcafdb",
-        "Msgs": [
-          "error: !listsplat count -1 is negative"
-        ],
-        "err_head": "\u003cfile\u003e:80:12: error: !listsplat count -1 is negative"
+        "err_sha256": "58518abf9dbd7ef9f6c23483b8f4c936752b4eaeb8e25ff91e060ddb9aa58532",
+        "Msgs": null,
+        "err_head": "error: !listsplat count -1 is negative"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:80:12: error: !listsplat count -1 is negative\ndefvar E = !listsplat(\"\", -1);\n           ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/match.td",
@@ -8868,15 +8858,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6006e4bcd0c43356cf1ecb8f4f0e83494487aebe2779e9f2dbe33b44bb47c4ee",
+        "err_sha256": "c37071f7ab0071cabc92a9fbfdb90d1882f16b30f7f2618b3e514b58b8e2ac29",
         "Msgs": [
-          "error: The name of named argument should be a valid identifier",
-          "error: Expected comma before next argument"
+          "error: The name of named argument should be a valid identifier"
         ],
         "err_head": "\u003cfile\u003e:106:30: error: The name of named argument should be a valid identifier"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:106:30: error: The name of named argument should be a valid identifier\ndef testError2: TestClass\u003c1, 3=0\u003e;\n                             ^\n\u003cfile\u003e:106:31: error: Expected comma before next argument\ndef testError2: TestClass\u003c1, 3=0\u003e;\n                              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/named-arguments.td",
@@ -9006,14 +8994,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "af0433cf04ee44089b8a6c80d237fca6f325dfa69e91af8d1f769b8b6bc61f45",
+        "err_sha256": "69ccbf98933f3b0d96f06223f5bff8a80010d4f8729d6f800645fbfa37e4417b",
         "Msgs": [
-          "error: We can only specify the template argument 'TestSubroutine:a' once"
+          "error: We can only specify the template argument 'TestSubroutine:a' once",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:132:13: error: We can only specify the template argument 'TestSubroutine:a' once"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:132:13: error: We can only specify the template argument 'TestSubroutine:a' once\n  int value=TestSubroutine\u003c1, a=1\u003e.value;\n            ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/named-arguments.td",
@@ -9896,12 +9884,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1793104463/inc",
-        "/tmp/tblgen-split-1793104463/main.td",
+        "/tmp/tblgen-split-3969768552/inc",
+        "/tmp/tblgen-split-3969768552/main.td",
         "-o",
-        "/tmp/tblgen-split-1793104463/out.td",
+        "/tmp/tblgen-split-3969768552/out.td",
         "-d",
-        "/tmp/tblgen-split-1793104463/out.d"
+        "/tmp/tblgen-split-3969768552/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9921,12 +9909,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-1793104463/inc",
-        "/tmp/tblgen-split-1793104463/main.td",
+        "/tmp/tblgen-split-3969768552/inc",
+        "/tmp/tblgen-split-3969768552/main.td",
         "-o",
-        "/tmp/tblgen-split-1793104463/out.td",
+        "/tmp/tblgen-split-3969768552/out.td",
         "-d",
-        "/tmp/tblgen-split-1793104463/out2.d"
+        "/tmp/tblgen-split-3969768552/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9947,10 +9935,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1793104463/inc",
-        "/tmp/tblgen-split-1793104463/main.td",
+        "/tmp/tblgen-split-3969768552/inc",
+        "/tmp/tblgen-split-3969768552/main.td",
         "-d",
-        "/tmp/tblgen-split-1793104463/out.d"
+        "/tmp/tblgen-split-3969768552/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10036,8 +10024,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2569632124",
-        "/tmp/tblgen-split-2569632124/main.td"
+        "/tmp/tblgen-split-717887225",
+        "/tmp/tblgen-split-717887225/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10061,8 +10049,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2569632124",
-        "/tmp/tblgen-split-2569632124/multi.td"
+        "/tmp/tblgen-split-717887225",
+        "/tmp/tblgen-split-717887225/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10556,14 +10544,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9ee43e413505b9c420471477567c3847e2348c8d65032a08030f228b15581085",
+        "err_sha256": "7f85a5c6be8b96a21a8e6024f32add18fcc1c65e80e699a527a39a673d415208",
         "Msgs": [
-          "error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0"
+          "error: Value specified for template argument 'Cl:rec' is of type {}; expected type Cl: !cast\u003c{}\u003e(\"Rec0\")"
         ],
-        "err_head": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0"
+        "err_head": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type {}; expected type Cl: !cast\u003c{}\u003e(\"Rec0\")"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:13:15: error: Value specified for template argument 'Cl:rec' is of type record; expected type Cl: Rec0\ndef Rec0 : Cl\u003cRec0\u003e;\n              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference.td",
@@ -10664,14 +10651,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "2f5b39e2cdf1c9ecdb67bd4c5067aa8f726f5102e77adcaba0099ac5faee964e",
+        "err_sha256": "fa8d39102543e6dab085dcef1918e2204f6a673c988b8744066d6bb8d21d66d6",
         "Msgs": [
-          "error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, (myop), !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'"
+          "error: !sort must have a list argument",
+          "error: expected ';' after declaration"
         ],
-        "err_head": "\u003cfile\u003e:61:22: error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, (myop), !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'"
+        "err_head": "\u003cfile\u003e:61:38: error: !sort must have a list argument"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:61:22: error: Field 'bad' of type 'list\u003cstring\u003e' is incompatible with value '!sort(x, (myop), !cast\u003cstring\u003e(x))' of type 'list\u003cdag\u003e'\n  list\u003cstring\u003e bad = !sort(x, mydag, !cast\u003cstring\u003e(x));\n                     ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/sort.td",
@@ -10961,16 +10948,17 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "dad96389f680e4761d519cb3648aa162d5c2a200319d85945b67de1a1ea190f7",
+        "err_sha256": "65b1eeeb59081ce52a8885d58c0fba02b9e88687b9d5290a8fddcc05b7bc3803",
         "Msgs": [
           "error: expected string, got type 'int'",
           "error: expected int, got type 'bits\u003c3\u003e'",
-          "error: expected int, got type 'string'"
+          "error: expected int, got type 'string'",
+          "error: !substr start position is out of range 0...29: 30",
+          "error: !substr length must be nonnegative"
         ],
         "err_head": "\u003cfile\u003e:72:36: error: expected string, got type 'int'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:72:36: error: expected string, got type 'int'\n  string claim1 = !substr(42, 0, 3);\n                                   ^\n\u003cfile\u003e:73:34: error: expected int, got type 'bits\u003c3\u003e'\n  string claim2 = !substr(claim, 0b101);\n                                 ^\n\u003cfile\u003e:74:44: error: expected int, got type 'string'\n  string claim3 = !substr(claim, 0, \"oops\");\n                                           ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/switch.td",
@@ -11221,16 +11209,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "2d4beb48a8f190cb40e375764d8a40b69ffe40691824059969696b04cdbdc5c4",
+        "err_sha256": "eb8233ef001648b6a93748f6ae3c3d7cc4ad8a96ec4bdbf22afd691765c7f8dc",
         "Msgs": [
-          "error: template argument with the same name has already been defined",
-          "warning: unused template argument: C:a",
-          "warning: unused template argument: C:a"
+          "error: template argument with the same name has already been defined"
         ],
         "err_head": "\u003cfile\u003e:10:16: error: template argument with the same name has already been defined"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:10:16: error: template argument with the same name has already been defined\nclass C\u003cint a, int a\u003e;\n               ^\n\u003cfile\u003e:10:13: warning: unused template argument: C:a\nclass C\u003cint a, int a\u003e;\n            ^\n\u003cfile\u003e:10:20: warning: unused template argument: C:a\nclass C\u003cint a, int a\u003e;\n                   ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-arg-duplicate.td",
@@ -11251,16 +11236,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "d4966a84751eecdd03e36dc639fdf39576c1e1c963eb9e983aae5552e86132db",
+        "err_sha256": "0c0494df91178812bcaf3240ab2326d3d01a9a230271c74b5b791d6ea11007a7",
         "Msgs": [
-          "error: template argument with the same name has already been defined",
-          "warning: unused template argument: M::a",
-          "warning: unused template argument: M::a"
+          "error: template argument with the same name has already been defined"
         ],
         "err_head": "\u003cfile\u003e:15:21: error: template argument with the same name has already been defined"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:15:21: error: template argument with the same name has already been defined\nmulticlass M\u003cint a, int a\u003e {\n                    ^\n\u003cfile\u003e:15:18: warning: unused template argument: M::a\nmulticlass M\u003cint a, int a\u003e {\n                 ^\n\u003cfile\u003e:15:25: warning: unused template argument: M::a\nmulticlass M\u003cint a, int a\u003e {\n                        ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-arg-duplicate.td",
@@ -11281,16 +11263,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "7debf4dc410cbdf9d2a21bc2a425c051ed1cdffc549e753c8feadea182f1feb1",
+        "err_sha256": "a4975c98ae5c63bf6d6422713476e6f930f657021813229da537c1cf4333814e",
         "Msgs": [
-          "error: template argument with the same name has already been defined",
-          "warning: unused template argument: D:a",
-          "warning: unused template argument: D:a"
+          "error: template argument with the same name has already been defined"
         ],
         "err_head": "\u003cfile\u003e:23:16: error: template argument with the same name has already been defined"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:23:16: error: template argument with the same name has already been defined\nclass D\u003cint a, string a = \"x\"\u003e;\n               ^\n\u003cfile\u003e:23:13: warning: unused template argument: D:a\nclass D\u003cint a, string a = \"x\"\u003e;\n            ^\n\u003cfile\u003e:23:23: warning: unused template argument: D:a\nclass D\u003cint a, string a = \"x\"\u003e;\n                      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11711,14 +11690,11 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6be679457401f866d29973fdea28f177647918145b392ddeed7f856be634a29c",
-        "Msgs": [
-          "error: Concatenated Dag operators do not match"
-        ],
-        "err_head": "\u003cfile\u003e:7:1: error: Concatenated Dag operators do not match"
+        "err_sha256": "ebb3c556f81f88b37da1d268aa6838276a7e55c255e5657dfa8c1a90ad5c6773",
+        "Msgs": null,
+        "err_head": "error: Concatenated Dag operators do not match: '(op 1)' vs. '(otherop 2)'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:7:1: error: Concatenated Dag operators do not match\ndef test {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment.td",

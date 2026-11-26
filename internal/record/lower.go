@@ -42,6 +42,9 @@ func lowerWith(file *syntax.File, filename string, namesOnly bool) (*Keeper, []d
 }
 
 type Lowerer struct {
+	// stop halts lowering after an error that LLVM's parser would have
+	// propagated out of ParseObjectList (see EvalError.Abort).
+	stop  bool
 	k     *Keeper
 	diags *diag.Collector
 	file  string
@@ -99,6 +102,9 @@ func (l *Lowerer) errorAt(err error, fallback diag.Span) {
 		l.diags.Error("E_UNSUPPORTED", e.Feature, span)
 		return
 	case *EvalError:
+		if e.Abort {
+			l.stop = true
+		}
 		if e.NoLoc {
 			// PrintFatalError(Twine): no location, no source line, no caret.
 			l.diags.Error("E_SEMANTIC", e.Msg, diag.Span{})
@@ -131,7 +137,7 @@ func (l *Lowerer) errorAt(err error, fallback diag.Span) {
 // bindings currently in scope; they are applied when a def is built.
 func (l *Lowerer) objects(objs []syntax.Object, env *Env, lets []*syntax.LetBind) {
 	for _, o := range objs {
-		if o == nil {
+		if o == nil || l.stop {
 			continue
 		}
 		l.object(o, env, lets)
@@ -700,7 +706,7 @@ func withDefmLocs(rec *Record, err error) error {
 		return err
 	}
 	ee, ok := err.(*EvalError)
-	if !ok {
+	if !ok || ee.Fatal {
 		return err
 	}
 	cp := *ee
