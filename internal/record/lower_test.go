@@ -43,6 +43,29 @@ func lowerJSON(t *testing.T, src string) string {
 	return strings.TrimSuffix(string(out), "\n")
 }
 
+// A `let` written in a multiclass body around a nested defm belongs to that
+// defm's own ParseDefm: the class's trailing classes are added and then its
+// LetStack is applied, all while the multiclass body is parsed. The enclosing
+// defm adds its own trailing classes later, so those win. AVX512XDIi8Base's
+// `ExeDomain = SSEPackedInt` overriding `let ExeDomain = _.ExeDomain` in
+// avx512_unary_fp_packed_imm is this exact shape (X86.td).
+func TestNestedDefmLetBeforeEnclosingParents(t *testing.T) {
+	src := `class D<bits<2> v> { bits<2> Value = v; }
+def A : D<1>;
+def B : D<3>;
+class Has { D F = A; }
+class Base { D F = B; }
+multiclass Leaf { def m : Has; }
+multiclass Inner { let F = A in { defm r : Leaf; } }
+multiclass Outer { defm Z : Inner; }
+defm T : Outer, Base;
+`
+	want := `{"!instanceof":{"Base":["TZrm"],"D":["A","B"],"Has":["TZrm"]},"!tablegen_json_version":1,"A":{"!anonymous":false,"!fields":[],"!locs":["t.td:2"],"!name":"A","!superclasses":["D"],"Value":[1,0]},"B":{"!anonymous":false,"!fields":[],"!locs":["t.td:3"],"!name":"B","!superclasses":["D"],"Value":[1,1]},"TZrm":{"!anonymous":false,"!fields":[],"!locs":["t.td:6","t.td:7","t.td:8","t.td:9"],"!name":"TZrm","!superclasses":["Has","Base"],"F":{"def":"B","kind":"def","printable":"B"}}}`
+	if got := lowerJSON(t, src); got != want {
+		t.Errorf("dump-json mismatch\n got: %s\nwant: %s", got, want)
+	}
+}
+
 func TestParseTimeAnonymousNames(t *testing.T) {
 	cases := []struct {
 		name string

@@ -612,12 +612,10 @@ type scopedLet struct {
 // deferredDef is a defm entry that has been through TGParser's resolve phase
 // but not yet through addDefOne. See expandDefm.
 type deferredDef struct {
-	rec          *Record
-	anonymous    bool
-	env          *Env
-	postLets     []scopedLet
-	extraParents []*syntax.ParentRef
-	loopSeq      int
+	rec       *Record
+	anonymous bool
+	env       *Env
+	loopSeq   int
 }
 
 // buildDef builds one def. Order is the part that TableGen users trip over:
@@ -640,8 +638,7 @@ func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []sco
 		// resolves and adds each one before touching the next, so there the
 		// per-def order is already correct.
 		*l.pending = append(*l.pending, &deferredDef{
-			rec: rec, anonymous: anonymous, env: env,
-			postLets: postLets, extraParents: extraParents, loopSeq: l.loopSeq,
+			rec: rec, anonymous: anonymous, env: env, loopSeq: l.loopSeq,
 		})
 		return rec, nil
 	}
@@ -1165,17 +1162,27 @@ func (l *Lowerer) defm(st *syntax.DefmStmt, env *Env, lets []*syntax.LetBind) er
 		}
 		defmName = n
 	}
-	return l.expandDefm(st, defmName, env, scopedLets(lets, env), nil, nil)
+	return l.expandDefm(st, defmName, env, scopedLets(lets, env), nil, nil, nil)
 }
 
 // expandDefm expands every multiclass in st's parent list. defmName is the
 // final prefix for the generated defs; outerLocs are the defm locations of
 // enclosing multiclass instantiations, innermost first.
-func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, postLets []scopedLet, outerLocs []diag.Pos, extraParents []*syntax.ParentRef) error {
-	// LLVM expands a defm nested in a multiclass at parse time and applies the
-	// trailing classes right there, so the inner trailing list comes first and
-	// the enclosing defm's trailing classes are appended after it.
-	trailing := append(append([]*syntax.ParentRef(nil), st.Parents[st.ClassStart:]...), extraParents...)
+func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, siteLets, outerLets []scopedLet, outerLocs []diag.Pos, extraParents []*syntax.ParentRef) error {
+	// siteLets are the lets lexically around this defm statement; outerLets
+	// come from the enclosing defm levels and are only needed on the path
+	// where a statement-level loop finishes a record before phase 3.
+	// ParseDefm at each level applies first its trailing classes and then its
+	// own let stack, so a nested defm's lets land before the enclosing
+	// level's trailing classes (TGParser.cpp:4626-4659).
+	mergedLets := append(append([]scopedLet(nil), siteLets...), outerLets...)
+	// Each ParseDefm applies its own trailing classes to every entry it
+	// resolves; the enclosing levels' classes arrive later, when those levels
+	// finalise this defm's records. A record finished by a statement-level
+	// loop inside phase 1 never reaches phase 2, so it takes the merged list
+	// here (inner list first, enclosing classes appended after it).
+	ownTrailing := st.Parents[st.ClassStart:]
+	trailing := append(append([]*syntax.ParentRef(nil), ownTrailing...), extraParents...)
 	// Phase 1: resolve every generated entry (this is where a class
 	// application used as a parent argument instantiates its anonymous def).
 	var pool []*deferredDef
@@ -1189,7 +1196,7 @@ func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, pos
 			break
 		}
 		locs := append([]diag.Pos{ref.Span().Start}, outerLocs...)
-		if err = l.expandMC(mc, ref.Args, defmName, locs, env, postLets, trailing); err != nil {
+		if err = l.expandMC(mc, ref.Args, defmName, locs, env, mergedLets, trailing); err != nil {
 			break
 		}
 	}
@@ -1197,14 +1204,24 @@ func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, pos
 	if err != nil {
 		return err
 	}
-	// Phase 2: trailing regular classes, applied to every entry up front.
+	// Phase 2: this level's trailing regular classes, applied to every entry
+	// up front (TGParser::ParseDefm's AddParentClass loop).
 	for _, d := range pool {
-		if err := l.applyParents(d.rec, d.extraParents, d.env); err != nil {
+		if err := l.applyParents(d.rec, ownTrailing, d.env); err != nil {
 			return err
 		}
-		// A nested defm's entries are handed to the enclosing defm, which
-		// would apply the same (already inherited) trailing list again.
-		d.extraParents = nil
+		// This defm sits inside a multiclass body, so its own ParseDefm ran
+		// while that body was parsed: LLVM applies siteLets there, before the
+		// enclosing defm adds its trailing classes. The outermost defm instead
+		// applies them in phase 3, interleaved with addDefOne, exactly like
+		// ParseDefm's final ApplyLetStack/addEntry loop.
+		if prevPending != nil && !l.namesOnly {
+			for _, lb := range siteLets {
+				if err := l.applyLet(d.rec, lb.b, lb.env); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	// addEntry appends the entries of a defm that sits inside a multiclass body
 	// to that multiclass, so the enclosing defm owns their addDefOne. Only a
@@ -1217,7 +1234,7 @@ func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, pos
 	// Phase 3: the defm let stack, then addDefOne per entry (this is where a
 	// class application in a field initialiser instantiates its anonymous def).
 	for _, d := range pool {
-		for _, lb := range d.postLets {
+		for _, lb := range siteLets {
 			if err := l.applyLet(d.rec, lb.b, lb.env); err != nil {
 				return err
 			}
@@ -1407,12 +1424,11 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 				inner = defmName + n
 			}
 			// A let around a defm is applied after the generated records.
-			// Lets attached to the enclosing multiclass definitions run
-			// first, so the lets at the defm call site are applied last and
-			// win (TGParser::ParseDefm passes its LetStack to addDefOne,
-			// which overwrites whatever the multiclass body produced).
-			nl := append(append([]scopedLet(nil), preLets...), postLets...)
-			if err := l.expandDefm(t, inner, env, nl, outerLocs, extraParents); err != nil {
+			// The lets written here in the multiclass body belong to this
+			// nested defm's own ParseDefm (applied before the enclosing
+			// level's trailing classes); the call-site stack rides along as
+			// outerLets for the immediate loop path only.
+			if err := l.expandDefm(t, inner, env, preLets, postLets, outerLocs, extraParents); err != nil {
 				return err
 			}
 		default:
