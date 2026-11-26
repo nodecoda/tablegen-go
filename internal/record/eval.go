@@ -850,6 +850,17 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	if err != nil {
 		return err
 	}
+	// AddParentClass installs a MapResolver entry from the parent's qualified
+	// NAME to the child's own NAME before resolving the copied values
+	// (TGParser.cpp:366-374): inside a class, `Parent:NAME` becomes
+	// `Child:NAME`. A def maps NAME to its record name instead, which the
+	// evaluator already handles when it sees a bare NAME reference.
+	if target.IsClass {
+		provided[class.Name+":NAME"] = Binding{
+			V:   qualifiedNameValue(target.Name),
+			Env: env,
+		}
+	}
 	for _, f := range class.Vals {
 		nv := &RecordVal{Name: f.Name, Ty: f.Ty, Nonconcrete: f.Nonconcrete, Loc: f.Loc}
 		nv.Expr = rebind(f.Expr, provided)
@@ -879,6 +890,18 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	}
 	target.Super = append(target.Super, class)
 	return nil
+}
+
+// qualifiedNameValue is the Init a class's `NAME` maps to when it is
+// inherited: a VarInit whose qualified name prints as `Class:NAME`
+// (QualifiedNameOfImplicitName, TGParser.cpp:134-142).
+func qualifiedNameValue(name string) syntax.Value {
+	return &syntax.VarValue{
+		ValueBase: syntax.ValueBase{Base: syntax.Base{}, Ty: syntax.StringTy},
+		Name:      "NAME",
+		ArgQual:   name + ":NAME",
+		ArgRef:    true,
+	}
 }
 
 // preFoldArgs builds the record that AddParentClass's MapResolver exposes to a

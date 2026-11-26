@@ -1658,8 +1658,12 @@ func (k *Keeper) implicitCast(want *Ty, v syntax.Value, self *Record) syntax.Val
 	if got.IsA(want) {
 		return v
 	}
-	// TypedInit::convertInitializerTo covers bit -> bits<1> without a cast.
+	// TypedInit::convertInitializerTo covers bit -> bits<1> and bits<1> -> bit
+	// without a cast (Record.cpp:447-451 returns the single bit).
 	if got.Kind == BitTy && want.Kind == BitsTy && want.Bits == 1 {
+		return v
+	}
+	if got.Kind == BitsTy && got.Bits == 1 && want.Kind == BitTy {
 		return v
 	}
 	if !got.ConvertibleTo(want) || concreteInit(v) {

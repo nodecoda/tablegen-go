@@ -688,6 +688,66 @@ func (r *Record) bitTextsOf(e Expr, w int) []string {
 	return unsetBits(w)
 }
 
+// dagParts is a literal dag split into its operator text and rendered
+// arguments, so two of them can be concatenated like DagInit::Fold does.
+type dagParts struct {
+	op   string
+	name string
+	args []string
+}
+
+func constDagParts(v syntax.Value, env *Env) (dagParts, bool) {
+	d, ok := v.(*syntax.DagValue)
+	if !ok {
+		return dagParts{}, false
+	}
+	if _, unset := d.Op.(*syntax.UnsetValue); !unset {
+		switch d.Op.(type) {
+		case *syntax.VarValue:
+			// A reference is only a literal operator once it resolves to a
+			// def; anything else keeps the !con node.
+			if vv := d.Op.(*syntax.VarValue); vv.GlobalRef || vv.Subst {
+				break
+			}
+			return dagParts{}, false
+		}
+	}
+	p := dagParts{op: rawText(d.Op, env), name: d.OpName}
+	for _, a := range d.Args {
+		t := rawText(a.Value, env)
+		if a.Name != "" {
+			t += ":$" + a.Name
+		}
+		p.args = append(p.args, t)
+	}
+	return p, true
+}
+
+func dagPartsText(l, r dagParts) string {
+	op := l.op
+	if op == "?" {
+		op = r.op
+	}
+	name := l.name
+	if name == "" {
+		name = r.name
+	}
+	args := append(append([]string{}, l.args...), r.args...)
+	var b strings.Builder
+	b.WriteByte('(')
+	b.WriteString(op)
+	if name != "" {
+		b.WriteString(":$")
+		b.WriteString(name)
+	}
+	if len(args) > 0 {
+		b.WriteByte(' ')
+		b.WriteString(strings.Join(args, ", "))
+	}
+	b.WriteByte(')')
+	return b.String()
+}
+
 func rawText(v syntax.Value, env *Env) string {
 	switch x := v.(type) {
 	case nil:
@@ -763,9 +823,6 @@ func rawText(v syntax.Value, env *Env) string {
 	case *syntax.SliceValue:
 		return rawText(x.Base, env) + "[" + sliceText(x, env) + "]"
 	case *syntax.BitRangeValue:
-		// convertInitializerBitRange always produces a BitsInit, so even a
-		// one-bit slice prints with braces. Bits keeps the written order,
-		// which is the order the Init tree prints.
 		bits := make([]string, len(x.Bits))
 		for i, bit := range x.Bits {
 			bits[i] = rawText(x.Base, env) + "{" + strconv.FormatInt(int64(bit), 10) + "}"
@@ -784,6 +841,16 @@ func rawText(v syntax.Value, env *Env) string {
 				}
 			}
 			return "!listconcat(" + rawText(x.LHS, env) + ", " + rawText(x.RHS, env) + ")"
+		}
+		if x.LHS.Type().Kind == syntax.DagType {
+			// BinOpInit::Fold's CONCAT merges two DagInits whose operators
+			// agree, keeping the left name (Record.cpp:1219-1248).
+			if l, lok := constDagParts(x.LHS, env); lok {
+				if r, rok := constDagParts(x.RHS, env); rok && l.op == r.op {
+					return dagPartsText(l, r)
+				}
+			}
+			return "!con(" + rawText(x.LHS, env) + ", " + rawText(x.RHS, env) + ")"
 		}
 		if lt, lc, ok := constStrCode(x.LHS, env, 0); ok {
 			if rt, rc, ok := constStrCode(x.RHS, env, 0); ok {
@@ -1608,6 +1675,13 @@ func constStr(v syntax.Value, env *Env, depth int) (string, bool) {
 		}
 		if _, sub, subEnv := resolveVar(x, env); sub != nil && sub != v {
 			return constStr(sub, subEnv, depth+1)
+		}
+	case *syntax.PasteValue:
+		// BinOpInit::getStrConcat folds as soon as both operands are string
+		// literals (Record.cpp:1297-1307); a paste inside !strconcat is
+		// already a literal by the time the outer operator folds.
+		if t, c, ok := constStrCode(x, env, depth+1); ok && !c {
+			return t, true
 		}
 	case *syntax.BangValue:
 		switch x.Op {

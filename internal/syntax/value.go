@@ -85,6 +85,9 @@ func (p *Parser) parseValue(rec *recordInfo, item *Type, mode idMode) Value {
 				return nil
 			}
 			base := lhs
+			// TypedInit::convertInitializerBitRange wraps every selected bit
+			// in a VarBitInit and returns a BitsInit even for one index
+			// (Record.cpp:2246-2258), so `op{5}` has type bits<1>.
 			lhs = &BitRangeValue{ValueBase: ValueBase{Base: Base{At: p.span(start)}, Ty: bitsOf(len(bits))}, Base: base, Bits: bits}
 			// Init::convertInitializerBitRange runs right here in the parser
 			// (TGParser.cpp:3257): slicing a literal BitsInit selects the
@@ -925,7 +928,14 @@ func (p *Parser) finishUnary(v *BangValue, rec *recordInfo) Value {
 func foldCastLiteral(arg Value, to Type) Value {
 	if to.Kind == BitType {
 		if b, ok := arg.(*BitsValue); ok && b.Ty.Kind == BitsType && b.Ty.Bits == 1 && len(b.Elems) == 1 {
-			return &IntValue{ValueBase: ValueBase{Base: Base{At: arg.Span()}, Ty: BitTy}, Num: bitNum(b.Elems[0])}
+			// BitsInit::convertInitializerTo(BitRecTy) returns getBit(0)
+			// (Record.cpp:447-451): the bit itself, which keeps a reference
+			// such as `Inst{22}` in the tree.
+			el := b.Elems[0]
+			if iv, ok := el.(*IntValue); ok {
+				return &IntValue{ValueBase: ValueBase{Base: Base{At: arg.Span()}, Ty: BitTy}, Num: iv.Num}
+			}
+			return el
 		}
 	}
 	if to.Kind != BitType && to.Kind != BitsType && to.Kind != IntType {
@@ -958,14 +968,6 @@ func foldCastLiteral(arg Value, to Type) Value {
 		}
 		return &BitsValue{ValueBase: ValueBase{Base: at, Ty: bitsOf(to.Bits)}, Elems: elems}
 	}
-}
-
-// bitNum reads the value of a literal bit element.
-func bitNum(v Value) uint64 {
-	if n, ok := constInt(v); ok {
-		return uint64(n)
-	}
-	return 0
 }
 
 // canFitInBits mirrors canFitInBitfield (Record.cpp:571): with NumBits == 4,
@@ -1259,6 +1261,14 @@ func (p *Parser) finishSubstr(v *BangValue, rec *recordInfo) Value {
 			return nil
 		}
 		args = append(args, rhs)
+	} else {
+		// TGParser supplies INT64_MAX as the default length
+		// (TGParser.cpp:2424-2433), so the stored operator always has three
+		// arguments.
+		args = append(args, &IntValue{
+			ValueBase: ValueBase{Base: Base{At: startLoc}, Ty: IntTy},
+			Num:       9223372036854775807,
+		})
 	}
 	if !p.eat(RParen) {
 		p.errTok("E_PARSE_BANG_RPAREN", "expected ')' in !substr operator")
