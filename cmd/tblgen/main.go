@@ -35,6 +35,7 @@ func main() {
 	printExpandedSource := flag.Bool("E", false, "print the preprocessed token stream")
 	printRecords := flag.Bool("print-records", false, "print all records (the default action)")
 	detailedRecords := flag.Bool("print-detailed-records", false, "print the detailed records report")
+	printSets := flag.Bool("print-sets", false, "print expanded sets for testing DAG exprs")
 	nullBackend := flag.Bool("null-backend", false, "resolve records and emit nothing")
 	noWarnUnusedTArgs := flag.Bool("no-warn-on-unused-template-args", false,
 		"suppress unused template argument warnings")
@@ -181,6 +182,17 @@ func main() {
 	}
 
 	if *nullBackend {
+		return
+	}
+	if *printSets {
+		out, err := backend.PrintSets(keeper)
+		if err != nil {
+			// SetTheory's operators call PrintFatalError, which exits 1.
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		writeDepfile(*outFile, inputName, file.Sources, *depFile)
+		emit(out, *outFile)
 		return
 	}
 	if *dumpJSON {

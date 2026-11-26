@@ -6,9 +6,9 @@
   "counts": {
     "status:err-diff": 77,
     "status:err-wording": 26,
-    "status:exit-diff": 3,
+    "status:exit-diff": 2,
     "status:out-diff": 10,
-    "status:same": 200,
+    "status:same": 201,
     "status:skipped": 291
   },
   "skips": {
@@ -4203,15 +4203,14 @@
         "out_len": 1003
       },
       "ours": {
-        "exit": 2,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "81349aa1ecb5cb1dd50654d4b125444964be9922da92d31d3bfe713c03b45247",
+        "exit": 0,
+        "out_sha256": "59ca30448cf6b6362e94ffdae101a7a69be6ff9359a84b01cc96ed2af05ec22f",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "err_head": "flag provided but not defined: -print-sets"
+        "out_len": 1003
       },
-      "status": "exit-diff",
-      "out_len": 1003,
-      "err_text": "flag provided but not defined: -print-sets\nusage: tblgen [action] [-D name]... [-I dir]... \u003cfile.td\u003e\n\nactions: --dump-tokens --dump-ast (development aids)\n         --dump-json --print-records --null-backend (M5)"
+      "status": "same",
+      "out_len": 1003
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SiblingForeach.td",
@@ -9946,12 +9945,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3338912121/inc",
-        "/tmp/tblgen-split-3338912121/main.td",
+        "/tmp/tblgen-split-2335167844/inc",
+        "/tmp/tblgen-split-2335167844/main.td",
         "-o",
-        "/tmp/tblgen-split-3338912121/out.td",
+        "/tmp/tblgen-split-2335167844/out.td",
         "-d",
-        "/tmp/tblgen-split-3338912121/out.d"
+        "/tmp/tblgen-split-2335167844/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9971,12 +9970,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-3338912121/inc",
-        "/tmp/tblgen-split-3338912121/main.td",
+        "/tmp/tblgen-split-2335167844/inc",
+        "/tmp/tblgen-split-2335167844/main.td",
         "-o",
-        "/tmp/tblgen-split-3338912121/out.td",
+        "/tmp/tblgen-split-2335167844/out.td",
         "-d",
-        "/tmp/tblgen-split-3338912121/out2.d"
+        "/tmp/tblgen-split-2335167844/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9997,10 +9996,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3338912121/inc",
-        "/tmp/tblgen-split-3338912121/main.td",
+        "/tmp/tblgen-split-2335167844/inc",
+        "/tmp/tblgen-split-2335167844/main.td",
         "-d",
-        "/tmp/tblgen-split-3338912121/out.d"
+        "/tmp/tblgen-split-2335167844/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10087,8 +10086,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2639372687",
-        "/tmp/tblgen-split-2639372687/main.td"
+        "/tmp/tblgen-split-4216565614",
+        "/tmp/tblgen-split-4216565614/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10112,8 +10111,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2639372687",
-        "/tmp/tblgen-split-2639372687/multi.td"
+        "/tmp/tblgen-split-4216565614",
+        "/tmp/tblgen-split-4216565614/multi.td"
       ],
       "oracle": {
         "exit": 0,
