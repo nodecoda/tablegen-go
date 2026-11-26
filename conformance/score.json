@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-26T07:53:13Z",
+ "generated": "2026-11-26T09:06:24Z",
  "oracle_version": "LLVM version 24.0.0git",
  "compare": {
   "match": 330,
@@ -12,10 +12,10 @@
  "matrix": {
   "skipped": 291,
   "status:err-diff": 77,
-  "status:err-wording": 25,
-  "status:exit-diff": 4,
-  "status:out-diff": 11,
-  "status:same": 199,
+  "status:err-wording": 26,
+  "status:out-diff": 10,
+  "status:same": 201,
+  "status:same-report": 2,
   "status:skipped": 291
  },
  "stderr": {
