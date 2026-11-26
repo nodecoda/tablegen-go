@@ -31,6 +31,7 @@ func lowerWith(file *syntax.File, filename string, namesOnly bool) (*Keeper, []d
 		diags:        col,
 		file:         filename,
 		mcs:          map[string]*syntax.MultiClassStmt{},
+		mcLets:       map[string][]*syntax.LetBind{},
 		anonName:     map[*syntax.DefStmt]string{},
 		anonDefmName: map[*syntax.DefmStmt]string{},
 		loopSeq:      -1,
@@ -41,10 +42,15 @@ func lowerWith(file *syntax.File, filename string, namesOnly bool) (*Keeper, []d
 }
 
 type Lowerer struct {
-	k            *Keeper
-	diags        *diag.Collector
-	file         string
-	mcs          map[string]*syntax.MultiClassStmt
+	k     *Keeper
+	diags *diag.Collector
+	file  string
+	mcs   map[string]*syntax.MultiClassStmt
+	// mcLets keeps the `let` bindings a multiclass definition sits inside.
+	// TGParser applies the active LetStack to every def prototype while
+	// parsing the multiclass body (ParseObjectBody calls ApplyLetStack before
+	// ParseBody), so each generated def starts with those values already set.
+	mcLets       map[string][]*syntax.LetBind
 	anonName     map[*syntax.DefStmt]string
 	anonDefmName map[*syntax.DefmStmt]string
 	loopSeq      int // Seq of the statement-level loop being expanded, or -1
@@ -140,6 +146,7 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 		}
 	case *syntax.MultiClassStmt:
 		l.mcs[t.Name] = t
+		l.mcLets[t.Name] = lets
 		l.reserveAnonNames(t.Body)
 	case *syntax.DefvarStmt:
 		if l.scope == 0 {
@@ -981,7 +988,8 @@ func (l *Lowerer) expandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg, defmNa
 			return err
 		}
 	}
-	return l.mcObjects(mc.Body, env, nil, defmName, locs, postLets, extraParents)
+	preLets := scopedLets(l.mcLets[mc.Name], env)
+	return l.mcObjects(mc.Body, env, preLets, defmName, locs, postLets, extraParents)
 }
 
 func firstLoc(locs []diag.Pos) *diag.Pos {
