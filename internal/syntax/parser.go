@@ -233,6 +233,16 @@ func (p *Parser) errTok(code, msg string) {
 	p.diags.Error(code, msg, t.Span)
 }
 
+// errAtNote records an error with a secondary location, the shape
+// PrintError+PrintNote produces (TGParser.cpp:659-661).
+func (p *Parser) errAtNote(span Span, code, msg string, noteSpan Span, noteMsg string) {
+	p.diags.Error(code, msg, span)
+	if n := len(p.diags.Diags); n > 0 {
+		p.diags.Diags[n-1].Notes = append(p.diags.Diags[n-1].Notes,
+			diag.Note{Message: noteMsg, Pos: noteSpan.Start})
+	}
+}
+
 func (p *Parser) errAt(span Span, code, msg string) {
 	p.diags.Error(code, msg, span)
 }
@@ -1919,24 +1929,28 @@ func (p *Parser) parseClassRef(isMulticlass bool) (*ParentRef, bool) {
 		p.errAt(nt.Span, "E_PARSE_CLASSREF_CLASS", msg)
 		return nil, false
 	}
+	var formals []*Decl
+	if isMulticlass {
+		if mc := p.multiclasses[nt.Text]; mc != nil {
+			formals = mc.TemplateArgs
+		}
+	} else {
+		formals = p.classArgs[nt.Text]
+	}
+	sep := ":"
+	if isMulticlass {
+		sep = "::"
+	}
 	if p.eat(Less) {
-		var formals []*Decl
-		if isMulticlass {
-			if mc := p.multiclasses[nt.Text]; mc != nil {
-				formals = mc.TemplateArgs
-			}
-		} else {
-			formals = p.classArgs[nt.Text]
-		}
-		sep := ":"
-		if isMulticlass {
-			sep = "::"
-		}
 		args, ok := p.parseTemplateArgValues(p.curRecOrNil(), formals, nt.Text, nt.Span, sep)
 		if !ok {
 			return nil, false
 		}
 		ref.Args = args
+	} else if !p.checkUnsolvedArgs(formals, nt.Text, sep, nt.Span, nil, 0) {
+		// ParseClassID calls resolveArguments even without a '<' list, so a
+		// required argument is reported here (TGParser.cpp:654-668).
+		return nil, false
 	}
 	ref.Base.At = p.span(start)
 	return ref, true
@@ -1945,8 +1959,17 @@ func (p *Parser) parseClassRef(isMulticlass bool) (*ParentRef, bool) {
 // parseTemplateArgValues parses an argument list after '<' has been consumed,
 // through '>'. An empty list is allowed.
 func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner string, nameSpan Span, sep string) ([]*Arg, bool) {
+	// CheckTemplateArgValues returns HasError, and its caller aborts the value
+	// (TGParser.cpp:1035-1040), so the tokens after the '>' are left for the
+	// caller to report.
+	badValue := false
 	var args []*Arg
 	if p.eat(Greater) {
+		// An empty list still has to satisfy every required argument
+		// (TGParser.cpp:654-668).
+		if !p.checkUnsolvedArgs(formals, owner, sep, nameSpan, nil, 0) {
+			return nil, false
+		}
 		return args, true
 	}
 	named := map[string]bool{}
@@ -1987,7 +2010,7 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 					"The value of named argument should be initialized, but we got '?'")
 			}
 			named[nameTok.Text] = true
-			p.checkTemplateArgValue(v, hint, owner, nameTok.Text, sep)
+			badValue = p.checkTemplateArgValue(v, hint, owner, nameTok.Text, sep) || badValue
 			args = append(args, &Arg{Base: Base{At: p.span(start)}, Name: nameTok.Text, NameSpan: nameTok.Span, Value: v})
 		} else {
 			var hint *Type
@@ -2012,34 +2035,63 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 				p.errAt(v.Span(), "E_PARSE_ARG_NAME", "The name of named argument should be a valid identifier")
 			}
 			positional++
-			p.checkTemplateArgValue(v, hint, owner, argName, sep)
+			badValue = p.checkTemplateArgValue(v, hint, owner, argName, sep) || badValue
 			args = append(args, &Arg{Base: Base{At: p.span(start)}, Value: v})
 		}
-		if !p.eat(Comma) {
+		// TGParser::ParseTemplateArgValueList expects either the end of the
+		// list or a comma, and names neither case (TGParser.cpp:3569-3577).
+		if p.eat(Greater) {
 			break
 		}
+		if !p.eat(Comma) {
+			p.errTok("E_PARSE_TARGS_COMMA", "Expected comma before next argument")
+			return nil, false
+		}
 	}
-	if !p.eat(Greater) {
-		p.errTok("E_PARSE_TARGS_GT", "expected '>' at end of template argument list")
+	if badValue {
+		return nil, false
+	}
+	// resolveArguments fills the defaults and rejects a required argument that
+	// was never given (TGParser.cpp:654-668).
+	if !p.checkUnsolvedArgs(formals, owner, sep, nameSpan, named, positional) {
 		return nil, false
 	}
 	return args, true
+}
+
+// checkUnsolvedArgs is the tail of resolveArguments: every template argument
+// that was neither passed nor defaulted is an error, reported at the class
+// name with a note at the argument's declaration (TGParser.cpp:654-668).
+func (p *Parser) checkUnsolvedArgs(formals []*Decl, owner, sep string, nameSpan Span, named map[string]bool, positional int) bool {
+	for i, f := range formals {
+		if f == nil || i < positional || named[f.Name] {
+			continue
+		}
+		if _, unset := f.Value.(*UnsetValue); f.Value != nil && !unset {
+			continue
+		}
+		p.errAtNote(nameSpan, "E_PARSE_ARG_MISSING",
+			"value not specified for template argument '"+owner+sep+f.Name+"'",
+			f.NameSpan, "declared in '"+owner+"'")
+		return false
+	}
+	return true
 }
 
 // checkTemplateArgValue mirrors TGParser::CheckTemplateArgValues: a template
 // argument must be convertible to the declared parameter type. LLVM also
 // inserts casts for convertible values; expression typing already produces the
 // right type for literals, so only the diagnostic matters here.
-func (p *Parser) checkTemplateArgValue(v Value, formal *Type, owner, name, sep string) {
+func (p *Parser) checkTemplateArgValue(v Value, formal *Type, owner, name, sep string) bool {
 	if v == nil || formal == nil || name == "" || owner == "" {
-		return
+		return false
 	}
 	vt := v.Type()
 	if vt.Kind == InvalidType || vt.Kind == UnsetType {
-		return
+		return false
 	}
 	if p.typeConvertible(vt, *formal) {
-		return
+		return false
 	}
 	// TGParser stores the qualified name in the argument RecordVal
 	// (QualifyName uses "::" inside a multiclass, ":" otherwise) and appends
@@ -2047,6 +2099,7 @@ func (p *Parser) checkTemplateArgValue(v Value, formal *Type, owner, name, sep s
 	p.errAt(v.Span(), "E_PARSE_ARG_TYPE",
 		"Value specified for template argument '"+owner+sep+name+"' is of type "+
 			vt.String()+"; expected type "+formal.String()+": "+InitText(v))
+	return true
 }
 
 // typeConvertible resolves record types through the class hierarchy, which

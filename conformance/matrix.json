@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 32,
-    "status:err-wording": 23,
-    "status:same": 259,
+    "status:err-diff": 28,
+    "status:err-wording": 21,
+    "status:same": 265,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -8870,15 +8870,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "4a126e5afa9f6003f765189728a151d6abd02c0b77cf2fa821215c1f137fb929",
+        "err_sha256": "6006e4bcd0c43356cf1ecb8f4f0e83494487aebe2779e9f2dbe33b44bb47c4ee",
         "Msgs": [
           "error: The name of named argument should be a valid identifier",
-          "error: expected '\u003e' at end of template argument list"
+          "error: Expected comma before next argument"
         ],
         "err_head": "\u003cfile\u003e:106:30: error: The name of named argument should be a valid identifier"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:106:30: error: The name of named argument should be a valid identifier\ndef testError2: TestClass\u003c1, 3=0\u003e;\n                             ^\n\u003cfile\u003e:106:31: error: expected '\u003e' at end of template argument list\ndef testError2: TestClass\u003c1, 3=0\u003e;\n                              ^"
+      "err_text": "\u003cfile\u003e:106:30: error: The name of named argument should be a valid identifier\ndef testError2: TestClass\u003c1, 3=0\u003e;\n                             ^\n\u003cfile\u003e:106:31: error: Expected comma before next argument\ndef testError2: TestClass\u003c1, 3=0\u003e;\n                              ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/named-arguments.td",
@@ -9898,12 +9898,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3867383049/inc",
-        "/tmp/tblgen-split-3867383049/main.td",
+        "/tmp/tblgen-split-1460679364/inc",
+        "/tmp/tblgen-split-1460679364/main.td",
         "-o",
-        "/tmp/tblgen-split-3867383049/out.td",
+        "/tmp/tblgen-split-1460679364/out.td",
         "-d",
-        "/tmp/tblgen-split-3867383049/out.d"
+        "/tmp/tblgen-split-1460679364/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9923,12 +9923,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-3867383049/inc",
-        "/tmp/tblgen-split-3867383049/main.td",
+        "/tmp/tblgen-split-1460679364/inc",
+        "/tmp/tblgen-split-1460679364/main.td",
         "-o",
-        "/tmp/tblgen-split-3867383049/out.td",
+        "/tmp/tblgen-split-1460679364/out.td",
         "-d",
-        "/tmp/tblgen-split-3867383049/out2.d"
+        "/tmp/tblgen-split-1460679364/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9949,10 +9949,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3867383049/inc",
-        "/tmp/tblgen-split-3867383049/main.td",
+        "/tmp/tblgen-split-1460679364/inc",
+        "/tmp/tblgen-split-1460679364/main.td",
         "-d",
-        "/tmp/tblgen-split-3867383049/out.d"
+        "/tmp/tblgen-split-1460679364/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10039,8 +10039,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3277137404",
-        "/tmp/tblgen-split-3277137404/main.td"
+        "/tmp/tblgen-split-2402405225",
+        "/tmp/tblgen-split-2402405225/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10064,8 +10064,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3277137404",
-        "/tmp/tblgen-split-3277137404/multi.td"
+        "/tmp/tblgen-split-2402405225",
+        "/tmp/tblgen-split-2402405225/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10964,14 +10964,16 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "e3f46fc2c2feb3bab218106d666566e47d3effb5d07399dd0a8d2f696a12de8c",
+        "err_sha256": "dad96389f680e4761d519cb3648aa162d5c2a200319d85945b67de1a1ea190f7",
         "Msgs": [
-          "error: expected string, got type 'int'"
+          "error: expected string, got type 'int'",
+          "error: expected int, got type 'bits\u003c3\u003e'",
+          "error: expected int, got type 'string'"
         ],
-        "err_head": "\u003cfile\u003e:72:31: error: expected string, got type 'int'"
+        "err_head": "\u003cfile\u003e:72:36: error: expected string, got type 'int'"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:72:31: error: expected string, got type 'int'\n  string claim1 = !substr(42, 0, 3);\n                              ^"
+      "err_text": "\u003cfile\u003e:72:36: error: expected string, got type 'int'\n  string claim1 = !substr(42, 0, 3);\n                                   ^\n\u003cfile\u003e:73:34: error: expected int, got type 'bits\u003c3\u003e'\n  string claim2 = !substr(claim, 0b101);\n                                 ^\n\u003cfile\u003e:74:44: error: expected int, got type 'string'\n  string claim3 = !substr(claim, 0, \"oops\");\n                                           ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/switch.td",
@@ -11389,14 +11391,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "91f4fa537101c7df17dee38a07dd65d17a8f7e7a70ff1ec3be860f942038e030",
+        "err_sha256": "8024666ad79dc371ab0a967ceceb7a45fe282dd5664ea1ed2b831ec5f40d4c46",
         "Msgs": [
-          "error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42"
+          "error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:79:24: error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:79:24: error: Value specified for template argument 'Class1:nm' is of type int; expected type string: 42\n  string Name = Class1\u003c42\u003e.Name;\n                       ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11418,14 +11420,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "b7c06f252f5b1d1b9eddca0fd3fd7b4bd98f81b879cc0307141c8e2455aa74aa",
+        "err_sha256": "9fc5889504dac46fe2e1ed07cbef0c81f64160e55d8f27effa8c854ceaad7da0",
         "Msgs": [
-          "error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"huh?\""
+          "error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"huh?\"",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:94:32: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"huh?\""
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:94:32: error: Value specified for template argument 'Class2:cd' is of type string; expected type bits\u003c8\u003e: \"huh?\"\n  list\u003cint\u003e CodeList = [Class2\u003c\"huh?\"\u003e.Code];\n                               ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11500,14 +11502,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a68952daccb6cb2695500a144fea732c34c614493e9d2a1024fcf9f40c4ca370",
+        "err_sha256": "1678d04a337de15c5f6f25a80c1e3e3049b676e1c40e3ea216a4c68f0e3f1cee",
         "Msgs": [
-          "error: expected '\u003e' at end of template argument list"
+          "error: Expected comma before next argument"
         ],
-        "err_head": "\u003cfile\u003e:155:31: error: expected '\u003e' at end of template argument list"
+        "err_head": "\u003cfile\u003e:155:31: error: Expected comma before next argument"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:155:31: error: expected '\u003e' at end of template argument list\ndefm MissingComma : TwoArgs\u003c2 \"two\"\u003e;\n                              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11528,14 +11529,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "e3b8e310785726bfeae867a6cc6ea6450eb5373aad0ab5d2bce88a9509331152",
+        "err_sha256": "8efc739ae06c121f82655ed704c9078f3c78b9b502a2c366bc21691af138d1dc",
         "Msgs": [
           "error: value not specified for template argument 'Class1:nm'"
         ],
         "err_head": "\u003cfile\u003e:160:13: error: value not specified for template argument 'Class1:nm'"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:160:13: error: value not specified for template argument 'Class1:nm'\ndef error8: Class1;\n            ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11556,14 +11556,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "888a37b3ca9ff566d2e392c41dcb9c3ee222ee4b72027e15367401096e5fab8d",
+        "err_sha256": "eb58df7772924e54f8e1999ea54bac3432040c78467cc1762fa42ec88ae632a9",
         "Msgs": [
           "error: value not specified for template argument 'MC1::nm'"
         ],
         "err_head": "\u003cfile\u003e:166:14: error: value not specified for template argument 'MC1::nm'"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:166:14: error: value not specified for template argument 'MC1::nm'\ndefm error9: MC1;\n             ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
@@ -11585,14 +11584,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "63ca62e195770e8bc77acb728e02fcdb2f823afe2d334a5c26df8f9acec92f1c",
+        "err_sha256": "96570cbd02fe9bea7b9617514585d150d34736ed8f009200a6aad2cc1baffbcd",
         "Msgs": [
-          "error: value not specified for template argument 'Class2:cd'"
+          "error: value not specified for template argument 'Class2:cd'",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:173:15: error: value not specified for template argument 'Class2:cd'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:173:15: error: value not specified for template argument 'Class2:cd'\n  int value = Class2\u003c\u003e.Code;\n              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",

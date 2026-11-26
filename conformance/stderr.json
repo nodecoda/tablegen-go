@@ -5208,9 +5208,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "611e26d432109bdfa19fab40fbf8f1d9f4850227c506d7c255aa7d62559d9f59",
+        "full_sha256": "829e08e6d985d2ad4e56bbc60d72fc0e8575bb89a5e9ddc62843625266009c75",
         "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3830258255/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-1324681830/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5220,9 +5220,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "861377b105ca37c46c7e62a6886fbcf6610df571d2cc349a2ba4355d65acb4eb",
+        "full_sha256": "1e6f38dfec1522634310cc776672e1accb65f7f8c440c33219bd07f2a76e03af",
         "full_len": 1120,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3830258255/a.td:2:\n/tmp/tblgen-split-3830258255/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3830258255/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },

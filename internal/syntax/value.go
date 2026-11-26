@@ -1307,8 +1307,20 @@ func (p *Parser) finishSubstr(v *BangValue, rec *recordInfo) Value {
 		p.errTok("E_PARSE_BANG_RPAREN", "expected ')' in !substr operator")
 		return nil
 	}
+	// TGParser::ParseOperationSubstr checks the operands after the ')':
+	// the string operand reports through TokError (the token after the call),
+	// the start position at its own location, and the length through TokError
+	// again (TGParser.cpp:2438-2489).
 	if lt := lhs.Type(); lt.Kind != InvalidType && lt.Kind != UnsetType && lt.Kind != StringType {
-		p.errAt(startLoc, "E_PARSE_SUBSTR", "expected string, got type '"+lt.String()+"'")
+		p.errTok("E_PARSE_SUBSTR", "expected string, got type '"+lt.String()+"'")
+		return nil
+	}
+	if mt := mhs.Type(); mt.Kind != InvalidType && mt.Kind != UnsetType && mt.Kind != IntType {
+		p.errAt(startLoc, "E_PARSE_SUBSTR", "expected int, got type '"+mt.String()+"'")
+		return nil
+	}
+	if rt := args[2].Type(); rt.Kind != InvalidType && rt.Kind != UnsetType && rt.Kind != IntType {
+		p.errTok("E_PARSE_SUBSTR", "expected int, got type '"+rt.String()+"'")
 		return nil
 	}
 	v.Args = args
