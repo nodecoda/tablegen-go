@@ -429,17 +429,7 @@ func (r *Record) DumpText() (string, error) {
 			if i > 0 {
 				b.WriteString(", ")
 			}
-			b.WriteString(ta.Ty.String())
-			b.WriteString(" ")
-			// TGParser stores the qualified name, so `class P<int i>` prints
-			// `int P:i = ?`.
-			if r.IsClass {
-				b.WriteString(r.Name)
-				b.WriteString(":")
-			}
-			b.WriteString(ta.Name)
-			b.WriteString(" = ")
-			b.WriteString(r.exprText(ta))
+			b.WriteString(r.TemplateArgText(ta))
 		}
 		b.WriteString(">")
 	}
@@ -453,48 +443,12 @@ func (r *Record) DumpText() (string, error) {
 	}
 	b.WriteString("\n")
 	writeVal := func(v *RecordVal) error {
+		t, err := r.ValueText(v)
+		if err != nil {
+			return err
+		}
 		b.WriteString("  ")
-		if v.Nonconcrete {
-			b.WriteString("field ")
-		}
-		var val Value
-		if !r.IsClass {
-			var err error
-			val, err = r.evalVal(v)
-			if err != nil {
-				return err
-			}
-		}
-		// RecordVal::getPrintType follows the value: a string field holding a
-		// code literal prints as `code`.
-		tyText := v.Ty.String()
-		if v.Ty.Kind == StringTy {
-			code := false
-			if r.IsClass {
-				if e, ok := v.Expr.(*AstExpr); ok {
-					if sv, ok := e.V.(*syntax.StringValue); ok && sv.Code {
-						code = true
-					}
-				}
-			} else if sv, ok := val.(*Str); ok {
-				code = sv.Code
-			}
-			if code {
-				tyText = "code"
-			} else {
-				tyText = "string"
-			}
-		}
-		b.WriteString(tyText)
-		b.WriteString(" ")
-		b.WriteString(v.Name)
-		b.WriteString(" = ")
-		if r.IsClass {
-			// Class bodies are never resolved; the dump shows the Init tree.
-			b.WriteString(r.exprText(v))
-		} else {
-			b.WriteString(val.String())
-		}
+		b.WriteString(t)
 		b.WriteString(";\n")
 		return nil
 	}
@@ -514,6 +468,82 @@ func (r *Record) DumpText() (string, error) {
 	}
 	b.WriteString("}\n")
 	return b.String(), nil
+}
+
+// TemplateArgText renders one template argument the way RecordVal::print
+// does: TGParser stores the qualified name, so `class P<int i>` prints
+// `int P:i = ?`.
+func (r *Record) TemplateArgText(ta *RecordVal) string {
+	var b strings.Builder
+	b.WriteString(ta.Ty.String())
+	b.WriteString(" ")
+	if r.IsClass {
+		b.WriteString(r.Name)
+		b.WriteString(":")
+	}
+	b.WriteString(ta.Name)
+	b.WriteString(" = ")
+	b.WriteString(r.exprText(ta))
+	return b.String()
+}
+
+// ValueText renders one field as RecordVal::print(os, false) does: the
+// optional `field` marker, the print type, the name, and `= value`, without a
+// terminator. Classes print their Init tree; defs print the resolved value.
+func (r *Record) ValueText(v *RecordVal) (string, error) {
+	var b strings.Builder
+	if v.Nonconcrete {
+		b.WriteString("field ")
+	}
+	var val Value
+	if !r.IsClass {
+		var err error
+		val, err = r.evalVal(v)
+		if err != nil {
+			return "", err
+		}
+	}
+	// RecordVal::getPrintType follows the value: a string field holding a
+	// code literal prints as `code`.
+	tyText := v.Ty.String()
+	if v.Ty.Kind == StringTy {
+		code := false
+		if r.IsClass {
+			if e, ok := v.Expr.(*AstExpr); ok {
+				if sv, ok := e.V.(*syntax.StringValue); ok && sv.Code {
+					code = true
+				}
+			}
+		} else if sv, ok := val.(*Str); ok {
+			code = sv.Code
+		}
+		if code {
+			tyText = "code"
+		} else {
+			tyText = "string"
+		}
+	}
+	b.WriteString(tyText)
+	b.WriteString(" ")
+	b.WriteString(v.Name)
+	b.WriteString(" = ")
+	if r.IsClass {
+		// Class bodies are never resolved; the dump shows the Init tree.
+		b.WriteString(r.exprText(v))
+	} else {
+		b.WriteString(val.String())
+	}
+	return b.String(), nil
+}
+
+// HasDirectSuperClass reports whether sc is one of the direct superclasses.
+func (r *Record) HasDirectSuperClass(sc *Record) bool {
+	for _, s := range r.Super {
+		if s == sc {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Record) IsSubClassOf(name string) bool {
@@ -603,6 +633,25 @@ func (k *Keeper) LoopDefs() map[int][]LoopDef { return k.loopDefs }
 
 func (k *Keeper) Classes() []*Record { return sortedRecords(k.classes) }
 func (k *Keeper) Defs() []*Record    { return sortedRecords(k.defs) }
+
+// Globals returns every top-level defvar, sorted by name: RecordKeeper keeps
+// its Globals vector sorted and DetailedRecordsBackend prints it in that order.
+func (k *Keeper) Globals() []*Global {
+	names := make([]string, 0, len(k.globals))
+	for n := range k.globals {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	out := make([]*Global, len(names))
+	for i, n := range names {
+		out[i] = k.globals[n]
+	}
+	return out
+}
+
+// InputFile is the path the record keeper was built from, which the detailed
+// records report prints in its heading.
+func (k *Keeper) InputFile() string { return k.file }
 
 func sortedRecords(m map[string]*Record) []*Record {
 	names := make([]string, 0, len(m))

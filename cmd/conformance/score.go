@@ -111,7 +111,7 @@ func runSummary(path string) {
 	}
 	line("compare", score.Compare, prev.Compare, "match", "diff", "reject-match", "timeout", "skipped")
 	line("stderr", score.Stderr, prev.Stderr, "msg-match", "full-match", "spoken", "skipped")
-	line("matrix", score.Matrix, prev.Matrix, "status:same", "status:exit-diff", "status:out-diff", "status:err-diff", "status:err-wording", "status:skipped")
+	line("matrix", score.Matrix, prev.Matrix, "status:same", "status:same-report", "status:exit-diff", "status:out-diff", "status:err-diff", "status:err-wording", "status:skipped")
 	if len(prev.Compare) > 0 {
 		fmt.Printf("delta vs %s\n", prev.Generated)
 	}

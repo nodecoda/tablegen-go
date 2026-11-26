@@ -1201,3 +1201,9 @@ func bindNames(env *Env, names []string) *Env {
 	}
 	return env.With(vars)
 }
+
+// Text renders a top-level defvar initializer the way Init::getAsString does,
+// which is what DetailedRecordsBackend prints for global variables.
+func (g *Global) Text() string {
+	return (&Record{}).renderExpr(g.Expr, nil)
+}

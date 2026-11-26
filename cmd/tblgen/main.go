@@ -206,7 +206,14 @@ func main() {
 		return
 	}
 	if *detailedRecords {
-		unsupported("-print-detailed-records")
+		out, err := backend.Detailed(keeper)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "tblgen: error: %v\n", err)
+			os.Exit(1)
+		}
+		writeDepfile(*outFile, inputName, file.Sources, *depFile)
+		emit(out, *outFile)
+		return
 	}
 	if *printRecords || !*dumpJSON {
 		// --print-records is also llvm-tblgen's default action.

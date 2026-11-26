@@ -6,9 +6,9 @@
   "counts": {
     "status:err-diff": 77,
     "status:err-wording": 26,
-    "status:exit-diff": 2,
     "status:out-diff": 10,
     "status:same": 201,
+    "status:same-report": 2,
     "status:skipped": 291
   },
   "skips": {
@@ -4672,17 +4672,14 @@
         "out_len": 1483
       },
       "ours": {
-        "exit": 2,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a46ae528139ad2d00c3f10d883031475fe626a344d76cd158bda2fb32266fbdd",
-        "Msgs": [
-          "error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
-        ],
-        "err_head": "tblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
+        "exit": 0,
+        "out_sha256": "7087635f3df46c33d6f010eef8f80e46b3f4246ae74482ae73ea51de7c6c5c58",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 884
       },
-      "status": "exit-diff",
-      "out_len": 1483,
-      "err_text": "tblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
+      "status": "same-report",
+      "out_len": 1483
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/arithmetic.td",
@@ -5930,18 +5927,18 @@
         "out_len": 1604
       },
       "ours": {
-        "exit": 2,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a2b373d29dc6c962f0e660aa272d04130a4f1dad804125fbd3481ff225d86f7d",
+        "exit": 0,
+        "out_sha256": "e7db3720693972926969eef475425d1952591fc42fc134e3d72c7342b35b2c16",
+        "err_sha256": "315b000a3dff6399a8555c53fa4d9bf7acaf1983ca0d47873d8453e0b0ff51e0",
         "Msgs": [
-          "warning: unused template argument: Class3:Arg",
-          "error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
+          "warning: unused template argument: Class3:Arg"
         ],
-        "err_head": "\u003cfile\u003e:34:18: warning: unused template argument: Class3:Arg"
+        "err_head": "\u003cfile\u003e:34:18: warning: unused template argument: Class3:Arg",
+        "out_len": 1005
       },
-      "status": "exit-diff",
+      "status": "same-report",
       "out_len": 1604,
-      "err_text": "\u003cfile\u003e:34:18: warning: unused template argument: Class3:Arg\nclass Class3\u003cint Arg\u003e {\n                 ^\ntblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
+      "err_text": "\u003cfile\u003e:34:18: warning: unused template argument: Class3:Arg\nclass Class3\u003cint Arg\u003e {\n                 ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/directive1.td",
@@ -9945,12 +9942,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2335167844/inc",
-        "/tmp/tblgen-split-2335167844/main.td",
+        "/tmp/tblgen-split-1365239764/inc",
+        "/tmp/tblgen-split-1365239764/main.td",
         "-o",
-        "/tmp/tblgen-split-2335167844/out.td",
+        "/tmp/tblgen-split-1365239764/out.td",
         "-d",
-        "/tmp/tblgen-split-2335167844/out.d"
+        "/tmp/tblgen-split-1365239764/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9970,12 +9967,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-2335167844/inc",
-        "/tmp/tblgen-split-2335167844/main.td",
+        "/tmp/tblgen-split-1365239764/inc",
+        "/tmp/tblgen-split-1365239764/main.td",
         "-o",
-        "/tmp/tblgen-split-2335167844/out.td",
+        "/tmp/tblgen-split-1365239764/out.td",
         "-d",
-        "/tmp/tblgen-split-2335167844/out2.d"
+        "/tmp/tblgen-split-1365239764/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9996,10 +9993,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2335167844/inc",
-        "/tmp/tblgen-split-2335167844/main.td",
+        "/tmp/tblgen-split-1365239764/inc",
+        "/tmp/tblgen-split-1365239764/main.td",
         "-d",
-        "/tmp/tblgen-split-2335167844/out.d"
+        "/tmp/tblgen-split-1365239764/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10086,8 +10083,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-4216565614",
-        "/tmp/tblgen-split-4216565614/main.td"
+        "/tmp/tblgen-split-3812495280",
+        "/tmp/tblgen-split-3812495280/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10111,8 +10108,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-4216565614",
-        "/tmp/tblgen-split-4216565614/multi.td"
+        "/tmp/tblgen-split-3812495280",
+        "/tmp/tblgen-split-3812495280/multi.td"
       ],
       "oracle": {
         "exit": 0,

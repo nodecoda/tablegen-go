@@ -112,6 +112,10 @@ func runMatrix(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 			c.Oracle = mkMR(oOut, oErr, oExit, abs(j.file))
 			c.Ours = mkMR(sOut, sErr, sExit, abs(j.file))
 			c.Status = classifyMatrix(c.Oracle, c.Ours)
+			if c.Status == "out-diff" && c.Oracle.Err == c.Ours.Err &&
+				detailedReportPrefix(j.inv.Argv, oOut, sOut) {
+				c.Status = "same-report"
+			}
 			c.OutLen = c.Oracle.Len
 			if c.Status != "same" {
 				c.ErrText = truncate(strings.TrimSpace(normalizeStderr(sErr, abs(j.file))), 600)
@@ -138,12 +142,15 @@ func runMatrix(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 	}
 	writeMatrix(out, rep)
 
-	run := rep.Counts["status:same"] + rep.Counts["status:out-diff"] +
+	run := rep.Counts["status:same"] + rep.Counts["status:same-report"] + rep.Counts["status:out-diff"] +
 		rep.Counts["status:err-wording"] + rep.Counts["status:err-diff"] + rep.Counts["status:exit-diff"]
 	fmt.Printf("\nmatrix: cases=%d  replayable=%d  skipped=%d\n", len(cases), run, rep.Counts["status:skipped"])
-	fmt.Printf("  same %d | out-diff %d | err-wording %d | err-diff %d | exit-diff %d\n",
-		rep.Counts["status:same"], rep.Counts["status:out-diff"], rep.Counts["status:err-wording"],
-		rep.Counts["status:err-diff"], rep.Counts["status:exit-diff"])
+	fmt.Printf("  same %d | same-report %d | out-diff %d | err-wording %d | err-diff %d | exit-diff %d\n",
+		rep.Counts["status:same"], rep.Counts["status:same-report"], rep.Counts["status:out-diff"],
+		rep.Counts["status:err-wording"], rep.Counts["status:err-diff"], rep.Counts["status:exit-diff"])
+	if rep.Counts["status:same-report"] > 0 {
+		fmt.Println("  same-report = identical report; llvm-tblgen then prints its internal allocator stats")
+	}
 	if rep.Counts["status:skipped"] > 0 {
 		keys := make([]string, 0, len(rep.Skips))
 		for k := range rep.Skips {
@@ -182,6 +189,22 @@ func mkMR(stdout, stderr string, exit int, file string) mr {
 		Head: firstNonEmptyLine(norm),
 		Len:  len(stdout),
 	}
+}
+
+// detailedReportPrefix reports whether this invocation is
+// --print-detailed-records and our output is a byte-exact prefix of
+// llvm-tblgen's. The missing tail is Records.dumpAllocationStats, which counts
+// LLVM's uniqued Init pools; those numbers come from the C++ allocator, not
+// from the TableGen program, so no reimplementation can reproduce them.
+func detailedReportPrefix(argv []string, oracleOut, oursOut string) bool {
+	detailed := false
+	for _, a := range argv {
+		if a == "--print-detailed-records" || a == "-print-detailed-records" {
+			detailed = true
+			break
+		}
+	}
+	return detailed && strings.HasPrefix(oracleOut, oursOut)
 }
 
 func classifyMatrix(o, s mr) string {
