@@ -5,10 +5,12 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"tblgen/internal/backend"
@@ -105,16 +107,24 @@ func main() {
 		os.Exit(1)
 	}
 	if *printExpandedSource {
-		toks, diags := syntax.TokenizeWithDirs(inputName, string(src), macros, includes)
-		cache := newSourceCache(inputName, []byte(src))
-		if err := printExpanded(os.Stdout, toks, cache); err != nil {
-			fmt.Fprintf(os.Stderr, "tblgen: %v\n", err)
-			os.Exit(1)
-		}
+		toks, diags, sources := syntax.TokenizeWithDeps(inputName, string(src), macros, includes)
 		for _, d := range diags {
 			fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName))
 		}
-		os.Exit(diagExit(diags))
+		if code := diagExit(diags); code != 0 {
+			os.Exit(code)
+		}
+		// Main.cpp:263-271 writes the depfile before the output, and both
+		// only after the lexer has run without errors.
+		writeDepfile(*outFile, inputName, sources, *depFile)
+		cache := newSourceCache(inputName, []byte(src))
+		var buf bytes.Buffer
+		if err := printExpanded(&buf, toks, cache); err != nil {
+			fmt.Fprintf(os.Stderr, "tblgen: %v\n", err)
+			os.Exit(1)
+		}
+		emit(buf.Bytes(), *outFile)
+		return
 	}
 	popts := syntax.Options{NoWarnUnusedTArgs: *noWarnUnusedTArgs}
 	file, diags := syntax.ParseWith(inputName, string(src), macros, includes, nil, popts)
@@ -179,7 +189,8 @@ func main() {
 			fmt.Fprintf(os.Stderr, "tblgen: error: %v\n", err)
 			os.Exit(1)
 		}
-		os.Stdout.Write(out)
+		writeDepfile(*outFile, inputName, file.Sources, *depFile)
+		emit(out, *outFile)
 		return
 	}
 	if *detailedRecords {
@@ -192,8 +203,8 @@ func main() {
 			fmt.Fprintf(os.Stderr, "tblgen: error: %v\n", err)
 			os.Exit(1)
 		}
+		writeDepfile(*outFile, inputName, file.Sources, *depFile)
 		emit(out, *outFile)
-		writeDepfile(*outFile, inputName, *depFile)
 		return
 	}
 }
@@ -216,24 +227,65 @@ func osErrText(err error) string {
 }
 
 // writeDepfile emits the make-style dependency file `-d` asks for: the output
-// target followed by the primary input. With stdin there is no input path, but
-// the target must still appear (an empty depfile is treated as missing).
-func writeDepfile(outPath, inputName, depPath string) {
+// target, the primary input, and every include the lexer opened. This is
+// Main.cpp:184-217 createDependencyFile: dependencies are sorted and
+// deduplicated like the std::set there, -d without -o is an error, and names
+// go through escapeDependencyFilename (Main.cpp:142).
+func writeDepfile(outPath, inputName string, sources []string, depPath string) {
 	if depPath == "" {
 		return
 	}
-	target := outPath
-	if target == "" || target == "-" {
-		target = "-"
-	}
-	line := target + ":"
-	if inputName != "" && inputName != "-" {
-		line += " " + inputName
-	}
-	if err := os.WriteFile(depPath, []byte(line+"\n"), 0o644); err != nil {
-		fmt.Fprintf(os.Stderr, "tblgen: error: %v\n", err)
+	if outPath == "" || outPath == "-" {
+		fmt.Fprintf(os.Stderr, "%s: the option -d must be used together with -o\n", os.Args[0])
 		os.Exit(1)
 	}
+	var b strings.Builder
+	b.WriteString(escapeDependencyFilename(outPath))
+	b.WriteByte(':')
+	if inputName != "" && inputName != "-" {
+		b.WriteByte(' ')
+		b.WriteString(escapeDependencyFilename(inputName))
+	}
+	seen := make(map[string]bool, len(sources))
+	deps := make([]string, 0, len(sources))
+	for _, s := range sources {
+		if !seen[s] {
+			seen[s] = true
+			deps = append(deps, s)
+		}
+	}
+	sort.Strings(deps)
+	for _, d := range deps {
+		b.WriteByte(' ')
+		b.WriteString(escapeDependencyFilename(d))
+	}
+	b.WriteByte('\n')
+	if err := os.WriteFile(depPath, []byte(b.String()), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "%s: error opening %s:%s\n", os.Args[0], depPath, osErrText(err))
+		os.Exit(1)
+	}
+}
+
+// escapeDependencyFilename mirrors Main.cpp:142 for non-Windows: `#` becomes
+// `\#`, a space gains a preceding `\` plus one more for each backslash that
+// already precedes it, and `$` is doubled.
+func escapeDependencyFilename(name string) string {
+	var b strings.Builder
+	for i := 0; i < len(name); i++ {
+		switch name[i] {
+		case '#':
+			b.WriteByte('\\')
+		case ' ':
+			b.WriteByte('\\')
+			for j := i; j > 0 && name[j-1] == '\\'; j-- {
+				b.WriteByte('\\')
+			}
+		case '$':
+			b.WriteByte('$')
+		}
+		b.WriteByte(name[i])
+	}
+	return b.String()
 }
 
 // emit writes an action's output, honouring -o the way llvm-tblgen does.

@@ -135,7 +135,7 @@ func Parse(file, src string, macros, includeDirs []string) (*File, []diag.Diagno
 // are installed into the parser's global table when the corresponding
 // statement-level loop ends, which is exactly when LLVM's parser adds them.
 func ParseWith(file, src string, macros, includeDirs []string, known map[int][]KnownDef, opts Options) (*File, []diag.Diagnostic) {
-	toks, lexDiags := TokenizeWithDirs(file, src, macros, includeDirs)
+	toks, lexDiags, sources := TokenizeWithDeps(file, src, macros, includeDirs)
 	for _, d := range lexDiags {
 		if d.Severity == diag.Error {
 			return &File{}, lexDiags
@@ -157,6 +157,7 @@ func ParseWith(file, src string, macros, includeDirs []string, known map[int][]K
 	}
 	f := p.parseFile()
 	f.DynLoopNames = p.dynLoopNames
+	f.Sources = sources
 	diags := append(lexDiags, p.diags.Diags...)
 	return f, diags
 }

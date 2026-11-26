@@ -177,6 +177,9 @@ func itoa(n int) string {
 // File is ObjectList.
 type File struct {
 	Objects []Object
+	// Sources lists every include the lexer opened, in encounter order. The
+	// dependency file (-d) reports them together with the main input.
+	Sources []string
 	// DynLoopNames reports that some statement-level foreach creates record
 	// names the parser could not materialize (they depend on a bang
 	// expression or a class field). The driver then lowers once to learn the

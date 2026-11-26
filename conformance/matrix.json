@@ -5,10 +5,10 @@
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
     "status:err-diff": 77,
-    "status:err-wording": 25,
-    "status:exit-diff": 4,
-    "status:out-diff": 11,
-    "status:same": 199,
+    "status:err-wording": 26,
+    "status:exit-diff": 3,
+    "status:out-diff": 10,
+    "status:same": 200,
     "status:skipped": 291
   },
   "skips": {
@@ -9946,12 +9946,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-916325978/inc",
-        "/tmp/tblgen-split-916325978/main.td",
+        "/tmp/tblgen-split-3338912121/inc",
+        "/tmp/tblgen-split-3338912121/main.td",
         "-o",
-        "/tmp/tblgen-split-916325978/out.td",
+        "/tmp/tblgen-split-3338912121/out.td",
         "-d",
-        "/tmp/tblgen-split-916325978/out.d"
+        "/tmp/tblgen-split-3338912121/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9961,23 +9961,22 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "94c2ef442b0e670f3aa685a23c570e4264bf8dd3a6b12f1e22b17101d644c179",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Msgs": null,
-        "out_len": 24
+        "Msgs": null
       },
-      "status": "out-diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-916325978/inc",
-        "/tmp/tblgen-split-916325978/main.td",
+        "/tmp/tblgen-split-3338912121/inc",
+        "/tmp/tblgen-split-3338912121/main.td",
         "-o",
-        "/tmp/tblgen-split-916325978/out.td",
+        "/tmp/tblgen-split-3338912121/out.td",
         "-d",
-        "/tmp/tblgen-split-916325978/out2.d"
+        "/tmp/tblgen-split-3338912121/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9998,10 +9997,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-916325978/inc",
-        "/tmp/tblgen-split-916325978/main.td",
+        "/tmp/tblgen-split-3338912121/inc",
+        "/tmp/tblgen-split-3338912121/main.td",
         "-d",
-        "/tmp/tblgen-split-916325978/out.d"
+        "/tmp/tblgen-split-3338912121/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10012,13 +10011,14 @@
         "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: the option -d must be used together with -o"
       },
       "ours": {
-        "exit": 0,
-        "out_sha256": "94c2ef442b0e670f3aa685a23c570e4264bf8dd3a6b12f1e22b17101d644c179",
-        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit": 1,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "60b0224d383b4effd78db63146d6e6cab19ef77bcd04da7ba5ca6fa84d107d35",
         "Msgs": null,
-        "out_len": 24
+        "err_head": "./tblgen: the option -d must be used together with -o"
       },
-      "status": "exit-diff"
+      "status": "err-wording",
+      "err_text": "./tblgen: the option -d must be used together with -o"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-errors.td",
@@ -10087,8 +10087,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-190922901",
-        "/tmp/tblgen-split-190922901/main.td"
+        "/tmp/tblgen-split-2639372687",
+        "/tmp/tblgen-split-2639372687/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10112,8 +10112,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-190922901",
-        "/tmp/tblgen-split-190922901/multi.td"
+        "/tmp/tblgen-split-2639372687",
+        "/tmp/tblgen-split-2639372687/multi.td"
       ],
       "oracle": {
         "exit": 0,

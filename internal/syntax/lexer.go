@@ -41,6 +41,9 @@ type Lexer struct {
 	// searched, because llvm-tblgen does not add it either.
 	includeDirs []string
 	included    []includeFrame
+	// deps are the resolved include paths in encounter order, for the
+	// make-style dependency file (-d). SourceMgr keeps the same list.
+	deps []string
 }
 
 // includeFrame is the lexer state of an including file. LLVM pushes a new
@@ -87,7 +90,15 @@ func Tokenize(file, src string, macros []string) ([]Token, []diag.Diagnostic) {
 
 // TokenizeWithDirs is Tokenize with -I directories for include resolution.
 func TokenizeWithDirs(file, src string, macros, includeDirs []string) ([]Token, []diag.Diagnostic) {
-	return NewLexerWithDirs(file, src, macros, includeDirs).Lex()
+	toks, diags, _ := TokenizeWithDeps(file, src, macros, includeDirs)
+	return toks, diags
+}
+
+// TokenizeWithDeps also returns the resolved include paths, which -d writes.
+func TokenizeWithDeps(file, src string, macros, includeDirs []string) ([]Token, []diag.Diagnostic, []string) {
+	l := NewLexerWithDirs(file, src, macros, includeDirs)
+	toks, diags := l.Lex()
+	return toks, diags, l.deps
 }
 
 func (l *Lexer) pos() diag.Pos { return diag.Pos{File: l.file, Line: l.line, Col: l.col} }
@@ -470,6 +481,7 @@ func (l *Lexer) lexInclude(from diag.Pos) {
 		file: l.file, src: l.src, i: l.i, line: l.line, col: l.col,
 		prep: l.prep, lineStart: l.lineStart,
 	})
+	l.deps = append(l.deps, path)
 	l.file, l.src, l.i, l.line, l.col = path, src, 0, 1, 1
 	l.prep = nil
 	l.lineStart = true
