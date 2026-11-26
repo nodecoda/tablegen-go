@@ -9884,12 +9884,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-897886702/inc",
-        "/tmp/tblgen-split-897886702/main.td",
+        "/tmp/tblgen-split-410624281/inc",
+        "/tmp/tblgen-split-410624281/main.td",
         "-o",
-        "/tmp/tblgen-split-897886702/out.td",
+        "/tmp/tblgen-split-410624281/out.td",
         "-d",
-        "/tmp/tblgen-split-897886702/out.d"
+        "/tmp/tblgen-split-410624281/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9909,12 +9909,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-897886702/inc",
-        "/tmp/tblgen-split-897886702/main.td",
+        "/tmp/tblgen-split-410624281/inc",
+        "/tmp/tblgen-split-410624281/main.td",
         "-o",
-        "/tmp/tblgen-split-897886702/out.td",
+        "/tmp/tblgen-split-410624281/out.td",
         "-d",
-        "/tmp/tblgen-split-897886702/out2.d"
+        "/tmp/tblgen-split-410624281/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9935,10 +9935,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-897886702/inc",
-        "/tmp/tblgen-split-897886702/main.td",
+        "/tmp/tblgen-split-410624281/inc",
+        "/tmp/tblgen-split-410624281/main.td",
         "-d",
-        "/tmp/tblgen-split-897886702/out.d"
+        "/tmp/tblgen-split-410624281/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10024,8 +10024,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2995737312",
-        "/tmp/tblgen-split-2995737312/main.td"
+        "/tmp/tblgen-split-106316137",
+        "/tmp/tblgen-split-106316137/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10049,8 +10049,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2995737312",
-        "/tmp/tblgen-split-2995737312/multi.td"
+        "/tmp/tblgen-split-106316137",
+        "/tmp/tblgen-split-106316137/multi.td"
       ],
       "oracle": {
         "exit": 0,
