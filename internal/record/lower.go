@@ -269,10 +269,16 @@ func (l *Lowerer) foreach(st *syntax.ForeachStmt, env *Env, lets []*syntax.LetBi
 	}
 	l.scope++
 	// TGParser parses the loop body exactly once, before any iteration is
-	// resolved: every concrete class application in a parent argument or a
-	// field initializer instantiates there, in source order. Only then does
-	// resolve() add each iteration's records. Lowering element by element would
-	// interleave those two phases and shift the anonymous numbering.
+	// resolved: an anonymous `def` takes its name when ParseDef runs, and every
+	// concrete class application in a parent argument or a field initializer
+	// instantiates there, in source order. Only then does resolve() add each
+	// iteration's records (each copy keeps the parse-time name, and addDefOne
+	// renames the duplicates). Lowering element by element would interleave
+	// those two phases and shift the anonymous numbering, so the body is
+	// parsed here first.
+	for _, o := range st.Body {
+		l.reserveAnonNames([]syntax.Object{o})
+	}
 	l.preFoldParseItems(st.Body)
 	l.loopVars = append(l.loopVars, st.Var)
 	for _, e := range elems {
@@ -305,6 +311,12 @@ func (l *Lowerer) ifStmt(st *syntax.IfStmt, env *Env, lets []*syntax.LetBind) {
 	// folding them here would create anonymous records LLVM never makes.
 	prevSkip := l.skipLoopFold
 	l.skipLoopFold = true
+	for _, o := range st.Then {
+		l.reserveAnonNames([]syntax.Object{o})
+	}
+	for _, o := range st.Else {
+		l.reserveAnonNames([]syntax.Object{o})
+	}
 	l.preFoldParseItems(st.Then)
 	l.preFoldParseItems(st.Else)
 	l.skipLoopFold = prevSkip
@@ -708,6 +720,10 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, ext
 	if name == "" {
 		if st.Name == nil || isUnset(st.Name) {
 			anonymous = true
+			// A `def` inside a loop body was parsed once, so every iteration
+			// reuses the name ParseDef gave that statement; addDefOne renames
+			// the copies after the first (finishDef below).
+			name = l.anonName[st]
 		} else {
 			// TGParser registers a VarDefInit for every class application
 			// while parsing, including the ones inside a def's name
@@ -800,14 +816,18 @@ func (l *Lowerer) reserveAnonNames(items []syntax.Object) {
 		switch t := o.(type) {
 		case *syntax.DefStmt:
 			if t.Name == nil || isUnset(t.Name) {
-				l.anonName[t] = l.k.newAnonymous(t.Span().Start).Name
+				if _, ok := l.anonName[t]; !ok {
+					l.anonName[t] = l.k.newAnonymous(t.Span().Start).Name
+				}
 			}
 			l.preFold(t.Name, nil)
 			l.preFoldParents(t.Parents)
 			l.preFoldItems(t.Body)
 		case *syntax.DefmStmt:
 			if t.Name == nil || isUnset(t.Name) {
-				l.anonDefmName[t] = l.k.newAnonymous(t.Span().Start).Name
+				if _, ok := l.anonDefmName[t]; !ok {
+					l.anonDefmName[t] = l.k.newAnonymous(t.Span().Start).Name
+				}
 			}
 			l.preFoldParents(t.Parents)
 			l.preExpandInnerDefm(t)
@@ -1080,8 +1100,14 @@ func (l *Lowerer) preFoldParseItems(items []syntax.Object) {
 func (l *Lowerer) defm(st *syntax.DefmStmt, env *Env, lets []*syntax.LetBind) error {
 	defmName := ""
 	if st.Name == nil || isUnset(st.Name) {
-		// The anonymous name is only a prefix; it is not itself a def.
-		defmName = l.k.newAnonymous(st.Span().Start).Name
+		// The anonymous name is only a prefix; it is not itself a def. A defm
+		// inside a loop body was parsed once, so every iteration keeps the
+		// name ParseDefm gave it (TGParser.cpp:4573) and only the records it
+		// generates collide.
+		defmName = l.anonDefmName[st]
+		if defmName == "" {
+			defmName = l.k.newAnonymous(st.Span().Start).Name
+		}
 	} else {
 		n, err := l.evalName(st.Name, env)
 		if err != nil {

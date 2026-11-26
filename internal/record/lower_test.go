@@ -82,6 +82,59 @@ defm D : MC;
 			want: `{"!instanceof":{"H":["anonymous_0","anonymous_3","anonymous_4"],"T":["anonymous_1","anonymous_2"]},"!tablegen_json_version":1,"OP":{"!anonymous":false,"!fields":[],"!locs":["t.td:1"],"!name":"OP","!superclasses":[]},"anonymous_0":{"!anonymous":true,"!fields":[],"!locs":["t.td:13","t.td:20"],"!name":"anonymous_0","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":1,"printable":"(1)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1))"}},"anonymous_1":{"!anonymous":true,"!fields":[],"!locs":["t.td:13"],"!name":"anonymous_1","!superclasses":["T"],"P":1},"anonymous_2":{"!anonymous":true,"!fields":[],"!locs":["t.td:13"],"!name":"anonymous_2","!superclasses":["T"],"P":2},"anonymous_3":{"!anonymous":true,"!fields":[],"!locs":["t.td:16","t.td:20"],"!name":"anonymous_3","!superclasses":["H"],"Y":{"args":[[3,null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP 3)"}},"anonymous_4":{"!anonymous":true,"!fields":[],"!locs":["t.td:13","t.td:20"],"!name":"anonymous_4","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":2,"printable":"(2)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2))"}}}`,
 		},
 		{
+			// TGParser parses a loop body once: the two anonymous `def`s take
+			// their names before any iteration runs, so the H copy of the first
+			// iteration keeps 0 and the second keeps 1, while T<1> - created
+			// while that copy resolves - lands on 2 (addEntry ->
+			// resolve(ForeachLoop), TGParser.cpp:426-505).
+			name: "loop body parses once, then unrolls",
+			src: `def OP;
+
+class T<int V> {
+  int Half = V;
+  int Quarter = V;
+}
+
+class H<dag D> {
+  dag Y = D;
+}
+
+foreach V = [1, 2] in {
+  foreach idx = [0, 4] in
+    def : H<(OP (T<V>.Half idx))>;
+  foreach idx = [0, 2] in
+    def : H<(OP (T<V>.Quarter idx))>;
+}
+`,
+			want: `{"!instanceof":{"H":["anonymous_0","anonymous_1","anonymous_3","anonymous_4","anonymous_6","anonymous_7","anonymous_8","anonymous_9"],"T":["anonymous_2","anonymous_5"]},"!tablegen_json_version":1,"OP":{"!anonymous":false,"!fields":[],"!locs":["t.td:1"],"!name":"OP","!superclasses":[]},"anonymous_0":{"!anonymous":true,"!fields":[],"!locs":["t.td:14"],"!name":"anonymous_0","!superclasses":["H"],"Y":{"args":[[{"args":[[0,null]],"kind":"dag","operator":1,"printable":"(1 0)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1 0))"}},"anonymous_1":{"!anonymous":true,"!fields":[],"!locs":["t.td:16"],"!name":"anonymous_1","!superclasses":["H"],"Y":{"args":[[{"args":[[0,null]],"kind":"dag","operator":1,"printable":"(1 0)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1 0))"}},"anonymous_2":{"!anonymous":true,"!fields":[],"!locs":["t.td:14"],"!name":"anonymous_2","!superclasses":["T"],"Half":1,"Quarter":1},"anonymous_3":{"!anonymous":true,"!fields":[],"!locs":["t.td:14"],"!name":"anonymous_3","!superclasses":["H"],"Y":{"args":[[{"args":[[4,null]],"kind":"dag","operator":1,"printable":"(1 4)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1 4))"}},"anonymous_4":{"!anonymous":true,"!fields":[],"!locs":["t.td:16"],"!name":"anonymous_4","!superclasses":["H"],"Y":{"args":[[{"args":[[2,null]],"kind":"dag","operator":1,"printable":"(1 2)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1 2))"}},"anonymous_5":{"!anonymous":true,"!fields":[],"!locs":["t.td:14"],"!name":"anonymous_5","!superclasses":["T"],"Half":2,"Quarter":2},"anonymous_6":{"!anonymous":true,"!fields":[],"!locs":["t.td:14"],"!name":"anonymous_6","!superclasses":["H"],"Y":{"args":[[{"args":[[0,null]],"kind":"dag","operator":2,"printable":"(2 0)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2 0))"}},"anonymous_7":{"!anonymous":true,"!fields":[],"!locs":["t.td:14"],"!name":"anonymous_7","!superclasses":["H"],"Y":{"args":[[{"args":[[4,null]],"kind":"dag","operator":2,"printable":"(2 4)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2 4))"}},"anonymous_8":{"!anonymous":true,"!fields":[],"!locs":["t.td:16"],"!name":"anonymous_8","!superclasses":["H"],"Y":{"args":[[{"args":[[0,null]],"kind":"dag","operator":2,"printable":"(2 0)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2 0))"}},"anonymous_9":{"!anonymous":true,"!fields":[],"!locs":["t.td:16"],"!name":"anonymous_9","!superclasses":["H"],"Y":{"args":[[{"args":[[2,null]],"kind":"dag","operator":2,"printable":"(2 2)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2 2))"}}}`,
+		},
+		{
+			// An anonymous defm inside a loop keeps the prefix ParseDefm gave it
+			// (TGParser.cpp:4573), so each iteration reuses it and only the
+			// generated records collide.
+			name: "defm in a loop keeps its anonymous prefix",
+			src: `def OP;
+
+class T<int V> {
+  int P = V;
+}
+
+class H<dag D> {
+  dag Y = D;
+}
+
+multiclass MC<int V> {
+  def : H<(OP (T<V>.P))>;
+}
+
+foreach V = [1, 2] in {
+  defm : MC<V>;
+  defm : MC<V>;
+}
+`,
+			want: `{"!instanceof":{"H":["anonymous_0","anonymous_4","anonymous_6","anonymous_7"],"T":["anonymous_3","anonymous_5"]},"!tablegen_json_version":1,"OP":{"!anonymous":false,"!fields":[],"!locs":["t.td:1"],"!name":"OP","!superclasses":[]},"anonymous_0":{"!anonymous":true,"!fields":[],"!locs":["t.td:12","t.td:16"],"!name":"anonymous_0","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":1,"printable":"(1)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1))"}},"anonymous_3":{"!anonymous":true,"!fields":[],"!locs":["t.td:12"],"!name":"anonymous_3","!superclasses":["T"],"P":1},"anonymous_4":{"!anonymous":true,"!fields":[],"!locs":["t.td:12","t.td:17"],"!name":"anonymous_4","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":1,"printable":"(1)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1))"}},"anonymous_5":{"!anonymous":true,"!fields":[],"!locs":["t.td:12"],"!name":"anonymous_5","!superclasses":["T"],"P":2},"anonymous_6":{"!anonymous":true,"!fields":[],"!locs":["t.td:12","t.td:16"],"!name":"anonymous_6","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":2,"printable":"(2)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2))"}},"anonymous_7":{"!anonymous":true,"!fields":[],"!locs":["t.td:12","t.td:17"],"!name":"anonymous_7","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":2,"printable":"(2)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2))"}}}`,
+		},
+		{
 			// LLVM instantiates `X<1>` while parsing the (unused) class body.
 			name: "unused class body",
 			src: `class X<int n> { int v = n; }

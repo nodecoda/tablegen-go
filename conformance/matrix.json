@@ -6,8 +6,7 @@
   "counts": {
     "status:err-diff": 75,
     "status:err-wording": 20,
-    "status:out-diff": 1,
-    "status:same": 218,
+    "status:same": 219,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -4610,12 +4609,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "f4bb3186f6c75a31dd527c2133295a1d885eba8703824aaf6fd3ca9b9a85d449",
+        "out_sha256": "d973796cfae5d2eab01cc4f36b804f115bb12f2307edf541c4af2dfc3e52a4fb",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
         "out_len": 63660222
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 63660222
     },
     {
@@ -9941,12 +9940,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-195529655/inc",
-        "/tmp/tblgen-split-195529655/main.td",
+        "/tmp/tblgen-split-789220323/inc",
+        "/tmp/tblgen-split-789220323/main.td",
         "-o",
-        "/tmp/tblgen-split-195529655/out.td",
+        "/tmp/tblgen-split-789220323/out.td",
         "-d",
-        "/tmp/tblgen-split-195529655/out.d"
+        "/tmp/tblgen-split-789220323/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9966,12 +9965,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-195529655/inc",
-        "/tmp/tblgen-split-195529655/main.td",
+        "/tmp/tblgen-split-789220323/inc",
+        "/tmp/tblgen-split-789220323/main.td",
         "-o",
-        "/tmp/tblgen-split-195529655/out.td",
+        "/tmp/tblgen-split-789220323/out.td",
         "-d",
-        "/tmp/tblgen-split-195529655/out2.d"
+        "/tmp/tblgen-split-789220323/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9992,10 +9991,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-195529655/inc",
-        "/tmp/tblgen-split-195529655/main.td",
+        "/tmp/tblgen-split-789220323/inc",
+        "/tmp/tblgen-split-789220323/main.td",
         "-d",
-        "/tmp/tblgen-split-195529655/out.d"
+        "/tmp/tblgen-split-789220323/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10082,8 +10081,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3430131777",
-        "/tmp/tblgen-split-3430131777/main.td"
+        "/tmp/tblgen-split-1874962536",
+        "/tmp/tblgen-split-1874962536/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10107,8 +10106,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3430131777",
-        "/tmp/tblgen-split-3430131777/multi.td"
+        "/tmp/tblgen-split-1874962536",
+        "/tmp/tblgen-split-1874962536/multi.td"
       ],
       "oracle": {
         "exit": 0,
