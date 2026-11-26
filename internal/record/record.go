@@ -876,6 +876,11 @@ type Keeper struct {
 	// VarDefInit::instantiate assigns the next anonymous number.
 	readOnly bool
 	anonLoc  diag.Pos
+	// nameUnresolved is set while a def's parent classes are applied for a
+	// def whose name expression is not concrete at parse time. AddParentClass
+	// then sees NAME as a VarInit, so a class application that mentions it
+	// does not instantiate. See Lowerer.makeDef.
+	nameUnresolved bool
 	// preInstantiate is set while a multiclass body is parsed the way
 	// TGParser::ParseObject does it: class applications that are already
 	// concrete are instantiated there, exactly like the VarDefInit::Fold calls

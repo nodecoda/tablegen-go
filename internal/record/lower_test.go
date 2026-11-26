@@ -551,3 +551,34 @@ defm "" : A<"W0">;
 		t.Fatalf("anonymous instances\n got: %v\nwant: %v", got, want)
 	}
 }
+
+// TestParentFieldNameStaysUnresolvedInALoop pins when a class application that
+// mentions NAME instantiates. TGParser applies a def's parents while it parses
+// the object body, so AddParentClass sees the name Init as written: for a def
+// inside a foreach that is `"D" # f`, not a string (TGParser.cpp:356-362). The
+// application stays unresolved there, and a later `let` that overrides the
+// field means llvm-tblgen never instantiates it.
+func TestParentFieldNameStaysUnresolvedInALoop(t *testing.T) {
+	const decls = `class P2V<string P> { string VInst = P; }
+class Base { string B = P2V<NAME>.VInst; }
+`
+	// The `let` replaces the field, so the loop copies keep no application.
+	got := lowerJSON(t, decls+`foreach f = ["A", "B"] in {
+  let B = "x" in
+  def "D" # f : Base;
+}
+`)
+	if strings.Contains(got, `"!anonymous":true`) {
+		t.Fatalf("a let-overridden field must not instantiate:\n%s", got)
+	}
+	// Without the `let` the copies resolve B with their concrete name.
+	got = lowerJSON(t, decls+`foreach f = ["A", "B"] in {
+  def "D" # f : Base;
+}
+`)
+	for _, want := range []string{`"VInst":"DA"`, `"VInst":"DB"`} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %s in\n%s", want, got)
+		}
+	}
+}

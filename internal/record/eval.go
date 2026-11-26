@@ -943,7 +943,7 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	// its anonymous record (and gets its anonymous_N name), even if a later
 	// `let` replaces the field. Reproduce the side effect only; the copied
 	// fields stay lazy so the final values are resolved as before.
-	stand := k.preFoldArgs(target.Name, class, provided, target.IsClass)
+	stand := k.preFoldArgs(target.Name, class, provided, target.IsClass, k.nameUnresolved)
 	for _, f := range class.Vals {
 		// Unconditional: the class application we care about may sit inside a
 		// binding this field only names (e.g. Intrinsic's IntrProperties is
@@ -974,8 +974,11 @@ func qualifiedNameValue(name string) syntax.Value {
 // of an Env frame) lets references resolve even when they were captured in a
 // different environment, e.g. inside the argument expression of a parent
 // class applied while the class itself was parsed.
-func (k *Keeper) preFoldArgs(name string, class *Record, provided *Frame, isClass bool) *Record {
-	rec := &Record{Name: name, IsClass: isClass, keeper: k}
+func (k *Keeper) preFoldArgs(name string, class *Record, provided *Frame, isClass, nameUnresolved bool) *Record {
+	// A stand-in that answers NAME with the unresolved `Class:NAME` behaves
+	// like the class itself, which is what a def whose name is still an Init
+	// looks like to AddParentClass.
+	rec := &Record{Name: name, IsClass: isClass || nameUnresolved, keeper: k}
 	for _, ta := range class.TArgs {
 		b, ok := provided.get(class.Name + ":" + ta.Name)
 		if !ok {

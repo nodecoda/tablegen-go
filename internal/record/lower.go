@@ -816,11 +816,22 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, ext
 	for _, x := range extraLocs {
 		rec.Locs = append(rec.Locs, x)
 	}
+	// TGParser applies a def's parent classes while it parses the object
+	// body, so AddParentClass sees NAME as the name Init written in the
+	// source (TGParser.cpp:356-362). Inside a loop or a multiclass body that
+	// Init still contains VarInits (`"D" # f`, `name # "_a"`), so a class
+	// application that mentions NAME stays unresolved there; only a literal
+	// name is a StringInit at that point.
+	prevUnresolved := l.k.nameUnresolved
+	l.k.nameUnresolved = st.Name != nil && !l.parseTimeKnown(st.Name, env)
 	for _, p := range st.Parents {
-		if err := l.applyParent(rec, p, env); err != nil {
+		err := l.applyParent(rec, p, env)
+		if err != nil {
+			l.k.nameUnresolved = prevUnresolved
 			return nil, false, err
 		}
 	}
+	l.k.nameUnresolved = prevUnresolved
 	if !l.namesOnly {
 		// LowerNames never instantiates the parents, so their fields are
 		// missing and a `let Field` would report "Value unknown". Names and
