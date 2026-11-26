@@ -622,3 +622,83 @@ foreach i = [0, 1] in {
 		t.Fatalf("instantiation order: got %v want %v", got, want)
 	}
 }
+
+// A multiclass-body loop is resolved the moment its list is concrete, i.e.
+// while the multiclass is parsed: Record::resolveReferences resolves the
+// entry's name first, then its values (Record.cpp:2855-2882), and only then
+// does addDefOne run (TGParser.cpp:545-552). An inherited field therefore
+// instantiates its class application right after the name's, not when the defm
+// later expands. The expected list is llvm-tblgen 24.0.0git's --print-records
+// order for this input (G(1), K(1), G(2), K(2), G(3), K(3)).
+func TestMulticlassLoopEntryResolvesInheritedFieldsWithTheName(t *testing.T) {
+	const src = `class G<int x> { int s = x; }
+class K<int x> { int c = x; }
+class H<int x> { K k = K<x>; }
+defvar LIST = [1, 2, 3];
+multiclass M {
+  foreach a = LIST in {
+    foreach b = LIST in {
+      defvar IX = G<b>.s;
+      def "D" # a # "_" # b # "_" # IX : H<b>;
+    }
+  }
+}
+defm y : M;
+`
+	f, diags := syntax.Parse("t.td", src, nil, nil)
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("parse: %v", errs)
+	}
+	k, diags := record.Lower(f, "t.td")
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("lower: %v", errs)
+	}
+	var got []string
+	for _, r := range k.Defs() {
+		switch {
+		case r.Val("c") != nil:
+			got = append(got, r.Name+"=K")
+		case r.Val("s") != nil:
+			got = append(got, r.Name+"=G")
+		}
+	}
+	want := []string{"anonymous_0=G", "anonymous_1=K", "anonymous_2=G", "anonymous_3=K", "anonymous_4=G", "anonymous_5=K"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("instantiation order: got %v want %v", got, want)
+	}
+}
+
+// The name of a multiclass-body loop entry still takes its anonymous number
+// when the multiclass is parsed, before the statements that follow it: the
+// entry's name Init is resolved with the loop substitution right away even
+// though NAME is still unresolved. llvm-tblgen gives G<1> anonymous_0 and the
+// later top-level `def : G<9>` anonymous_1.
+func TestMulticlassLoopEntryNameTakesNumberAtDefinition(t *testing.T) {
+	const src = `class G<int x> { int s = x; }
+class K<int x> { int c = x; }
+multiclass M { foreach b = [1] in { def "D"#G<b>.s : K<b>; } }
+def : G<9>;
+defm y : M;
+`
+	f, diags := syntax.Parse("t.td", src, nil, nil)
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("parse: %v", errs)
+	}
+	k, diags := record.Lower(f, "t.td")
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("lower: %v", errs)
+	}
+	var got []string
+	for _, r := range k.Defs() {
+		if r.Val("s") != nil {
+			got = append(got, r.Name+"=G")
+		}
+	}
+	want := []string{"anonymous_0=G", "anonymous_1=G"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("instantiation order: got %v want %v", got, want)
+	}
+	if v := k.Defs(); len(v) == 0 {
+		t.Fatal("no defs")
+	}
+}

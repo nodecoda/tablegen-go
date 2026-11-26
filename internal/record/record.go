@@ -854,9 +854,12 @@ func (r *Record) resolveAll() error {
 
 // Keeper owns the class/def tables and the global variables of one file.
 type Keeper struct {
-	classes map[string]*Record
-	defs    map[string]*Record
-	globals map[string]*Global
+	// skipClassFold suppresses applyClass's own pre-fold while prePhaseValues
+	// builds a throwaway record: the guarded walk there replaces it.
+	skipClassFold bool
+	classes       map[string]*Record
+	defs          map[string]*Record
+	globals       map[string]*Global
 
 	anon      int
 	anonCache map[string]*Record

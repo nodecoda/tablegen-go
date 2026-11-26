@@ -943,14 +943,18 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	// its anonymous record (and gets its anonymous_N name), even if a later
 	// `let` replaces the field. Reproduce the side effect only; the copied
 	// fields stay lazy so the final values are resolved as before.
-	stand := k.preFoldArgs(target.Name, class, provided, target.IsClass, k.nameUnresolved)
-	for _, f := range class.Vals {
-		// Unconditional: the class application we care about may sit inside a
-		// binding this field only names (e.g. Intrinsic's IntrProperties is
-		// `intr_properties`, whose argument expression mentions
-		// AMDGPUImageDimIntrinsicEval), so a syntactic check on the field
-		// expression itself is not enough.
-		k.preFoldExprBound(rebind(f.Expr, provided), stand, false)
+	// prePhaseValues builds its own throwaway record and walks it under
+	// valueSafe, so it turns this fold off for the call.
+	if !k.skipClassFold {
+		stand := k.preFoldArgs(target.Name, class, provided, target.IsClass, k.nameUnresolved)
+		for _, f := range class.Vals {
+			// Unconditional: the class application we care about may sit inside
+			// a binding this field only names (e.g. Intrinsic's IntrProperties
+			// is `intr_properties`, whose argument expression mentions
+			// AMDGPUImageDimIntrinsicEval), so a syntactic check on the field
+			// expression itself is not enough.
+			k.preFoldExprBound(rebind(f.Expr, provided), stand, false)
+		}
 	}
 	target.Super = append(target.Super, class)
 	return nil

@@ -98,6 +98,29 @@ type Lowerer struct {
 	// them only into record entries; a defvar value is never re-resolved, so a
 	// class application that mentions one must stay a VarDefInit forever.
 	loopVars []string
+	// prePhase is set while modelling the value half of resolve() for an entry
+	// of a multiclass-body loop. LLVM resolves that entry (name first, then
+	// values) the moment the loop list is concrete, i.e. while the multiclass
+	// is being parsed (TGParser.cpp:426-430, 490-560). Here only the
+	// instantiation side effects matter. Because a value may still mention a
+	// reference the substitution cannot supply (the implicit NAME, a field),
+	// nothing is evaluated unless valueSafe proved it can be
+	// (TernOpInit::resolveReferences leaves such an expression unresolved
+	// instead of folding its operands, Record.cpp:1944-1975).
+	prePhase bool
+	// preWalk bounds the binding walk in preResolveValue.
+	preWalk int
+	// preLoopDepth counts the parse-time-unrolled foreach loops enclosing the
+	// statement being pre-expanded. LLVM resolves a loop entry (name, then
+	// values) as soon as its list is concrete; the value pass is limited to
+	// that case here because an `if` arm is only resolved later, when the
+	// defm supplies the multiclass arguments.
+	preLoopDepth int
+	// preLets is the stack of `let` bindings lexically around the multiclass
+	// body statement being pre-expanded. TGParser applies them to each entry
+	// while parsing it (ApplyLetStack), so a field they overwrite is no longer
+	// resolved when the entry is resolved with the loop substitutions.
+	preLets []*syntax.LetBind
 }
 
 func (l *Lowerer) errorAt(err error, fallback diag.Span) {
@@ -1048,7 +1071,9 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 				// `foreach i = 1...4` has no list value; TGParser unrolls it
 				// while parsing, so the body sees a concrete iterator.
 				for _, n := range t.Range {
+					l.preLoopDepth++
 					l.preExpandBody(t.Body, env.WithBinding(t.Var, Binding{Val: &Int{N: int64(n)}, ParseTime: true}))
+					l.preLoopDepth--
 				}
 				continue
 			}
@@ -1070,7 +1095,9 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 				if lit, ok := t.List.(*syntax.ListValue); ok {
 					kt = kt && i < len(lit.Elems) && l.parseTimeKnown(lit.Elems[i], env)
 				}
+				l.preLoopDepth++
 				l.preExpandBody(t.Body, env.WithBinding(t.Var, Binding{Val: e, ParseTime: kt}))
+				l.preLoopDepth--
 			}
 		case *syntax.IfStmt:
 			l.preFold(t.Cond, env)
@@ -1088,7 +1115,16 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 				l.preExpandBody(t.Else, env)
 			}
 		case *syntax.LetStmt:
+			// ApplyLetStack at parse time evaluates each binding against the
+			// active loop substitution; the fields they assign are already
+			// final when the entry is resolved.
+			for _, b := range t.Binds {
+				l.preFold(b.Value, env)
+			}
+			n := len(l.preLets)
+			l.preLets = append(l.preLets, t.Binds...)
 			l.preExpandBody(t.Body, env)
+			l.preLets = l.preLets[:n]
 		case *syntax.DefmStmt:
 			l.preExpandInnerDefm(t)
 		case *syntax.DefStmt:
@@ -1101,8 +1137,73 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 			// is finished (VarDefInit::resolveReferences, Record.cpp:2423).
 			l.preFoldParentArgs(t.Parents, env)
 			l.preFoldBodyItems(t.Body, env)
+			l.prePhaseValues(t, env)
 		}
 	}
+}
+
+// prePhaseValues mirrors the value half of resolve() for one entry of a
+// multiclass-body loop: the entry's inherited fields are resolved with the
+// loop substitutions, so a class application written in a parent's field takes
+// its anonymous number right after the name's, not when the defm later expands
+// (Record.cpp:2855-2882 resolves the name first, then the values;
+// TGParser.cpp:545-552 runs the whole thing before addDefOne).
+//
+// The throwaway record is never registered and its folded values are dropped:
+// only the anonymous numbering matters here. Every evaluation is guarded by
+// valueSafe because the entry's name Init (NAME) and its own fields are still
+// unresolved at this point, and LLVM leaves operators over them unresolved
+// rather than folding them (TernOpInit::resolveReferences,
+// Record.cpp:1944-1975).
+func (l *Lowerer) prePhaseValues(st *syntax.DefStmt, env *Env) {
+	if l.namesOnly || l.preLoopDepth == 0 {
+		return
+	}
+	rec := &Record{Name: "", keeper: l.k}
+	prevUnresolved := l.k.nameUnresolved
+	// AddParentClass sees the name Init as written in the source; inside a
+	// multiclass body that is `NAME#"..."`, not a string (TGParser.cpp:356-362,
+	// ParseObjectName at :735-742).
+	l.k.nameUnresolved = st.Name != nil && !l.parseTimeKnown(st.Name, env)
+	prevSkip := l.k.skipClassFold
+	l.k.skipClassFold = true
+	prevPhase := l.prePhase
+	l.prePhase = true
+	// Only the instantiation side effect matters: the folded name must not be
+	// written back into the shared syntax node, the class body still prints as
+	// `K<x>` (VarDefInit::get/Fold on the class's own VarInit node).
+	prevResolve := l.preResolve
+	l.preResolve = true
+	prevPre := l.k.preInstantiate
+	l.k.preInstantiate = true
+	for _, p := range st.Parents {
+		if err := l.applyParent(rec, p, env); err != nil {
+			break
+		}
+	}
+	// A field the entry's own `let` bindings overwrite is not resolved at
+	// this point (ApplyLetStack replaced it while the body was parsed), so a
+	// class application behind it must not take a number here.
+	overridden := make(map[string]bool, len(l.preLets))
+	for _, b := range l.preLets {
+		overridden[b.Field] = true
+	}
+	for _, it := range st.Body {
+		if li, ok := it.(*syntax.LetItem); ok {
+			overridden[li.Bind.Field] = true
+		}
+	}
+	for _, v := range rec.Vals {
+		if v.state != unresolved || v.Expr == nil || overridden[v.Name] {
+			continue
+		}
+		l.preResolveExpr(v.Expr, rec)
+	}
+	l.k.preInstantiate = prevPre
+	l.preResolve = prevResolve
+	l.prePhase = prevPhase
+	l.k.skipClassFold = prevSkip
+	l.k.nameUnresolved = prevUnresolved
 }
 
 // preFoldBodyItems is preFoldItems with the environment the enclosing entry is
@@ -2289,6 +2390,17 @@ func (l *Lowerer) preResolveValue(v syntax.Value, env *Env, rec *Record) {
 		for _, a := range t.Args {
 			l.preResolveValue(a.Value, env, rec)
 		}
+		if l.prePhase {
+			// In resolve() an application instantiates when the substitution
+			// made its arguments concrete (VarDefInit::resolveReferences,
+			// Record.cpp:2423-2452). An argument the resolver cannot supply
+			// yet leaves the VarDefInit unresolved, so only a fully safe
+			// argument list may be evaluated here.
+			if l.applySafe(t, env) {
+				l.tryInstantiate(t, env, rec)
+			}
+			return
+		}
 		if l.loopChanged(t, env) {
 			l.tryInstantiate(t, env, rec)
 		}
@@ -2306,6 +2418,22 @@ func (l *Lowerer) preResolveValue(v syntax.Value, env *Env, rec *Record) {
 			l.preResolveValue(a.Value, env, rec)
 		}
 	case *syntax.VarValue:
+		if l.prePhase {
+			// A field written as `list<LLVMType> ParamTypes = param_types;`
+			// resolves the bound value; its elements were folded at parse
+			// time, in the order written (ParseTemplateArgValueList):
+			// `LLVMMatchType<0>` inside the list therefore precedes the
+			// parent's TypeInfoGen field.
+			if b, ok := l.varBinding(t, env, rec); ok && b.V != nil {
+				if l.preWalk < 64 {
+					l.preWalk++
+					l.preResolveValue(b.V, b.Env, rec)
+					l.preWalk--
+				}
+				return
+			}
+			return
+		}
 		l.preResolveValue(t.Lit, env, rec)
 	case *syntax.FieldValue:
 		l.preResolveValue(t.Base, env, rec)
@@ -2329,7 +2457,7 @@ func (l *Lowerer) preResolveBang(b *syntax.BangValue, env *Env, rec *Record) {
 	switch b.Op {
 	case syntax.XIf:
 		l.preResolveValue(b.Args[0], env, rec)
-		if n, ok := l.constInt(b.Args[0], env, rec); ok && len(b.Args) == 3 {
+		if n, ok := l.constIntGuarded(b.Args[0], env, rec); ok && len(b.Args) == 3 {
 			// TernOpInit::resolveReferences short-circuits once the condition
 			// resolves (Record.cpp:1949-1958); a dead arm never instantiates.
 			if n != 0 {
@@ -2349,7 +2477,7 @@ func (l *Lowerer) preResolveBang(b *syntax.BangValue, env *Env, rec *Record) {
 		for _, c := range b.Cases {
 			l.preResolveValue(c.Key, env, rec)
 			l.preResolveValue(c.Value, env, rec)
-			if n, ok := l.constInt(c.Key, env, rec); ok && n != 0 {
+			if n, ok := l.constIntGuarded(c.Key, env, rec); ok && n != 0 {
 				return
 			}
 		}
@@ -2361,9 +2489,13 @@ func (l *Lowerer) preResolveBang(b *syntax.BangValue, env *Env, rec *Record) {
 			return
 		}
 		l.preResolveValue(b.Args[0], env, rec)
-		lis, err := l.k.evalSyntax(b.Args[0], env, rec)
-		ls, ok := lis.(*List)
-		if err != nil || !ok {
+		var ls *List
+		if !l.prePhase || l.valueSafe(b.Args[0], env, 0) {
+			if lis, err := l.k.evalSyntax(b.Args[0], env, rec); err == nil {
+				ls, _ = lis.(*List)
+			}
+		}
+		if ls == nil {
 			l.preResolveValue(b.Args[1], env, rec)
 			return
 		}
@@ -2398,6 +2530,164 @@ func (l *Lowerer) constInt(v syntax.Value, env *Env, rec *Record) (int64, bool) 
 		return 0, false
 	}
 	return n, true
+}
+
+// constIntGuarded is constInt with the prePhase guard: an operator whose
+// operands still contain a reference the parse-time substitution cannot supply
+// stays unresolved in LLVM (TernOpInit::resolveReferences, Record.cpp:1944-1975),
+// so it must not be folded just to pick a branch.
+func (l *Lowerer) constIntGuarded(v syntax.Value, env *Env, rec *Record) (int64, bool) {
+	if l.prePhase && !l.valueSafe(v, env, 0) {
+		return 0, false
+	}
+	return l.constInt(v, env, rec)
+}
+
+// applySafe reports whether every argument of a class application can be
+// evaluated under env (see valueSafe).
+func (l *Lowerer) applySafe(ca *syntax.ClassApplyValue, env *Env) bool {
+	for _, a := range ca.Args {
+		if a.Value != nil && !l.valueSafe(a.Value, env, 0) {
+			return false
+		}
+	}
+	return true
+}
+
+// varBinding resolves a variable reference the way evalVar does and returns
+// the binding it names, if any.
+func (l *Lowerer) varBinding(t *syntax.VarValue, env *Env, rec *Record) (Binding, bool) {
+	if t.GlobalRef {
+		if _, ok, err := l.k.Global(t.Name); ok && err == nil {
+			return Binding{}, false // a top-level value: nothing to walk
+		}
+	}
+	if !t.Lexical && (t.ArgRef || t.ArgQual != "") {
+		q := t.ArgQual
+		if q == "" {
+			q, _ = env.Qualify(t.Name)
+		}
+		if q != "" {
+			if b, ok := env.Lookup(q); ok {
+				return b, true
+			}
+		}
+	}
+	if b, ok := env.Lookup(t.Name); ok {
+		return b, true
+	}
+	return Binding{}, false
+}
+
+// varSafe reports whether the value a variable reference points at can be
+// evaluated now.
+func (l *Lowerer) varSafe(t *syntax.VarValue, env *Env, depth int) bool {
+	if t.Subst && t.Lit != nil {
+		return l.valueSafe(t.Lit, env, depth+1)
+	}
+	if t.Lit != nil && !t.ArgRef {
+		return true
+	}
+	if t.GlobalRef {
+		if d := l.k.defs[t.Name]; d != nil {
+			return true
+		}
+		if _, ok, err := l.k.Global(t.Name); ok {
+			return err == nil
+		}
+		if d := l.k.defs[t.Name]; d != nil {
+			return true
+		}
+	}
+	if b, ok := l.varBinding(t, env, nil); ok {
+		return l.bindingSafe(b, depth)
+	}
+	return false
+}
+
+func (l *Lowerer) bindingSafe(b Binding, depth int) bool {
+	switch {
+	case b.Val != nil:
+		return !hasReference(b.Val)
+	case b.V != nil:
+		return l.valueSafe(b.V, b.Env, depth+1)
+	default:
+		return b.Rec != nil
+	}
+}
+
+// valueSafe reports whether v can be evaluated with env without touching a
+// reference the parse-time resolver has not substituted yet: an unbound
+// variable (the implicit NAME of a multiclass entry, a template argument of an
+// enclosing class) or a field of a record that is not built yet. LLVM's
+// resolve() leaves an expression over such a reference unresolved; evaluating
+// it here would both pick the wrong branch and emit spurious diagnostics
+// (a `!substr(NAME, ...)` over an empty name, IntrinsicsNVVM.td:1340).
+func (l *Lowerer) valueSafe(v syntax.Value, env *Env, depth int) bool {
+	if depth > 32 {
+		return false
+	}
+	switch t := v.(type) {
+	case nil, *syntax.UnsetValue, *syntax.IntValue, *syntax.BitsValue, *syntax.StringValue:
+		return true
+	case *syntax.VarValue:
+		return l.varSafe(t, env, depth)
+	case *syntax.ListValue:
+		for _, e := range t.Elems {
+			if !l.valueSafe(e, env, depth+1) {
+				return false
+			}
+		}
+		return true
+	case *syntax.DagValue:
+		if !l.valueSafe(t.Op, env, depth+1) {
+			return false
+		}
+		for _, a := range t.Args {
+			if a.Value != nil && !l.valueSafe(a.Value, env, depth+1) {
+				return false
+			}
+		}
+		return true
+	case *syntax.ClassApplyValue:
+		for _, a := range t.Args {
+			if a.Value != nil && !l.valueSafe(a.Value, env, depth+1) {
+				return false
+			}
+		}
+		return l.k.Class(t.Class) != nil
+	case *syntax.FieldValue:
+		// Reading a field of a record that the resolver can already name is
+		// safe; the field's own value is resolved like any other.
+		return l.valueSafe(t.Base, env, depth+1)
+	case *syntax.SliceValue:
+		if !l.valueSafe(t.Base, env, depth+1) {
+			return false
+		}
+		for _, e := range t.Index {
+			if !l.valueSafe(e.Lo, env, depth+1) || !l.valueSafe(e.Hi, env, depth+1) {
+				return false
+			}
+		}
+		return true
+	case *syntax.BitRangeValue:
+		return l.valueSafe(t.Base, env, depth+1)
+	case *syntax.PasteValue:
+		return l.valueSafe(t.LHS, env, depth+1) && l.valueSafe(t.RHS, env, depth+1)
+	case *syntax.BangValue:
+		for _, a := range t.Args {
+			if !l.valueSafe(a, env, depth+1) {
+				return false
+			}
+		}
+		for _, c := range t.Cases {
+			if !l.valueSafe(c.Key, env, depth+1) || !l.valueSafe(c.Value, env, depth+1) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // loopChanged reports whether resolving this application in the current
