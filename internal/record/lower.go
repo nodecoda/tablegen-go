@@ -1121,9 +1121,12 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 				}
 				inner = defmName + n
 			}
-			// A let around a defm is applied after the generated records,
-			// with inner lets winning over outer ones.
-			nl := append(append([]scopedLet(nil), postLets...), preLets...)
+			// A let around a defm is applied after the generated records.
+			// Lets attached to the enclosing multiclass definitions run
+			// first, so the lets at the defm call site are applied last and
+			// win (TGParser::ParseDefm passes its LetStack to addDefOne,
+			// which overwrites whatever the multiclass body produced).
+			nl := append(append([]scopedLet(nil), preLets...), postLets...)
 			if err := l.expandDefm(t, inner, env, nl, outerLocs, extraParents); err != nil {
 				return err
 			}
