@@ -200,7 +200,10 @@ func (k *Keeper) evalBitsLiteral(t *syntax.BitsValue, env *Env, rec *Record) (Va
 		}
 		bit, err := k.coerce(ev, &Ty{Kind: BitTy})
 		if err != nil {
-			return nil, &EvalError{Msg: "Element #" + itoa(len(t.Elems)-1-i) + " (" + ev.String() + ") is not convertable to a bit", Span: t.Elems[i].Span()}
+			// TGParser::ParseValue reports the source index at the opening
+			// brace (BraceLoc, TGParser.cpp:3084-3086), not at the element.
+			at := t.Span().Start
+			return nil, &EvalError{Msg: "Element #" + itoa(i) + " (" + ev.String() + ") is not convertable to a bit", Span: diag.Span{Start: at, End: at}}
 		}
 		out = append(out, bit)
 	}

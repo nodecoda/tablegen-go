@@ -5,8 +5,8 @@
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
     "status:diff": 10,
-    "status:msg-match": 8,
-    "status:same": 367,
+    "status:msg-match": 4,
+    "status:same": 371,
     "status:skipped": 7
   },
   "cases": [
@@ -401,9 +401,9 @@
           "error: Field 'F3' of type 'bits\u003c9\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8",
           "error: Element #0 (3) is not convertable to a bit"
         ],
-        "full_sha256": "9dde854a706f2a824129b243fbdc63648eff597ed9d788e623286ed827e4d6ec",
-        "full_len": 1879,
-        "full": "\u003cfile\u003e:9:15: error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4\n  bits\u003c2\u003e a = { opc, opc2 }; // error!\n              ^\n\u003cfile\u003e:14:16: error: Field 'B1' of type 'bits\u003c2\u003e' is incompatible with value '{ 0, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e B1 = 0b011;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:17:16: error: Field 'C1' of type 'bits\u003c2\u003e' is incompatible with value '{ 1, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e C1 = 0b111;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:20:16: error: Field 'D3' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D3 = { 0, 0 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:23:16: error: Field 'D4' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D4 = { 0b00 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:28:16: error: Field 'D8' of type 'bits\u003c2\u003e' is incompatible with value '{ 0 }' of type bit initializer with length 1\n  bits\u003c2\u003e D8 = { 0 };    // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:31:16: error: Field 'F2' of type 'bits\u003c7\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c7\u003e F2 = { 0, 1, 0b1001, 0, 0b0 }; // LHS doesn't have enough bits\n               ^\n\u003cfile\u003e:34:16: error: Field 'F3' of type 'bits\u003c9\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c9\u003e F3 = { 0, 1, 0b1001, 0, 0b0 }; // RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:25:18: error: Element #0 (3) is not convertable to a bit\n  bits\u003c1\u003e D7 = { 3 };    // type mismatch.  LHS doesn't have enough bits\n                 ^"
+        "full_sha256": "836852ff12bfba6c162a9e4b156e6988dc7cd734eb35a2be8cda9dbd7f80a921",
+        "full_len": 1877,
+        "full": "\u003cfile\u003e:9:15: error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4\n  bits\u003c2\u003e a = { opc, opc2 }; // error!\n              ^\n\u003cfile\u003e:14:16: error: Field 'B1' of type 'bits\u003c2\u003e' is incompatible with value '{ 0, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e B1 = 0b011;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:17:16: error: Field 'C1' of type 'bits\u003c2\u003e' is incompatible with value '{ 1, 1, 1 }' of type bit initializer with length 3\n  bits\u003c2\u003e C1 = 0b111;  // bitfield is too small, reject\n               ^\n\u003cfile\u003e:20:16: error: Field 'D3' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D3 = { 0, 0 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:23:16: error: Field 'D4' of type 'bits\u003c3\u003e' is incompatible with value '{ 0, 0 }' of type bit initializer with length 2\n  bits\u003c3\u003e D4 = { 0b00 }; // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:28:16: error: Field 'D8' of type 'bits\u003c2\u003e' is incompatible with value '{ 0 }' of type bit initializer with length 1\n  bits\u003c2\u003e D8 = { 0 };    // type mismatch.  RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:31:16: error: Field 'F2' of type 'bits\u003c7\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c7\u003e F2 = { 0, 1, 0b1001, 0, 0b0 }; // LHS doesn't have enough bits\n               ^\n\u003cfile\u003e:34:16: error: Field 'F3' of type 'bits\u003c9\u003e' is incompatible with value '{ 0, 1, 1, 0, 0, 1, 0, 0 }' of type bit initializer with length 8\n  bits\u003c9\u003e F3 = { 0, 1, 0b1001, 0, 0b0 }; // RHS doesn't have enough bits\n               ^\n\u003cfile\u003e:25:16: error: Element #0 (3) is not convertable to a bit\n  bits\u003c1\u003e D7 = { 3 };    // type mismatch.  LHS doesn't have enough bits\n               ^"
       },
       "status": "diff"
     },
@@ -3075,11 +3075,11 @@
         "msgs": [
           "error: adding record of incompatible type 'A' to defset"
         ],
-        "full_sha256": "3bbf575b76266c552e7152ffca1ffd62c692edc3311d6e38bdab50fd846ea3f3",
-        "full_len": 93,
-        "full": "\u003cfile\u003e:12:7: error: adding record of incompatible type 'A' to defset\n  def A0 : A\u003c1\u003e;\n      ^"
+        "full_sha256": "c96f8fb7cec282a353f72ebd608dcbccee7e7b56134490487f6d7b0a81f09daf",
+        "full_len": 174,
+        "full": "\u003cfile\u003e:12:7: error: adding record of incompatible type 'A' to defset\n  def A0 : A\u003c1\u003e;\n      ^\n\u003cfile\u003e:11:8: note: location of defset declaration\ndefset list\u003cB\u003e Bs = {\n       ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defset.td",
@@ -3358,11 +3358,11 @@
         "msgs": [
           "error: expected string type argument in !exists operator"
         ],
-        "full_sha256": "22688fff246642f96a4aed1e372e7687bb825b0f9be3424e2cef45eca4d09443",
-        "full_len": 128,
-        "full": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator\ndefvar value = !exists\u003cA\u003e(123);\n                         ^"
+        "full_sha256": "badfeca8d0fb92c61cf4631c75e48f2a29ed670faa358c014d9938b17e3b7ae8",
+        "full_len": 129,
+        "full": "\u003cfile\u003e:7:27: error: expected string type argument in !exists operator\ndefvar value = !exists\u003cA\u003e(123);\n                          ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-record.td",
@@ -3381,11 +3381,11 @@
         "msgs": [
           "error: expected string type argument in !exists operator, please use !isa instead"
         ],
-        "full_sha256": "45b26edc272a22656006a9b7911f041e2ac17139f0682d2008480098bcb23765",
-        "full_len": 151,
-        "full": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator, please use !isa instead\ndefvar value = !exists\u003cA\u003e(a);\n                         ^"
+        "full_sha256": "f47b6bae577e095ac6d6a1ae9286e339e96dadce81512b5de5d590520346be0d",
+        "full_len": 152,
+        "full": "\u003cfile\u003e:7:27: error: expected string type argument in !exists operator, please use !isa instead\ndefvar value = !exists\u003cA\u003e(a);\n                          ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-uninitialized.td",
@@ -3404,11 +3404,11 @@
         "msgs": [
           "error: expected string type argument in !exists operator"
         ],
-        "full_sha256": "7e8509d5a96d1801e8f9b7777e1159cf22ad88d407396161951be14aa4f4b832",
-        "full_len": 126,
-        "full": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator\ndefvar value = !exists\u003cA\u003e(?);\n                         ^"
+        "full_sha256": "748d61bd9ef9456d3b8fa885ea868adc70917d0c4f774de11cc20a07a6d68b6b",
+        "full_len": 127,
+        "full": "\u003cfile\u003e:7:27: error: expected string type argument in !exists operator\ndefvar value = !exists\u003cA\u003e(?);\n                          ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists.td",
@@ -5206,9 +5206,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "7482397aad448493e3fd338228f77e907e863e361b5727484f8cb63a9d56bccd",
-        "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-2332637426/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "a0d08e65c0df90c8a5eb03fddcc07580ca0799103414febbff46200ba1ba8b82",
+        "full_len": 266,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-699470480/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5218,9 +5218,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "6ba125bdd9c8870b77654cad9e132ed14bf6e62e2435c4053c3ecaa1561dbda3",
-        "full_len": 1120,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full_sha256": "aa99c961bdeda37b03f4b974c9ff6c75d39ef9fc42aa896bfa5ed9977248604d",
+        "full_len": 1108,
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-699470480/a.td:2:\n/tmp/tblgen-split-699470480/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-699470480/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },

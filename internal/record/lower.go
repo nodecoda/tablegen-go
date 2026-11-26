@@ -232,9 +232,14 @@ func (l *Lowerer) defset(st *syntax.DefsetStmt, env *Env, lets []*syntax.LetBind
 		}
 		dt := d.Type()
 		if !dt.IsA(elem) {
+			// addDefOne prints the note at the defset's element type
+			// ("defset list<B> Bs" -> the `list<B>` token, TGParser.cpp:4018
+			// sets Defset.Loc right after the `defset` keyword).
+			note := diag.Note{Message: "location of defset declaration", Pos: st.TypeSpan.Start}
 			return &EvalError{
-				Msg:  "adding record of incompatible type '" + dt.String() + "' to defset",
-				Span: diag.Span{Start: d.Locs[0], End: d.Locs[0]},
+				Msg:   "adding record of incompatible type '" + dt.String() + "' to defset",
+				Span:  diag.Span{Start: d.Locs[0], End: d.Locs[0]},
+				Notes: []diag.Note{note},
 			}
 		}
 		out.Elems = append(out.Elems, &DefVal{Rec: d})

@@ -734,9 +734,20 @@ func (p *Parser) parseBangBody(rec *recordInfo, item *Type) Value {
 		if v.TypeArg.Kind == InvalidType {
 			return nil
 		}
+		// TGParser records ExprLoc = Lex.getLoc() after consuming the '('
+		// (TGParser.cpp:1463), so the diagnostic points at the first token of
+		// the argument rather than at the parenthesis.
+		if !p.eat(LParen) {
+			p.errTok("E_PARSE_BANG_LPAREN", "expected '(' after !exists operator")
+			return nil
+		}
 		loc := p.cur().Span
-		arg, ok := p.parseOneArg(rec, "!exists")
-		if !ok {
+		arg := p.parseValue(rec, nil, parseValueMode)
+		if arg == nil {
+			return nil
+		}
+		if !p.eat(RParen) {
+			p.errTok("E_PARSE_BANG_RPAREN", "expected ')' in !exists")
 			return nil
 		}
 		at := arg.Type()

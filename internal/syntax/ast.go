@@ -261,6 +261,10 @@ type DefvarStmt struct {
 type DefsetStmt struct {
 	Base
 	ElemType Type
+	// TypeSpan is the element type's own location, which is what
+	// DefsetRecord::Loc holds (TGParser.cpp:4018) and where addDefOne points
+	// its "location of defset declaration" note.
+	TypeSpan Span
 	Name     string
 	NameSpan Span
 	Objects  []Object

@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 60,
-    "status:err-wording": 19,
-    "status:same": 235,
+    "status:err-diff": 58,
+    "status:err-wording": 15,
+    "status:same": 241,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -582,7 +582,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9dde854a706f2a824129b243fbdc63648eff597ed9d788e623286ed827e4d6ec",
+        "err_sha256": "836852ff12bfba6c162a9e4b156e6988dc7cd734eb35a2be8cda9dbd7f80a921",
         "Msgs": [
           "error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer with length 4",
           "error: Field 'B1' of type 'bits\u003c2\u003e' is incompatible with value '{ 0, 1, 1 }' of type bit initializer with length 3",
@@ -618,14 +618,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "424c5997d36a90f52876ece9baa0d8663e221132522cea2a4f8102f3d4d68f6d",
+        "err_sha256": "1fb0f8abb4d4b33bb4232c36365f07e4ee12f096ac09763e3e04059cd69ad52c",
         "Msgs": [
-          "error: Element #0 (\"x\") is not convertable to a bit"
+          "error: Element #1 (\"x\") is not convertable to a bit"
         ],
-        "err_head": "\u003cfile\u003e:10:20: error: Element #0 (\"x\") is not convertable to a bit"
+        "err_head": "\u003cfile\u003e:10:15: error: Element #1 (\"x\") is not convertable to a bit"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:10:20: error: Element #0 (\"x\") is not convertable to a bit\n  bits\u003c2\u003e X = { 1, \"x\" };\n                   ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitListErrors.td",
@@ -646,14 +645,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "65c6e968ccd7f62d2a7745a213e497c0a62cd5e821ae569a3c4b246df6b550d8",
+        "err_sha256": "ef1b7058f481f1ed17784e3243eb007137ab442ad2f462c0cb077cc5ec9a2edc",
         "Msgs": [
-          "error: Element #0 ([1]) is not convertable to a bit"
+          "error: Element #3 ([1]) is not convertable to a bit"
         ],
-        "err_head": "\u003cfile\u003e:19:31: error: Element #0 ([1]) is not convertable to a bit"
+        "err_head": "\u003cfile\u003e:19:15: error: Element #3 ([1]) is not convertable to a bit"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:19:31: error: Element #0 ([1]) is not convertable to a bit\n  bits\u003c6\u003e X = { 0b10, Two, 1, [1] };\n                              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitListErrors.td",
@@ -5556,14 +5554,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "3bbf575b76266c552e7152ffca1ffd62c692edc3311d6e38bdab50fd846ea3f3",
+        "err_sha256": "c96f8fb7cec282a353f72ebd608dcbccee7e7b56134490487f6d7b0a81f09daf",
         "Msgs": [
           "error: adding record of incompatible type 'A' to defset"
         ],
         "err_head": "\u003cfile\u003e:12:7: error: adding record of incompatible type 'A' to defset"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:12:7: error: adding record of incompatible type 'A' to defset\n  def A0 : A\u003c1\u003e;\n      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defset.td",
@@ -6227,14 +6224,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "22688fff246642f96a4aed1e372e7687bb825b0f9be3424e2cef45eca4d09443",
+        "err_sha256": "badfeca8d0fb92c61cf4631c75e48f2a29ed670faa358c014d9938b17e3b7ae8",
         "Msgs": [
           "error: expected string type argument in !exists operator"
         ],
-        "err_head": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator"
+        "err_head": "\u003cfile\u003e:7:27: error: expected string type argument in !exists operator"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator\ndefvar value = !exists\u003cA\u003e(123);\n                         ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-record.td",
@@ -6255,14 +6251,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "45b26edc272a22656006a9b7911f041e2ac17139f0682d2008480098bcb23765",
+        "err_sha256": "f47b6bae577e095ac6d6a1ae9286e339e96dadce81512b5de5d590520346be0d",
         "Msgs": [
           "error: expected string type argument in !exists operator, please use !isa instead"
         ],
-        "err_head": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator, please use !isa instead"
+        "err_head": "\u003cfile\u003e:7:27: error: expected string type argument in !exists operator, please use !isa instead"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator, please use !isa instead\ndefvar value = !exists\u003cA\u003e(a);\n                         ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-uninitialized.td",
@@ -6283,14 +6278,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "7e8509d5a96d1801e8f9b7777e1159cf22ad88d407396161951be14aa4f4b832",
+        "err_sha256": "748d61bd9ef9456d3b8fa885ea868adc70917d0c4f774de11cc20a07a6d68b6b",
         "Msgs": [
           "error: expected string type argument in !exists operator"
         ],
-        "err_head": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator"
+        "err_head": "\u003cfile\u003e:7:27: error: expected string type argument in !exists operator"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:7:26: error: expected string type argument in !exists operator\ndefvar value = !exists\u003cA\u003e(?);\n                         ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists.td",
@@ -9904,12 +9898,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3039198888/inc",
-        "/tmp/tblgen-split-3039198888/main.td",
+        "/tmp/tblgen-split-670104779/inc",
+        "/tmp/tblgen-split-670104779/main.td",
         "-o",
-        "/tmp/tblgen-split-3039198888/out.td",
+        "/tmp/tblgen-split-670104779/out.td",
         "-d",
-        "/tmp/tblgen-split-3039198888/out.d"
+        "/tmp/tblgen-split-670104779/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9929,12 +9923,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-3039198888/inc",
-        "/tmp/tblgen-split-3039198888/main.td",
+        "/tmp/tblgen-split-670104779/inc",
+        "/tmp/tblgen-split-670104779/main.td",
         "-o",
-        "/tmp/tblgen-split-3039198888/out.td",
+        "/tmp/tblgen-split-670104779/out.td",
         "-d",
-        "/tmp/tblgen-split-3039198888/out2.d"
+        "/tmp/tblgen-split-670104779/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9955,10 +9949,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3039198888/inc",
-        "/tmp/tblgen-split-3039198888/main.td",
+        "/tmp/tblgen-split-670104779/inc",
+        "/tmp/tblgen-split-670104779/main.td",
         "-d",
-        "/tmp/tblgen-split-3039198888/out.d"
+        "/tmp/tblgen-split-670104779/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10045,8 +10039,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-636016713",
-        "/tmp/tblgen-split-636016713/main.td"
+        "/tmp/tblgen-split-2673576173",
+        "/tmp/tblgen-split-2673576173/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10070,8 +10064,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-636016713",
-        "/tmp/tblgen-split-636016713/multi.td"
+        "/tmp/tblgen-split-2673576173",
+        "/tmp/tblgen-split-2673576173/multi.td"
       ],
       "oracle": {
         "exit": 0,

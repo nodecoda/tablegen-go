@@ -1141,6 +1141,7 @@ func (p *Parser) parseDefset() Object {
 	return &DefsetStmt{
 		Base:     Base{At: p.span(start)},
 		ElemType: elem,
+		TypeSpan: loc,
 		Name:     nt.Text,
 		NameSpan: nt.Span,
 		Objects:  objs,
