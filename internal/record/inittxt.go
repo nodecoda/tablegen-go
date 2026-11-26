@@ -264,8 +264,8 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		// A bit-select on a already-literal bits value is that bit: the
 		// VarBitInit of a BitsInit resolves to the selected element
 		// (VarBitInit::resolveReferences -> BitsInit element).
-		if bv, isLit := x.Base.(*syntax.BitsValue); isLit {
-			if hi, ok := bitListCandidates(bv, env, depth+1); ok {
+		if bv, bEnv, isLit := bitsLiteralOf(x.Base, env); isLit {
+			if hi, ok := bitListCandidates(bv, bEnv, depth+1); ok {
 				out := make([]string, w)
 				for i := 0; i < w; i++ {
 					bit := int(x.Bits[w-1-i])
@@ -292,6 +292,28 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		return reverseBits(hi), true
 	}
 	return nil, false
+}
+
+// bitsLiteralOf follows a reference chain to a `{ ... }` bit list. A template
+// argument's Init is the caller's literal once AddParentClass substituted it,
+// so a bit-select on it folds to the selected bit.
+func bitsLiteralOf(v syntax.Value, env *Env) (*syntax.BitsValue, *Env, bool) {
+	v = derefInit(v)
+	for i := 0; i < 32; i++ {
+		if bv, ok := v.(*syntax.BitsValue); ok {
+			return bv, env, true
+		}
+		vv, ok := v.(*syntax.VarValue)
+		if !ok {
+			return nil, nil, false
+		}
+		_, sub, subEnv := resolveVar(vv, env)
+		if sub == nil {
+			return nil, nil, false
+		}
+		v, env = derefInit(sub), subEnv
+	}
+	return nil, nil, false
 }
 
 // typedBits is TypedInit::getBit for an expression that is not a reference:
@@ -1153,7 +1175,10 @@ func rawText(v syntax.Value, env *Env) string {
 				return `"` + ls.Text + rs.Text + `"`
 			}
 		}
-		return "!strconcat(" + stringOperand(x.LHS, env) + ", " + stringOperand(x.RHS, env) + ")"
+		// The rest of the chain folds the same way a !strconcat pair does
+		// (BinOpInit::Fold), so a constant run stays one literal and the
+		// operator survives only at the unresolved operand.
+		return concatChain([]syntax.Value{x.LHS, x.RHS}, env, 0)
 	case *syntax.ClassApplyValue:
 		if x.FoldName != "" {
 			return x.FoldName
@@ -1220,14 +1245,8 @@ func rawText(v syntax.Value, env *Env) string {
 		// !strconcat's Fold concatenates adjacent StringInits and keeps the
 		// operator only for the unresolved operand (Record.cpp:1200-1210),
 		// so a chain nested on the right collapses to one literal.
-		if x.Op == syntax.XStrConcat && len(x.Args) == 2 {
-			if rs, rcode, ok := constStrCode(x.Args[1], env, 0); ok {
-				if ls, lcode, ok := constStrCode(x.Args[0], env, 0); ok {
-					return stringLiteral(ls+rs, lcode || rcode)
-				}
-				return "!strconcat(" + stringOperand(x.Args[0], env) + ", " +
-					stringLiteral(rs, rcode) + ")"
-			}
+		if x.Op == syntax.XStrConcat {
+			return strConcatChain(x, env, 0)
 		}
 		if str, ok := constStr(x, env, 0); ok {
 			return `"` + str + `"`
@@ -1274,6 +1293,48 @@ func castArgForPrint(className string, idx int, a *syntax.Arg, env *Env) syntax.
 		return a.Value
 	}
 	return env.keeper.implicitCast(ta.Ty, a.Value, nil)
+}
+
+// strConcatChain renders a (possibly n-ary) !strconcat the way the parser's
+// right-associative nesting folds: a run of adjacent constants becomes one
+// string and the operator survives only between an unresolved operand and the
+// folded tail (BinOpInit::Fold's CONCAT/STRCONCAT, Record.cpp:1200-1210).
+func strConcatChain(x *syntax.BangValue, env *Env, depth int) string {
+	if len(x.Args) == 0 || depth > 32 {
+		return bangText(x, env)
+	}
+	return concatChain(x.Args, env, depth)
+}
+
+// concatChain renders the operands of one concat operator, folding the
+// adjacent constant run into a single string literal.
+func concatChain(args []syntax.Value, env *Env, depth int) string {
+	last := args[len(args)-1]
+	acc, accCode, accConst := "", false, false
+	if t, code, ok := constStrCode(last, env, depth+1); ok {
+		acc, accCode, accConst = t, code, true
+	} else {
+		// The non-constant operand keeps its operand form: a value that is
+		// not a string prints as `!cast<string>(...)` inside the operator.
+		acc = stringOperand(last, env)
+	}
+	for i := len(args) - 2; i >= 0; i-- {
+		t, code, ok := constStrCode(args[i], env, depth+1)
+		if ok && accConst {
+			acc, accCode = t+acc, code || accCode
+			continue
+		}
+		tail := acc
+		if accConst {
+			tail = stringLiteral(acc, accCode)
+		}
+		acc = "!strconcat(" + stringOperand(args[i], env) + ", " + tail + ")"
+		accConst = false
+	}
+	if accConst {
+		return stringLiteral(acc, accCode)
+	}
+	return acc
 }
 
 // boolIdx maps an int condition to the index picking between the two arms of
@@ -1690,6 +1751,11 @@ func constStrCode(v syntax.Value, env *Env, depth int) (string, bool, bool) {
 				code = code || c
 			}
 			return out, code, true
+		}
+		// !if/!cond/identity !cast return one of their operands unchanged
+		// (TernOpInit::Fold, Record.cpp:1806-1816), which can be a string.
+		if d := derefBang(x, env, depth+1); d != syntax.Value(x) {
+			return constStrCode(d, env, depth+1)
 		}
 	case *syntax.PasteValue:
 		lt, lc, ok1 := constStrCode(x.LHS, env, depth+1)
