@@ -128,6 +128,12 @@ func (e *Env) With(vars map[string]Binding) *Env {
 	return out
 }
 
+// WithBinding is With for the single-variable frame a loop body or
+// comprehension binding needs.
+func (e *Env) WithBinding(name string, b Binding) *Env {
+	return e.With(map[string]Binding{name: b})
+}
+
 // StackOn builds the environment a substituted Init tree must be resolved in:
 // the lexical environment it was written in, with the frames of the current
 // application site on top. LLVM's MapResolver rewrites a parent's field with

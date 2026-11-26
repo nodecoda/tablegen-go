@@ -128,21 +128,25 @@ func main() {
 		return
 	}
 	popts := syntax.Options{NoWarnUnusedTArgs: *noWarnUnusedTArgs}
-	file, diags := syntax.ParseWith(inputName, string(src), macros, includes, nil, popts)
+	// The retry below re-parses the same file with loop names installed; the
+	// tokens are read-only, so lex once and parse twice.
+	tokens := syntax.TokenizeFile(inputName, string(src), macros, includes)
+	file, diags := tokens.Parse(inputName, string(src), includes, nil, popts)
 	// A statement-level foreach whose record names are built by bang
 	// expressions is opaque to the parser. LLVM's parser resolves the loop
 	// immediately, so later statements see those records; ours can only learn
 	// them by lowering once, then parsing again with the names installed at
 	// the end of the same loop.
 	if file.DynLoopNames && hasUndefinedName(diags) {
-		if k, _ := record.Lower(file, files[0]); len(k.LoopDefs()) > 0 {
+		k, _ := record.LowerNames(file, files[0])
+		if len(k.LoopDefs()) > 0 {
 			known := map[int][]syntax.KnownDef{}
 			for seq, defs := range k.LoopDefs() {
 				for _, d := range defs {
 					known[seq] = append(known[seq], syntax.KnownDef{Name: d.Name, Parents: d.Parents})
 				}
 			}
-			if f2, d2 := syntax.ParseWith(inputName, string(src), macros, includes, known, popts); countUndefined(d2) < countUndefined(diags) {
+			if f2, d2 := tokens.Parse(inputName, string(src), includes, known, popts); countUndefined(d2) < countUndefined(diags) {
 				file, diags = f2, d2
 			}
 		}

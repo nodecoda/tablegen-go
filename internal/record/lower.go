@@ -12,6 +12,19 @@ import (
 // Errors are collected, never thrown; a broken object is skipped so later
 // objects still produce diagnostics.
 func Lower(file *syntax.File, filename string) (*Keeper, []diag.Diagnostic) {
+	return lowerWith(file, filename, false)
+}
+
+// LowerNames is Lower without field resolution: it still instantiates every
+// def and loop so the keeper knows the record names and parents, but skips
+// record field evaluation, concreteness checks, and assertions. The driver
+// uses it only to learn the names a statement-level loop creates, then parses
+// the file again with those names installed; nothing it computes survives.
+func LowerNames(file *syntax.File, filename string) (*Keeper, []diag.Diagnostic) {
+	return lowerWith(file, filename, true)
+}
+
+func lowerWith(file *syntax.File, filename string, namesOnly bool) (*Keeper, []diag.Diagnostic) {
 	col := &diag.Collector{}
 	l := &Lowerer{
 		k:            NewKeeper(filename, col),
@@ -21,6 +34,7 @@ func Lower(file *syntax.File, filename string) (*Keeper, []diag.Diagnostic) {
 		anonName:     map[*syntax.DefStmt]string{},
 		anonDefmName: map[*syntax.DefmStmt]string{},
 		loopSeq:      -1,
+		namesOnly:    namesOnly,
 	}
 	l.objects(file.Objects, nil, nil)
 	return l.k, col.Diags
@@ -34,6 +48,9 @@ type Lowerer struct {
 	anonName     map[*syntax.DefStmt]string
 	anonDefmName map[*syntax.DefmStmt]string
 	loopSeq      int // Seq of the statement-level loop being expanded, or -1
+	// namesOnly skips the parts of addDefOne that only matter for the record
+	// graph (field resolution, concreteness, assertions); see LowerNames.
+	namesOnly bool
 	// skipLoopFold makes preFold ignore values that mention a foreach
 	// iterator. TGParser parses an `if` body with the iterator still a
 	// VarInit, so such values are not concrete at parse time and fold only
@@ -234,7 +251,7 @@ func (l *Lowerer) foreach(st *syntax.ForeachStmt, env *Env, lets []*syntax.LetBi
 	l.preFoldParseItems(st.Body)
 	l.loopVars = append(l.loopVars, st.Var)
 	for _, e := range elems {
-		sub := env.With(map[string]Binding{st.Var: {Val: e}})
+		sub := env.WithBinding(st.Var, Binding{Val: e})
 		l.objects(st.Body, sub, lets)
 	}
 	l.loopVars = l.loopVars[:len(l.loopVars)-1]
@@ -375,16 +392,22 @@ func (l *Lowerer) applyParent(target *Record, p *syntax.ParentRef, env *Env) err
 	// record's frame: `Whatev<Or4<BaseOpc>.V>` stays a VarDefInit until a
 	// field actually reads it (pr8330.td: the unused argument must not
 	// instantiate Or4).
+	cl := l.k.Class(p.Name)
+	if cl == nil {
+		return &EvalError{Msg: "Couldn't find class '" + p.Name + "'", Span: p.Span()}
+	}
+	if l.namesOnly {
+		// LowerNames only needs the direct parent list: skip folding the
+		// arguments and instantiating the class body.
+		target.Super = append(target.Super, cl)
+		return nil
+	}
 	for _, a := range p.Args {
 		// The arguments are folded without the record's frame, but the parser
 		// did parse them in its scope, which qualifies template-argument
 		// names for VarDefInit pooling.
 		l.k.noteShapeSites(a.Value, env)
 		l.preFold(a.Value, nil)
-	}
-	cl := l.k.Class(p.Name)
-	if cl == nil {
-		return &EvalError{Msg: "Couldn't find class '" + p.Name + "'", Span: p.Span()}
 	}
 	return l.k.applyClass(target, cl, p.Args, env, target, p.Span().Start)
 }
@@ -587,8 +610,18 @@ func (l *Lowerer) finishDef(rec *Record, anonymous bool) error {
 			rec.Name = l.k.newAnonymous(rec.Locs[0]).Name
 		}
 	}
-	if err := rec.resolveAll(); err != nil {
-		return err
+	if !l.namesOnly {
+		if err := rec.resolveAll(); err != nil {
+			return err
+		}
+	}
+	if l.namesOnly {
+		// Skip checkConcrete and the assertions: the caller only needs the
+		// record's name and parents.
+		if err := l.k.addDef(rec); err != nil {
+			return err
+		}
+		return l.recordLoopDef(rec)
 	}
 	// addDefOne runs checkConcrete between resolveReferences and the
 	// assertions: a value that is still a reference is only legal behind
@@ -605,6 +638,12 @@ func (l *Lowerer) finishDef(rec *Record, anonymous bool) error {
 	if err := l.k.addDef(rec); err != nil {
 		return err
 	}
+	return l.recordLoopDef(rec)
+}
+
+// recordLoopDef publishes a def created by a statement-level loop so the
+// driver can re-parse with its name known.
+func (l *Lowerer) recordLoopDef(rec *Record) error {
 	if l.loopSeq >= 0 {
 		kd := LoopDef{Name: rec.Name}
 		for _, sc := range rec.Super {
@@ -664,9 +703,13 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, ext
 			return nil, false, err
 		}
 	}
-	for _, item := range st.Body {
-		if err := l.bodyItem(rec, item, env); err != nil {
-			l.errorAt(err, item.Span())
+	if !l.namesOnly {
+		// A def body only carries fields, lets, and assertions; the name and
+		// the parent list are already fixed above, so LowerNames skips it.
+		for _, item := range st.Body {
+			if err := l.bodyItem(rec, item, env); err != nil {
+				l.errorAt(err, item.Span())
+			}
 		}
 	}
 	// LLVM's Record location is the object's name token; a multi-line `def`
@@ -1109,7 +1152,7 @@ func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, env *Env, preLets []scopedLe
 		if lit, ok := st.List.(*syntax.ListValue); ok {
 			known = known && i < len(lit.Elems) && l.parseTimeKnown(lit.Elems[i], env)
 		}
-		sub := env.With(map[string]Binding{st.Var: {Val: e, ParseTime: known}})
+		sub := env.WithBinding(st.Var, Binding{Val: e, ParseTime: known})
 		if err := l.mcObjects(st.Body, sub, preLets, defmName, outerLocs, postLets, extraParents); err != nil {
 			return err
 		}

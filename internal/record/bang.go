@@ -1005,7 +1005,7 @@ func (k *Keeper) evalListComprehension(b *syntax.BangValue, env *Env, rec *Recor
 		}
 		items := make([]kv, 0, len(ls.Elems))
 		for _, e := range ls.Elems {
-			key, err := k.evalSyntax(expr, env.With(map[string]Binding{varName: {Val: e}}), rec)
+			key, err := k.evalSyntax(expr, env.WithBinding(varName, Binding{Val: e}), rec)
 			if err != nil {
 				return nil, err
 			}
@@ -1044,7 +1044,7 @@ func (k *Keeper) evalListComprehension(b *syntax.BangValue, env *Env, rec *Recor
 	}
 	out := &List{Elem: ls.Elem, Elems: make([]Value, 0, len(ls.Elems))}
 	for _, e := range ls.Elems {
-		sub := env.With(map[string]Binding{varName: {Val: e}})
+		sub := env.WithBinding(varName, Binding{Val: e})
 		v, err := k.evalSyntax(expr, sub, rec)
 		if err != nil {
 			return nil, err
@@ -1072,7 +1072,7 @@ func (k *Keeper) evalListComprehension(b *syntax.BangValue, env *Env, rec *Recor
 // visited, nested dags recursively, and argument names are preserved.
 func (k *Keeper) foreachDag(d *Dag, varName string, expr syntax.Value, env *Env, rec *Record) (Value, error) {
 	apply := func(v Value) (Value, error) {
-		return k.evalSyntax(expr, env.With(map[string]Binding{varName: {Val: v}}), rec)
+		return k.evalSyntax(expr, env.WithBinding(varName, Binding{Val: v}), rec)
 	}
 	op, err := apply(d.Op)
 	if err != nil {

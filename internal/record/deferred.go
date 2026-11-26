@@ -249,7 +249,7 @@ func (k *Keeper) shadowBody(b *syntax.BangValue, env *Env, rec *Record) (Value, 
 	if name == "" {
 		name = "x"
 	}
-	sub := env.With(map[string]Binding{name: {Val: &Unresolved{Text: name, Kind: "var", Var: name}}})
+	sub := env.WithBinding(name, Binding{Val: &Unresolved{Text: name, Kind: "var", Var: name}})
 	return k.evalSyntax(b.Args[1], sub, rec)
 }
 
@@ -271,7 +271,7 @@ func (k *Keeper) foldFilterSort(b *syntax.BangValue, ls *List, env *Env, rec *Re
 		name = b.VarNames[0]
 	}
 	body := func(e Value) (Value, error) {
-		return k.evalSyntax(b.Args[1], env.With(map[string]Binding{name: {Val: e}}), rec)
+		return k.evalSyntax(b.Args[1], env.WithBinding(name, Binding{Val: e}), rec)
 	}
 
 	if b.Op == syntax.XFilter {

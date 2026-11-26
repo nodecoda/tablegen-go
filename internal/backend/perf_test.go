@@ -73,3 +73,20 @@ func BenchmarkAArch64Parse(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkAArch64Names is the names-only probe the driver runs before it
+// re-parses a file whose loops create records the parser cannot name.
+func BenchmarkAArch64Names(b *testing.B) {
+	file := a64Root + "/lib/Target/AArch64/AArch64.td"
+	src, err := os.ReadFile(file)
+	if err != nil {
+		b.Skip("llvm-project not checked out at " + a64Root)
+	}
+	for i := 0; i < b.N; i++ {
+		f, _ := syntax.ParseWith(file, string(src), nil,
+			[]string{a64Root + "/lib/Target/AArch64", a64Root + "/include"}, nil, syntax.Options{})
+		if _, d := record.LowerNames(f, file); len(d) > 0 && d[0].Severity == 2 {
+			b.Fatalf("lower: %v", d[0])
+		}
+	}
+}

@@ -135,16 +135,38 @@ func Parse(file, src string, macros, includeDirs []string) (*File, []diag.Diagno
 // are installed into the parser's global table when the corresponding
 // statement-level loop ends, which is exactly when LLVM's parser adds them.
 func ParseWith(file, src string, macros, includeDirs []string, known map[int][]KnownDef, opts Options) (*File, []diag.Diagnostic) {
-	toks, lexDiags, sources := TokenizeWithDeps(file, src, macros, includeDirs)
-	for _, d := range lexDiags {
+	return TokenizeFile(file, src, macros, includeDirs).Parse(file, src, includeDirs, known, opts)
+}
+
+// Tokens is one lexed source file. The driver parses a file twice (once to
+// learn the names statement-level loops create, once with those names
+// installed); tokens are read-only, so the second pass reuses them instead of
+// lexing again.
+type Tokens struct {
+	Toks    []Token
+	Diags   []diag.Diagnostic
+	Sources []string
+}
+
+// TokenizeFile lexes one file and keeps everything a later Parse needs.
+func TokenizeFile(file, src string, macros, includeDirs []string) *Tokens {
+	toks, diags, sources := TokenizeWithDeps(file, src, macros, includeDirs)
+	return &Tokens{Toks: toks, Diags: diags, Sources: sources}
+}
+
+// Parse runs the parser over t's tokens. Lexer errors suppress parsing,
+// matching LLVM: the parser's first Lex() returns Error and the parse aborts,
+// so the lexer diagnostic is the only one reported.
+func (t *Tokens) Parse(file, src string, includeDirs []string, known map[int][]KnownDef, opts Options) (*File, []diag.Diagnostic) {
+	for _, d := range t.Diags {
 		if d.Severity == diag.Error {
-			return &File{}, lexDiags
+			return &File{}, t.Diags
 		}
 	}
 	p := &Parser{
 		file:         file,
 		src:          src,
-		toks:         toks,
+		toks:         t.Toks,
 		globals:      map[string]*globalBinding{},
 		typeAliases:  map[string]Type{},
 		classes:      map[string]*recordInfo{},
@@ -157,8 +179,8 @@ func ParseWith(file, src string, macros, includeDirs []string, known map[int][]K
 	}
 	f := p.parseFile()
 	f.DynLoopNames = p.dynLoopNames
-	f.Sources = sources
-	diags := append(lexDiags, p.diags.Diags...)
+	f.Sources = t.Sources
+	diags := append(append([]diag.Diagnostic{}, t.Diags...), p.diags.Diags...)
 	return f, diags
 }
 

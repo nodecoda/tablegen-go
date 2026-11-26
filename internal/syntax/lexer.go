@@ -80,7 +80,10 @@ func NewLexerWithDirs(file, src string, macros, includeDirs []string) *Lexer {
 	for _, name := range macros {
 		m[name] = true
 	}
-	return &Lexer{file: file, src: src, line: 1, col: 1, macros: m, lineStart: true, includeDirs: includeDirs}
+	// TableGen averages roughly one token per 8 source bytes; presizing keeps
+	// the token slice from doubling its way to the final size.
+	return &Lexer{file: file, src: src, line: 1, col: 1, macros: m, lineStart: true,
+		includeDirs: includeDirs, toks: make([]Token, 0, len(src)/8+8)}
 }
 
 // Tokenize is the one-shot form used by tests and the CLI.
