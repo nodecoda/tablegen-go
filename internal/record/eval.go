@@ -1138,6 +1138,11 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		return nil, &EvalError{Msg: "Too many template arguments for class '" + class.Name + "'", Span: diag.Span{Start: loc, End: loc}}
 	}
 	provided := &Frame{}
+	// bindArgs stores at most one entry per template argument, so size the
+	// slice once; growing it one append at a time was 240MB of --dump-json.
+	if len(class.TArgs) <= smallFrame {
+		provided.entries = make([]frameEntry, 0, len(class.TArgs))
+	}
 	for i, a := range args {
 		name := a.Name
 		if name == "" {
