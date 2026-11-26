@@ -582,3 +582,43 @@ class Base { string B = P2V<NAME>.VInst; }
 		}
 	}
 }
+
+// TestLoopResolveInstantiatesBeforeAddDefOne pins the phase order addEntry
+// gives a foreach body: resolve() clones each entry and runs
+// Record::resolveReferences with the iterator substitution, and only then
+// calls addDefOne (TGParser.cpp:525-552). A class application whose arguments
+// the loop substitution makes concrete instantiates during that resolve
+// (VarDefInit::resolveReferences, Record.cpp:2444-2449), i.e. before addDefOne
+// renames a colliding def (TGParser.cpp:585-591). Here the defm's second
+// WriteRes collides, so the G instance of that iteration must come first.
+func TestLoopResolveInstantiatesBeforeAddDefOne(t *testing.T) {
+	const src = `class G<int x> { int c = x; }
+class WR<int x> { int Latency = 0; }
+multiclass MWR<int x> { def : WR<x>; }
+foreach i = [0, 1] in {
+  defvar Lat = G<i>.c;
+  let Latency = Lat in defm "" : MWR<i>;
+}
+`
+	f, diags := syntax.Parse("t.td", src, nil, nil)
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("parse: %v", errs)
+	}
+	k, diags := record.Lower(f, "t.td")
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("lower: %v", errs)
+	}
+	var got []string
+	for _, r := range k.Defs() {
+		switch {
+		case r.Val("Latency") != nil:
+			got = append(got, r.Name+"=WR")
+		case r.Val("c") != nil:
+			got = append(got, r.Name+"=G")
+		}
+	}
+	want := []string{"anonymous_0=WR", "anonymous_1=G", "anonymous_2=G", "anonymous_3=WR"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("instantiation order: got %v want %v", got, want)
+	}
+}

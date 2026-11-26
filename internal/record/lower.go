@@ -70,6 +70,11 @@ type Lowerer struct {
 	// VarInit, so such values are not concrete at parse time and fold only
 	// when the surviving branch executes.
 	skipLoopFold bool
+	// preResolve is set while modelling the resolve() pass that runs before
+	// addDefOne for a loop entry. A class application instantiated there is
+	// not folded into the value: the class body it came from still prints as
+	// `Class<args>`, so tryInstantiate must not record FoldName.
+	preResolve bool
 	// pending, when non-nil, is the entry list of the defm currently being
 	// expanded. TGParser resolves a defm's records into NewEntries and only
 	// afterwards runs addDefOne on each, so buildDef queues its record here
@@ -670,6 +675,20 @@ func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []sco
 			if err := l.applyLet(rec, lb.b, lb.env); err != nil {
 				return nil, err
 			}
+		}
+		if l.loopSeq >= 0 {
+			// A record built under a statement-level foreach is finished the
+			// way addEntry finishes a loop: resolve() clones the entry and
+			// runs Record::resolveReferences with the iterator substitution
+			// (TGParser.cpp:525-552), and only then calls addDefOne.
+			// VarDefInit::resolveReferences instantiates every anonymous
+			// class application whose arguments just became concrete
+			// (Record.cpp:2423-2452), so those records take their
+			// anonymous_N before addDefOne can rename a colliding def
+			// (TGParser.cpp:585-591). The folded values are deliberately
+			// dropped: addDefOne resolves the fields again with the final
+			// record name, which is what a self-reference has to see.
+			l.preResolveFields(rec)
 		}
 	}
 	if err := l.finishDef(rec, anonymous); err != nil {
@@ -2016,7 +2035,7 @@ func (l *Lowerer) tryInstantiate(ca *syntax.ClassApplyValue, env *Env, rec *Reco
 	if err != nil {
 		return
 	}
-	if dv, ok := v.(*DefVal); ok && !l.namesOnly {
+	if dv, ok := v.(*DefVal); ok && !l.namesOnly && !l.preResolve {
 		// VarDefInit::Fold returns the DefInit; later prints and evaluations
 		// see the anonymous record, not `Class<args>`.
 		ca.FoldName = dv.Rec.Name
@@ -2222,6 +2241,176 @@ func concreteInit(v syntax.Value) bool {
 			}
 		}
 		return true
+	}
+	return false
+}
+
+// preResolveFields is the resolve() half of a foreach iteration: resolve()
+// clones a loop entry and runs Record::resolveReferences with the iterator
+// substitution before addDefOne renames and finalises it
+// (TGParser.cpp:525-552). VarDefInit::resolveReferences instantiates an
+// anonymous class application only when that resolve changed one of its
+// arguments (Record.cpp:2444-2449), and instantiation is what hands out the
+// anonymous_N (Record.cpp:2448). The folded values are not kept: addDefOne
+// resolves the fields again with the final record name, which is what a
+// self-reference has to see (TGParser.cpp:592).
+func (l *Lowerer) preResolveFields(rec *Record) {
+	prev := l.preResolve
+	l.preResolve = true
+	defer func() { l.preResolve = prev }()
+	for _, v := range rec.Vals {
+		if v.state != unresolved || v.Expr == nil {
+			continue
+		}
+		l.preResolveExpr(v.Expr, rec)
+	}
+}
+
+func (l *Lowerer) preResolveExpr(e Expr, rec *Record) {
+	switch x := e.(type) {
+	case *AstExpr:
+		l.preResolveValue(x.V, x.Env, rec)
+	case *AppendExpr:
+		l.preResolveExpr(x.Base, rec)
+		l.preResolveExpr(x.Add, rec)
+	case *BitsExpr:
+		l.preResolveExpr(x.Base, rec)
+		l.preResolveExpr(x.Add, rec)
+	}
+}
+
+// preResolveValue walks the value the way *Init::resolveReferences descends
+// it: every operand is resolved, but a selector that resolves short-circuits
+// the alternatives behind it.
+func (l *Lowerer) preResolveValue(v syntax.Value, env *Env, rec *Record) {
+	switch t := v.(type) {
+	case nil:
+	case *syntax.ClassApplyValue:
+		for _, a := range t.Args {
+			l.preResolveValue(a.Value, env, rec)
+		}
+		if l.loopChanged(t, env) {
+			l.tryInstantiate(t, env, rec)
+		}
+	case *syntax.BitsValue:
+		for _, e := range t.Elems {
+			l.preResolveValue(e, env, rec)
+		}
+	case *syntax.ListValue:
+		for _, e := range t.Elems {
+			l.preResolveValue(e, env, rec)
+		}
+	case *syntax.DagValue:
+		l.preResolveValue(t.Op, env, rec)
+		for _, a := range t.Args {
+			l.preResolveValue(a.Value, env, rec)
+		}
+	case *syntax.VarValue:
+		l.preResolveValue(t.Lit, env, rec)
+	case *syntax.FieldValue:
+		l.preResolveValue(t.Base, env, rec)
+	case *syntax.SliceValue:
+		l.preResolveValue(t.Base, env, rec)
+		for _, e := range t.Index {
+			l.preResolveValue(e.Lo, env, rec)
+			l.preResolveValue(e.Hi, env, rec)
+		}
+	case *syntax.BitRangeValue:
+		l.preResolveValue(t.Base, env, rec)
+	case *syntax.PasteValue:
+		l.preResolveValue(t.LHS, env, rec)
+		l.preResolveValue(t.RHS, env, rec)
+	case *syntax.BangValue:
+		l.preResolveBang(t, env, rec)
+	}
+}
+
+func (l *Lowerer) preResolveBang(b *syntax.BangValue, env *Env, rec *Record) {
+	switch b.Op {
+	case syntax.XIf:
+		l.preResolveValue(b.Args[0], env, rec)
+		if n, ok := l.constInt(b.Args[0], env, rec); ok && len(b.Args) == 3 {
+			// TernOpInit::resolveReferences short-circuits once the condition
+			// resolves (Record.cpp:1949-1958); a dead arm never instantiates.
+			if n != 0 {
+				l.preResolveValue(b.Args[1], env, rec)
+			} else {
+				l.preResolveValue(b.Args[2], env, rec)
+			}
+			return
+		}
+		for _, a := range b.Args[1:] {
+			l.preResolveValue(a, env, rec)
+		}
+	case syntax.XCond:
+		// CondOpInit::resolveReferences resolves the value before it looks at
+		// the condition, and stops after the first true one
+		// (Record.cpp:2548-2571).
+		for _, c := range b.Cases {
+			l.preResolveValue(c.Key, env, rec)
+			l.preResolveValue(c.Value, env, rec)
+			if n, ok := l.constInt(c.Key, env, rec); ok && n != 0 {
+				return
+			}
+		}
+	case syntax.XForEach, syntax.XFilter, syntax.XSort:
+		if len(b.Args) < 2 {
+			for _, a := range b.Args {
+				l.preResolveValue(a, env, rec)
+			}
+			return
+		}
+		l.preResolveValue(b.Args[0], env, rec)
+		lis, err := l.k.evalSyntax(b.Args[0], env, rec)
+		ls, ok := lis.(*List)
+		if err != nil || !ok {
+			l.preResolveValue(b.Args[1], env, rec)
+			return
+		}
+		name := "x"
+		if len(b.VarNames) > 0 && b.VarNames[0] != "" {
+			name = b.VarNames[0]
+		}
+		for _, e := range ls.Elems {
+			l.preResolveValue(b.Args[1], env.WithBinding(name, Binding{Val: e}), rec)
+		}
+	default:
+		for _, a := range b.Args {
+			l.preResolveValue(a, env, rec)
+		}
+		for _, c := range b.Cases {
+			l.preResolveValue(c.Key, env, rec)
+			l.preResolveValue(c.Value, env, rec)
+		}
+	}
+}
+
+// constInt folds one selector. A selector that still depends on something the
+// loop substitution cannot supply stays unresolved, and LLVM then walks every
+// alternative (TernOpInit::resolveReferences, Record.cpp:1972-1975).
+func (l *Lowerer) constInt(v syntax.Value, env *Env, rec *Record) (int64, bool) {
+	val, err := l.k.evalSyntax(v, env, rec)
+	if err != nil {
+		return 0, false
+	}
+	n, err := l.k.asInt(val)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
+
+// loopChanged reports whether resolving this application in the current
+// environment changes its arguments. LLVM only instantiates a VarDefInit when
+// the resolve changed them (Record.cpp:2444-2449); an application whose
+// arguments were already concrete when the enclosing object was parsed was
+// folded then, and must not take a second anonymous number now. At this point
+// the loop substitution is the only resolver the parser did not already have.
+func (l *Lowerer) loopChanged(ca *syntax.ClassApplyValue, env *Env) bool {
+	for _, a := range ca.Args {
+		if a.Value != nil && !l.parseTimeKnown(a.Value, env) {
+			return true
+		}
 	}
 	return false
 }
