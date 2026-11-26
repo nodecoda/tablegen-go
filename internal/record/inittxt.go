@@ -477,6 +477,13 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 			}
 			return ^a, true
 		case syntax.XEq, syntax.XNe, syntax.XLt, syntax.XLe, syntax.XGt, syntax.XGe:
+			// CompareInit compares two strings lexicographically as well as
+			// two ints (Record.cpp:1400-1408).
+			if ls, _, lok := constStrCode(x.Args[0], env, depth+1); lok {
+				if rs, _, rok := constStrCode(x.Args[1], env, depth+1); rok {
+					return compareResult(x.Op, strings.Compare(ls, rs)), true
+				}
+			}
 			a, ok1 := arg(0)
 			b, ok2 := arg(1)
 			if !ok1 || !ok2 {
@@ -697,6 +704,14 @@ type dagParts struct {
 }
 
 func constDagParts(v syntax.Value, env *Env) (dagParts, bool) {
+	if vv, ok := v.(*syntax.VarValue); ok {
+		// A template argument that resolved to a literal dag is that dag once
+		// the caller's Init was substituted (AddParentClass).
+		if _, sub, subEnv := resolveVar(vv, env); sub != nil && sub != v {
+			return constDagParts(sub, subEnv)
+		}
+		return dagParts{}, false
+	}
 	d, ok := v.(*syntax.DagValue)
 	if !ok {
 		return dagParts{}, false
@@ -1452,6 +1467,30 @@ func binText(op syntax.Kind, a, b syntax.Value, env *Env) string {
 // constList returns the elements of a list expression whose Init is a
 // ListInit. TGParser folds list operators over ListInits regardless of whether
 // their elements are concrete.
+// compareResult turns a three-way comparison into the int !eq/!ne/!lt/... of
+// two operands produce.
+func compareResult(op syntax.Kind, cmp int) int64 {
+	var r bool
+	switch op {
+	case syntax.XEq:
+		r = cmp == 0
+	case syntax.XNe:
+		r = cmp != 0
+	case syntax.XLt:
+		r = cmp < 0
+	case syntax.XLe:
+		r = cmp <= 0
+	case syntax.XGt:
+		r = cmp > 0
+	case syntax.XGe:
+		r = cmp >= 0
+	}
+	if r {
+		return 1
+	}
+	return 0
+}
+
 func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 	if v == nil || depth > 32 {
 		return nil, false
@@ -1579,6 +1618,18 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 					right = append(append([]syntax.Value{}, left...), right...)
 				}
 				return right, true
+			}
+		case syntax.XListSplat:
+			// BinOpInit::Fold LISTSPLAT: a typed value and a literal count
+			// build a list of `count` copies (Record.cpp:1279-1290).
+			if len(x.Args) == 2 && x.Args[0].Type().Kind != syntax.InvalidType {
+				if n, ok := foldIntV(x.Args[1], env, depth+1); ok && n >= 0 && n <= 1<<20 {
+					out := make([]syntax.Value, n)
+					for i := range out {
+						out[i] = x.Args[0]
+					}
+					return out, true
+				}
 			}
 		case syntax.XListRemove:
 			if len(x.Args) == 2 {
