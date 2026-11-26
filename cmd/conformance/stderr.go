@@ -39,9 +39,10 @@ type sdiag struct {
 type scase struct {
 	File   string `json:"file"`
 	Run    string `json:"run,omitempty"`
+	Skip   string `json:"skip,omitempty"` // non-empty: not replayable
 	Oracle sdiag  `json:"oracle"`
 	Ours   sdiag  `json:"ours"`
-	Status string `json:"status"` // same | msg-match | diff
+	Status string `json:"status"` // same | msg-match | diff | skipped
 }
 
 type sreport struct {
@@ -126,8 +127,13 @@ func runStderr(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 	for i, f := range files {
 		i, f := i, f
 		run := runText(f)
-		args := append([]string{"--dump-json"}, includeArgs(abs(f), run)...)
-		args = append(args, abs(f))
+		plan := planInput(f)
+		if plan.Skip != "" {
+			cases[i] = scase{File: f, Run: run, Skip: plan.Skip, Status: "skipped"}
+			continue
+		}
+		args := append([]string{"--dump-json"}, plan.Args...)
+		args = append(args, plan.Input)
 		wg.Add(1)
 		sem <- struct{}{}
 		go func() {
@@ -138,8 +144,8 @@ func runStderr(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 			sOut, sErr, sExit := capture(timeout, bin, args)
 			_ = sOut
 			oc := scase{File: f, Run: run}
-			oc.Oracle = mkSdiag(oErr, abs(f), oExit)
-			oc.Ours = mkSdiag(sErr, abs(f), sExit)
+			oc.Oracle = mkSdiag(oErr, plan.Input, oExit)
+			oc.Ours = mkSdiag(sErr, plan.Input, sExit)
 			oc.Status = classifyStderr(oc.Oracle, oc.Ours)
 			if oc.Status != "same" {
 				oc.Oracle.Full = truncate(oc.Oracle.Full, 4000)
@@ -165,8 +171,12 @@ func runStderr(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 
 	// A case only enters the denominators if at least one side said something:
 	// silence on both sides is agreement, not evidence.
-	spoken, msg, full := 0, 0, 0
+	spoken, msg, full, skipped := 0, 0, 0, 0
 	for _, c := range cases {
+		if c.Status == "skipped" {
+			skipped++
+			continue
+		}
 		if len(c.Oracle.Msgs) == 0 && len(c.Ours.Msgs) == 0 {
 			continue
 		}
@@ -180,13 +190,16 @@ func runStderr(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 	}
 	fmt.Printf("\nstderr: files=%d  with-diagnostics=%d  msg-match=%d/%d  full-match=%d/%d\n",
 		len(cases), spoken, msg, spoken, full, spoken)
-	fmt.Printf("  same %d  msg-match %d  diff %d\n",
-		rep.Counts["status:same"], rep.Counts["status:msg-match"], rep.Counts["status:diff"])
+	fmt.Printf("  same %d  msg-match %d  diff %d  skipped %d\n",
+		rep.Counts["status:same"], rep.Counts["status:msg-match"], rep.Counts["status:diff"], skipped)
 
 	// Show the most common wording mismatches first: that is where a single fix
 	// buys the most cases.
 	var bad []scase
 	for _, c := range cases {
+		if c.Status == "skipped" {
+			continue
+		}
 		if c.Status != "same" {
 			bad = append(bad, c)
 		}

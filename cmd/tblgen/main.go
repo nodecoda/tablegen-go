@@ -30,6 +30,7 @@ func main() {
 	dumpTokens := flag.Bool("dump-tokens", false, "print the token stream (development aid, not an LLVM action)")
 	dumpAST := flag.Bool("dump-ast", false, "print the parsed AST (development aid, not an LLVM action)")
 	dumpJSON := flag.Bool("dump-json", false, "dump all records as JSON")
+	printExpandedSource := flag.Bool("E", false, "print the preprocessed token stream")
 	printRecords := flag.Bool("print-records", false, "print all records (the default action)")
 	detailedRecords := flag.Bool("print-detailed-records", false, "print the detailed records report")
 	nullBackend := flag.Bool("null-backend", false, "resolve records and emit nothing")
@@ -98,6 +99,18 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "tblgen: %v\n", err)
 		os.Exit(1)
+	}
+	if *printExpandedSource {
+		toks, diags := syntax.TokenizeWithDirs(inputName, string(src), macros, includes)
+		cache := newSourceCache(inputName, []byte(src))
+		if err := printExpanded(os.Stdout, toks, cache); err != nil {
+			fmt.Fprintf(os.Stderr, "tblgen: %v\n", err)
+			os.Exit(1)
+		}
+		for _, d := range diags {
+			fmt.Fprint(os.Stderr, d.Render(string(src)))
+		}
+		os.Exit(diagExit(diags))
 	}
 	popts := syntax.Options{NoWarnUnusedTArgs: *noWarnUnusedTArgs}
 	file, diags := syntax.ParseWith(inputName, string(src), macros, includes, nil, popts)

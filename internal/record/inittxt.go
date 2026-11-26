@@ -145,6 +145,26 @@ func resolveVar(x *syntax.VarValue, env *Env) (string, syntax.Value, *Env) {
 		}
 		return q, nil, nil
 	}
+	// An unbound name inside a record body prints qualified: LLVM stores it
+	// as a VarInit whose name was QualifyName'd by the owning record
+	// (`Foo:NAME`), which is how --print-records shows an unresolved name.
+	// Names that do resolve -- a lambda variable or a field of the same
+	// record -- print bare, so check both before qualifying.
+	if env != nil {
+		if _, ok := env.Lookup(x.Name); ok {
+			return x.Name, nil, nil
+		}
+		if env.owner != nil && env.owner.hasVal(x.Name) {
+			return x.Name, nil, nil
+		}
+		if env.owner != nil {
+			sep := env.ownerSep
+			if sep == "" {
+				sep = ":"
+			}
+			return env.owner.Name + sep + x.Name, nil, nil
+		}
+	}
 	return x.Name, nil, nil
 }
 
@@ -1121,17 +1141,26 @@ func bangText(b *syntax.BangValue, env *Env) string {
 	case syntax.XForEach, syntax.XFilter, syntax.XSort:
 		// The variable is a StringInit printed unquoted (UnquotedLHS).
 		head := ""
+		sub := bindNames(env, b.VarNames)
 		if len(b.VarNames) > 0 {
 			head = b.VarNames[0] + ", "
 		}
-		return name + "(" + head + rawText(b.Args[0], env) + ", " + rawText(b.Args[1], env) + ")"
+		return name + "(" + head + rawText(b.Args[0], sub) + ", " + rawText(b.Args[1], sub) + ")"
 	case syntax.XFoldl:
-		var parts []string
-		for _, a := range b.Args {
-			parts = append(parts, rawText(a, env))
-		}
-		for _, n := range b.VarNames {
-			parts = append(parts, n)
+		// FoldOpInit prints (init, list, var1, var2, expr): the lambda names
+		// sit before the expression, unlike the source syntax.
+		sub := bindNames(env, b.VarNames)
+		parts := make([]string, 0, len(b.Args)+len(b.VarNames))
+		if len(b.Args) >= 2 {
+			parts = append(parts, rawText(b.Args[0], env), rawText(b.Args[1], env))
+			parts = append(parts, b.VarNames...)
+			for _, a := range b.Args[2:] {
+				parts = append(parts, rawText(a, sub))
+			}
+		} else {
+			for _, a := range b.Args {
+				parts = append(parts, rawText(a, env))
+			}
 		}
 		return name + "(" + strings.Join(parts, ", ") + ")"
 	}
@@ -1140,4 +1169,18 @@ func bangText(b *syntax.BangValue, env *Env) string {
 		parts[i] = rawText(a, env)
 	}
 	return name + "(" + strings.Join(parts, ", ") + ")"
+}
+
+// bindNames installs comprehension lambda variables into a child environment so
+// that a bare `a` in `!foldl(..., !add(a, b), a, b)` is not mistaken for an
+// unresolved name and qualified with the record's name.
+func bindNames(env *Env, names []string) *Env {
+	if len(names) == 0 {
+		return env
+	}
+	vars := make(map[string]Binding, len(names))
+	for _, n := range names {
+		vars[n] = Binding{}
+	}
+	return env.With(vars)
 }

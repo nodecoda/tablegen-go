@@ -2,8 +2,9 @@ GO      ?= go
 BIN     := tblgen
 ORACLE  ?= /home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen
 CORPUS  ?= /home/ubuntu/llvm/llvm-project/llvm/test/TableGen
+JOBS    ?= 12
 
-.PHONY: build test baseline compare check stderr matrix show ast fmt ci vet fmt-check
+.PHONY: build test baseline compare check stderr matrix show ast fmt ci vet fmt-check score report
 
 build:
 	$(GO) build -o $(BIN) ./cmd/tblgen
@@ -39,6 +40,17 @@ matrix: build
 
 check: build
 	$(GO) run ./cmd/conformance -mode check -oracle $(ORACLE) -corpus $(CORPUS)
+
+# One number per question, plus a delta against the previous run.
+score: build
+	$(GO) run ./cmd/conformance -mode compare -jobs $(JOBS) -oracle $(ORACLE) -corpus $(CORPUS)
+	$(GO) run ./cmd/conformance -stderr -jobs $(JOBS) -oracle $(ORACLE) -corpus $(CORPUS)
+	$(GO) run ./cmd/conformance -matrix -jobs $(JOBS) -oracle $(ORACLE) -corpus $(CORPUS)
+	$(GO) run ./cmd/conformance -summary
+
+# Print the last score table without re-running anything.
+report:
+	$(GO) run ./cmd/conformance -summary
 
 show:
 	$(GO) run ./cmd/conformance -show $(F) -oracle $(ORACLE)

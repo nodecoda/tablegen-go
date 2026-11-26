@@ -71,7 +71,14 @@ func runMatrix(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 	var jobsList []job
 	seen := map[string]bool{}
 	for _, f := range files {
-		for _, inv := range invocationsFor(f) {
+		tdir := ""
+		if strings.Contains(runText(f), "split-file") {
+			if dir, err := materializeSplit(abs(f)); err == nil {
+				tdir = dir
+				keepTemp(dir)
+			}
+		}
+		for _, inv := range invocationsForDir(f, tdir) {
 			key := f + "\x00" + strings.Join(inv.Argv, "\x00")
 			if seen[key] {
 				continue

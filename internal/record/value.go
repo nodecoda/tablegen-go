@@ -148,7 +148,9 @@ func (v *Str) String() string {
 	if v.Code {
 		return "[{" + v.S + "}]"
 	}
-	return quote(v.S)
+	// StringInit::getAsString wraps the value in quotes without escaping it,
+	// so a tab in the source prints as a tab and a backslash prints once.
+	return `"` + v.S + `"`
 }
 
 func (v *List) String() string {

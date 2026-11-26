@@ -42,11 +42,13 @@ type runResult struct {
 type caseResult struct {
 	File   string     `json:"file"`
 	Run    string     `json:"run,omitempty"`
-	Scope  string     `json:"scope"` // in-scope | needs-include (legacy)
+	Scope  string     `json:"scope"` // in-scope | skipped
+	Skip   string     `json:"skip,omitempty"`
+	Input  string     `json:"input,omitempty"` // what the binaries actually read
 	Args   []string   `json:"args,omitempty"`
 	Oracle runResult  `json:"oracle"`
 	Ours   *runResult `json:"ours,omitempty"`
-	Status string     `json:"status,omitempty"` // match|diff|reject-match|unsupported|crash|missing
+	Status string     `json:"status,omitempty"` // match|diff|reject-match|unsupported|timeout|crash|missing
 }
 
 type report struct {
@@ -65,13 +67,20 @@ func main() {
 	bin := flag.String("bin", "./tblgen", "our binary")
 	out := flag.String("out", "", "output json (default: conformance/<mode>.json)")
 	jobs := flag.Int("jobs", runtime.NumCPU(), "parallel oracle invocations")
-	timeout := flag.Duration("timeout", 30*time.Second, "per-file timeout")
+	timeout := flag.Duration("timeout", 120*time.Second, "per-file timeout")
 	show := flag.String("show", "", "print both outputs for one file and exit")
 	stderrMode := flag.Bool("stderr", false, "compare diagnostics text instead of JSON output")
 	matrixMode := flag.Bool("matrix", false, "replay every RUN line of every test")
 	filter := flag.String("filter", "", "only run files whose path contains this substring")
+	useBaseline := flag.Bool("use-baseline", true, "reuse oracle results from conformance/baseline.json")
+	summary := flag.Bool("summary", false, "print the combined score table and write conformance/score.json")
 	flag.Parse()
+	defer cleanupTemps()
 
+	if *summary {
+		runSummary(outPath(*out, "score"))
+		return
+	}
 	if *stderrMode {
 		runStderr(*corpus, *oracle, *bin, *jobs, *timeout, outPath(*out, "stderr"), *filter)
 		return
@@ -94,7 +103,7 @@ func main() {
 		return
 	}
 
-	files, err := listCorpus(*corpus)
+	files, err := listCorpus(*corpus, *filter)
 	if err != nil {
 		fatal(err)
 	}
@@ -102,25 +111,43 @@ func main() {
 		fatal(fmt.Errorf("no .td files in %s", *corpus))
 	}
 
+	base := map[string]caseResult(nil)
+	if *useBaseline && *mode != "baseline" {
+		base = loadBaseline("conformance/baseline.json", *oracle)
+	}
 	cases := make([]caseResult, len(files))
 	sem := make(chan struct{}, *jobs)
 	var wg sync.WaitGroup
+	reused := 0
 	for i, f := range files {
 		i, f := i, f
-		run := runText(f)
-		args := includeArgs(abs(f), run)
-		cases[i] = caseResult{File: f, Run: run, Scope: "in-scope", Args: args}
+		plan := planInput(f)
+		cases[i] = caseResult{File: f, Run: runText(f), Input: plan.Input, Args: plan.Args}
+		if plan.Skip != "" {
+			cases[i].Scope = "skipped"
+			cases[i].Skip = plan.Skip
+			continue
+		}
+		cases[i].Scope = "in-scope"
+		if b, ok := base[f]; ok && samePlan(b, cases[i]) {
+			cases[i].Oracle = b.Oracle
+			reused++
+			continue
+		}
 		wg.Add(1)
 		sem <- struct{}{}
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			cmdArgs := append([]string{"--dump-json"}, args...)
-			cmdArgs = append(cmdArgs, abs(f))
+			cmdArgs := append([]string{"--dump-json"}, plan.Args...)
+			cmdArgs = append(cmdArgs, plan.Input)
 			cases[i].Oracle = runOne(*timeout, *oracle, cmdArgs)
 		}()
 	}
 	wg.Wait()
+	if *mode != "baseline" && *useBaseline {
+		fmt.Printf("oracle: reused %d/%d from baseline, ran %d\n", reused, len(files), len(files)-reused)
+	}
 
 	if *mode == "baseline" {
 		write(outPath(*out, *mode), buildReport(*oracle, *corpus, cases, nil))
@@ -147,7 +174,7 @@ func main() {
 				defer wg.Done()
 				defer func() { <-sem }()
 				cmdArgs := append([]string{"--dump-json"}, cases[i].Args...)
-				cmdArgs = append(cmdArgs, abs(cases[i].File))
+				cmdArgs = append(cmdArgs, cases[i].Input)
 				cases[i].Ours = ptr(runOne(*timeout, *bin, cmdArgs))
 				cases[i].Status = classify(cases[i].Oracle, *cases[i].Ours)
 			}()
@@ -173,8 +200,11 @@ func main() {
 		fatal(fmt.Errorf("binary %q not found; run `go build -o tblgen ./cmd/tblgen`", *bin))
 	}
 	for _, c := range cases {
-		if c.Status == "crash" {
+		switch c.Status {
+		case "crash":
 			fatal(fmt.Errorf("crash on %s", c.File))
+		case "timeout":
+			fatal(fmt.Errorf("timeout on %s after %s (lower -jobs or raise -timeout)", c.File, *timeout))
 		}
 	}
 	if *mode == "check" && prev != nil {
@@ -200,6 +230,8 @@ func outPath(flagVal, mode string) string {
 		return "conformance/stderr.json"
 	case "matrix":
 		return "conformance/matrix.json"
+	case "score":
+		return "conformance/score.json"
 	}
 	return "conformance/status.json"
 }
@@ -430,6 +462,8 @@ func classify(oracle, ours runResult) string {
 	case ours.Exit == 2:
 		return "unsupported"
 	case ours.Class == "timeout":
+		return "timeout"
+	case ours.Exit == -1:
 		return "crash"
 	case oracle.Class == "valid" && ours.Class == "valid":
 		if oracle.OutSHA == ours.OutSHA {
@@ -529,8 +563,13 @@ func summarize(cases []caseResult, mode string) {
 			counts[c.Status]++
 		}
 	}
-	fmt.Printf("\nmode=%s  files=%d  in-scope=%d  needs-include=%d\n",
-		mode, len(cases), scope["in-scope"], scope["needs-include"])
+	fmt.Printf("\nmode=%s  files=%d  in-scope=%d  skipped=%d\n",
+		mode, len(cases), scope["in-scope"], scope["skipped"])
+	if reasons := skipReasons(cases); len(reasons) > 0 {
+		for _, r := range reasons {
+			fmt.Printf("  skip: %s\n", r)
+		}
+	}
 	if len(counts) == 0 {
 		return
 	}
@@ -542,4 +581,149 @@ func summarize(cases []caseResult, mode string) {
 	for _, k := range keys {
 		fmt.Printf("  %-14s %d\n", k, counts[k])
 	}
+}
+
+// inputPlan is what the one-invocation-per-file modes hand to both binaries.
+// Most tests need nothing beyond their own path and the -I flags on their RUN
+// lines. Tests that build their inputs with `split-file` need the container
+// materialized and the primary input is the part the first tblgen RUN line
+// reads, not the container itself.
+type inputPlan struct {
+	Input string
+	Args  []string
+	Skip  string
+}
+
+func planInput(file string) inputPlan {
+	run := runText(file)
+	if !strings.Contains(run, "split-file") {
+		return inputPlan{Input: abs(file), Args: includeArgs(abs(file), run)}
+	}
+	dir, err := materializeSplit(abs(file))
+	if err != nil {
+		return inputPlan{Skip: "split-file: " + err.Error()}
+	}
+	keepTemp(dir)
+	for _, inv := range invocationsForDir(file, dir) {
+		if inv.Skip != "" || len(inv.Argv) == 0 {
+			continue
+		}
+		input := ""
+		for _, a := range inv.Argv {
+			if strings.HasSuffix(a, ".td") && !strings.HasPrefix(a, "-") {
+				input = a
+			}
+		}
+		if input == "" {
+			continue
+		}
+		return inputPlan{Input: input, Args: includeDirs(inv.Argv)}
+	}
+	return inputPlan{Skip: "split-file: no replayable invocation"}
+}
+
+// includeDirs keeps only the -I pairs of an already-substituted argv.
+func includeDirs(argv []string) []string {
+	var out []string
+	for i := 0; i < len(argv); i++ {
+		switch {
+		case argv[i] == "-I" && i+1 < len(argv):
+			i++
+			out = append(out, "-I", argv[i])
+		case strings.HasPrefix(argv[i], "-I") && len(argv[i]) > 2:
+			out = append(out, "-I", argv[i][2:])
+		}
+	}
+	return out
+}
+
+var (
+	tmpMu   sync.Mutex
+	tmpDirs []string
+)
+
+func keepTemp(dir string) {
+	tmpMu.Lock()
+	tmpDirs = append(tmpDirs, dir)
+	tmpMu.Unlock()
+}
+
+// cleanupTemps removes every split-file tree. The trees must outlive both the
+// oracle and the ours phase, so their lifetime is the process, not the case.
+func cleanupTemps() {
+	tmpMu.Lock()
+	dirs := tmpDirs
+	tmpDirs = nil
+	tmpMu.Unlock()
+	for _, d := range dirs {
+		os.RemoveAll(d)
+	}
+}
+
+// loadBaseline indexes the recorded oracle results. The cache is only trusted
+// when it was produced by the same oracle binary and the same input plan, which
+// is what samePlan checks per case.
+func loadBaseline(path, oracle string) map[string]caseResult {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var rep report
+	if err := json.Unmarshal(b, &rep); err != nil {
+		return nil
+	}
+	if v := oracleVersion(oracle); rep.OracleVersion != "" && v != "" && rep.OracleVersion != v {
+		fmt.Fprintf(os.Stderr, "conformance: baseline oracle %q != current %q; not reusing it\n", rep.OracleVersion, v)
+		return nil
+	}
+	m := make(map[string]caseResult, len(rep.Cases))
+	for _, c := range rep.Cases {
+		m[c.File] = c
+	}
+	return m
+}
+
+func samePlan(b, cur caseResult) bool {
+	if b.Run != cur.Run || !equalArgs(b.Args, cur.Args) {
+		return false
+	}
+	input := b.Input
+	if input == "" {
+		input = abs(b.File)
+	}
+	return input == cur.Input
+}
+
+func equalArgs(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func skipReasons(cases []caseResult) []string {
+	counts := map[string]int{}
+	for _, c := range cases {
+		if c.Skip != "" {
+			counts[c.Skip]++
+		}
+	}
+	if len(counts) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(counts))
+	for k := range counts {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]string, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, fmt.Sprintf("%s (%d)", k, counts[k]))
+	}
+	return out
 }

@@ -83,6 +83,16 @@ type Env struct {
 	hidden   map[string]bool
 }
 
+// hasVal reports whether the record declares a field with this name.
+func (r *Record) hasVal(name string) bool {
+	for _, v := range r.Vals {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *Env) Lookup(name string) (Binding, bool) {
 	if e == nil || e.hidden[name] {
 		return Binding{}, false

@@ -132,13 +132,21 @@ func shellFields(cmd string) []string {
 }
 
 // invocationsFor turns one file's RUN lines into replayable invocations.
-func invocationsFor(path string) []invocation {
+func invocationsFor(path string) []invocation { return invocationsForDir(path, "") }
+
+// invocationsForDir is invocationsFor with a materialized %t tree: tests that
+// start with `split-file %s %t` can only be replayed once the parts exist on
+// disk. Everything else keeps %t unresolved and is reported as a skip.
+func invocationsForDir(path, tdir string) []invocation {
 	dir := filepath.Dir(path)
 	abs := abs(path)
 	subst := func(s string) (string, bool) {
 		s = strings.ReplaceAll(s, "%s", abs)
 		s = strings.ReplaceAll(s, "%p", dir)
 		s = strings.ReplaceAll(s, "%S", dir)
+		if tdir != "" {
+			s = strings.ReplaceAll(s, "%t", tdir)
+		}
 		s = strings.ReplaceAll(s, "%%", "\x00")
 		if strings.Contains(s, "%") {
 			return "", false

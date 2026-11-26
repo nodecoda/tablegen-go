@@ -6,9 +6,9 @@
   "counts": {
     "status:err-diff": 79,
     "status:err-wording": 24,
-    "status:exit-diff": 14,
-    "status:out-diff": 19,
-    "status:same": 175,
+    "status:exit-diff": 11,
+    "status:out-diff": 10,
+    "status:same": 192,
     "status:skipped": 291
   },
   "skips": {
@@ -3310,12 +3310,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "aa173698b36dc74c60a0746400fbf771450e37e67981675ef439bf9ab1fe1165",
+        "out_sha256": "210c8aacb97819e56402d63156afe8a3a5e73ec02fb976b108047f292dc84a18",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 4995
+        "out_len": 4993
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 4993
     },
     {
@@ -4241,12 +4241,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "73a419ada813cc0447a44f4bb506d41fd7be9a6a0c16d5a4da4da58b826336f4",
+        "out_sha256": "909f5191a6ae85cbbacaa408412ac061bbf184f43e5e86c2991e5b7ad8d978ba",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 3106
+        "out_len": 3102
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 3102
     },
     {
@@ -4378,12 +4378,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "3f301eeb8543104cad5443db9b6fed694a5e5a8d6c6cfac6a351ef0176bbe80e",
+        "out_sha256": "8707957a13b8645d4a0689072c6f59bfe0842cbf88f06d10a33ba20069864c67",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 3095
+        "out_len": 3093
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 3093
     },
     {
@@ -4670,15 +4670,15 @@
       "ours": {
         "exit": 2,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "41a8f89cd2f129457a3864da9e1415b00b413f6d106c81f0422ba82bd849daae",
+        "err_sha256": "a46ae528139ad2d00c3f10d883031475fe626a344d76cd158bda2fb32266fbdd",
         "Msgs": [
-          "error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (M2: parser only)"
+          "error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
         ],
-        "err_head": "tblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (M2: parser only)"
+        "err_head": "tblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
       },
       "status": "exit-diff",
       "out_len": 1483,
-      "err_text": "tblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (M2: parser only)"
+      "err_text": "tblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/arithmetic.td",
@@ -4943,12 +4943,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "6f5af66dcc0834196bc832d7631e83c44b81dbaffffc60d7f0e8f451225a08c4",
+        "out_sha256": "b741c82f968ac0e96e8e2eec45b9654b18e7261d7315b082861b1ae45ad0a4af",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 4125
+        "out_len": 4121
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 4121
     },
     {
@@ -5352,12 +5352,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "8f4612da3e09f1b3349ba351e11605bd57410464f6bd65eb0edd873412c7b6da",
+        "out_sha256": "8ee546bca3bf7c17a999f40538780af97609c59cfbdbc1f6b3aa0e073c647fb1",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
         "out_len": 1791
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 1791
     },
     {
@@ -5931,16 +5931,16 @@
       "ours": {
         "exit": 2,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "4be81fe3b79903e1834896e1bae1f90dbf85ec6531711d0495b76d70e4e69377",
+        "err_sha256": "a2b373d29dc6c962f0e660aa272d04130a4f1dad804125fbd3481ff225d86f7d",
         "Msgs": [
           "warning: unused template argument: Class3:Arg",
-          "error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (M2: parser only)"
+          "error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
         ],
         "err_head": "\u003cfile\u003e:34:18: warning: unused template argument: Class3:Arg"
       },
       "status": "exit-diff",
       "out_len": 1604,
-      "err_text": "\u003cfile\u003e:34:18: warning: unused template argument: Class3:Arg\nclass Class3\u003cint Arg\u003e {\n                 ^\ntblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (M2: parser only)"
+      "err_text": "\u003cfile\u003e:34:18: warning: unused template argument: Class3:Arg\nclass Class3\u003cint Arg\u003e {\n                 ^\ntblgen: error: E_UNSUPPORTED: -print-detailed-records is not implemented yet (record-level core only; target emitters are out of scope)"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/directive1.td",
@@ -6503,12 +6503,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "ecd2560582a5dd00b59eeb1cee6b6dbe5c644441f7ff9a41ebd43d05245e19c0",
+        "out_sha256": "3bce3a4433e911565a5680380d7ac3cc07c5369833a8736635fffa94e593d199",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
         "out_len": 1163
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 1163
     },
     {
@@ -6918,12 +6918,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "bab82c6736441ed506e5c8580d366e6d33698e4180d32bf7213dc773931dab6b",
+        "out_sha256": "a996540d87e399bd9f71681702f0ac4c3679803cd141d6bd719a7aa083fd9cec",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
         "out_len": 440
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 440
     },
     {
@@ -8801,10 +8801,10 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "ce8674ce0787c5f3f87774ebba935e1e5ba23d87d196f6f5009f7c6386c18cb2",
+        "out_sha256": "65e44f27655993a803be9177d686245501941823b6c990ad9e0576806be6ef97",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 801
+        "out_len": 815
       },
       "status": "out-diff",
       "out_len": 811
@@ -9942,6 +9942,85 @@
       "status": "skipped"
     },
     {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
+      "argv": [
+        "-E",
+        "-I",
+        "/tmp/tblgen-split-2825755202/inc",
+        "/tmp/tblgen-split-2825755202/main.td",
+        "-o",
+        "/tmp/tblgen-split-2825755202/out.td",
+        "-d",
+        "/tmp/tblgen-split-2825755202/out.d"
+      ],
+      "oracle": {
+        "exit": 0,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null
+      },
+      "ours": {
+        "exit": 0,
+        "out_sha256": "94c2ef442b0e670f3aa685a23c570e4264bf8dd3a6b12f1e22b17101d644c179",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 24
+      },
+      "status": "out-diff"
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
+      "argv": [
+        "-I",
+        "/tmp/tblgen-split-2825755202/inc",
+        "/tmp/tblgen-split-2825755202/main.td",
+        "-o",
+        "/tmp/tblgen-split-2825755202/out.td",
+        "-d",
+        "/tmp/tblgen-split-2825755202/out2.d"
+      ],
+      "oracle": {
+        "exit": 0,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null
+      },
+      "ours": {
+        "exit": 0,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null
+      },
+      "status": "same"
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
+      "argv": [
+        "-E",
+        "-I",
+        "/tmp/tblgen-split-2825755202/inc",
+        "/tmp/tblgen-split-2825755202/main.td",
+        "-d",
+        "/tmp/tblgen-split-2825755202/out.d"
+      ],
+      "negate": true,
+      "oracle": {
+        "exit": 1,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "8dc5bad9021bb4909d89d53ed6d9766f13767999535da42668055d5fb5d0f055",
+        "Msgs": null,
+        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: the option -d must be used together with -o"
+      },
+      "ours": {
+        "exit": 0,
+        "out_sha256": "94c2ef442b0e670f3aa685a23c570e4264bf8dd3a6b12f1e22b17101d644c179",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 24
+      },
+      "status": "exit-diff"
+    },
+    {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-errors.td",
       "skip": "non-tblgen command: echo",
       "oracle": {
@@ -9968,15 +10047,14 @@
         "out_len": 490
       },
       "ours": {
-        "exit": 2,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "c99d145d24889d89466a597990ab621abd9197dd83fdcac0e20982271ba43f20",
+        "exit": 0,
+        "out_sha256": "df37b46ee327ec55a227ca1bb44683d0eeaf9dc0fc98af84ce47702adbe7d4c7",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "err_head": "flag provided but not defined: -E"
+        "out_len": 490
       },
-      "status": "exit-diff",
-      "out_len": 490,
-      "err_text": "flag provided but not defined: -E\nusage: tblgen [action] [-D name]... [-I dir]... \u003cfile.td\u003e\n\nactions: --dump-tokens --dump-ast (development aids)\n         --dump-json --print-records --null-backend (M5)"
+      "status": "same",
+      "out_len": 490
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-format.td",
@@ -10005,6 +10083,56 @@
       "status": "skipped"
     },
     {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-include.td",
+      "argv": [
+        "-E",
+        "-I",
+        "/tmp/tblgen-split-3978148123",
+        "/tmp/tblgen-split-3978148123/main.td"
+      ],
+      "oracle": {
+        "exit": 0,
+        "out_sha256": "b3c9ea669968cb702e3e3682c6af5a41c00e2a705b380fd3a06bac87c55ddc38",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 161
+      },
+      "ours": {
+        "exit": 0,
+        "out_sha256": "b3c9ea669968cb702e3e3682c6af5a41c00e2a705b380fd3a06bac87c55ddc38",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 161
+      },
+      "status": "same",
+      "out_len": 161
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-include.td",
+      "argv": [
+        "-E",
+        "-I",
+        "/tmp/tblgen-split-3978148123",
+        "/tmp/tblgen-split-3978148123/multi.td"
+      ],
+      "oracle": {
+        "exit": 0,
+        "out_sha256": "4b5ced50e845f6ada3254d13288257c4b1a0423e9124613052cb913c02a408bd",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 353
+      },
+      "ours": {
+        "exit": 0,
+        "out_sha256": "4b5ced50e845f6ada3254d13288257c4b1a0423e9124613052cb913c02a408bd",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 353
+      },
+      "status": "same",
+      "out_len": 353
+    },
+    {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-macros.td",
       "argv": [
         "-E",
@@ -10018,15 +10146,14 @@
         "out_len": 24
       },
       "ours": {
-        "exit": 2,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "c99d145d24889d89466a597990ab621abd9197dd83fdcac0e20982271ba43f20",
+        "exit": 0,
+        "out_sha256": "dfc0ceaca22f9f6e351aa6a45d238d36b5e2f0cf4f5c6644c7a00cbfffdba975",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "err_head": "flag provided but not defined: -E"
+        "out_len": 24
       },
-      "status": "exit-diff",
-      "out_len": 24,
-      "err_text": "flag provided but not defined: -E\nusage: tblgen [action] [-D name]... [-I dir]... \u003cfile.td\u003e\n\nactions: --dump-tokens --dump-ast (development aids)\n         --dump-json --print-records --null-backend (M5)"
+      "status": "same",
+      "out_len": 24
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-macros.td",
@@ -10043,15 +10170,14 @@
         "out_len": 30
       },
       "ours": {
-        "exit": 2,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "c99d145d24889d89466a597990ab621abd9197dd83fdcac0e20982271ba43f20",
+        "exit": 0,
+        "out_sha256": "1ab884033d87777326a42636d1e655745209c9d5271f98b7a91b485c2c7f39f5",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "err_head": "flag provided but not defined: -E"
+        "out_len": 30
       },
-      "status": "exit-diff",
-      "out_len": 30,
-      "err_text": "flag provided but not defined: -E\nusage: tblgen [action] [-D name]... [-I dir]... \u003cfile.td\u003e\n\nactions: --dump-tokens --dump-ast (development aids)\n         --dump-json --print-records --null-backend (M5)"
+      "status": "same",
+      "out_len": 30
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-macros.td",
@@ -10069,15 +10195,14 @@
         "out_len": 26
       },
       "ours": {
-        "exit": 2,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "c99d145d24889d89466a597990ab621abd9197dd83fdcac0e20982271ba43f20",
+        "exit": 0,
+        "out_sha256": "0dd2700c4ccea28b0c88eb2358bfcd622ff0b31fe84828e5ea0c05d695253ffb",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "err_head": "flag provided but not defined: -E"
+        "out_len": 26
       },
-      "status": "exit-diff",
-      "out_len": 26,
-      "err_text": "flag provided but not defined: -E\nusage: tblgen [action] [-D name]... [-I dir]... \u003cfile.td\u003e\n\nactions: --dump-tokens --dump-ast (development aids)\n         --dump-json --print-records --null-backend (M5)"
+      "status": "same",
+      "out_len": 26
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/pset-enum.td",
@@ -10396,12 +10521,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "06ba8c0e7c48387bcba17fdca24e606174054210f15e0c1c460c678cbd7b583d",
+        "out_sha256": "416ff74712565706a90ff8522d376d29dd45f2f70c39fa248b14cd81059d95bc",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 607
+        "out_len": 601
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 601
     },
     {
@@ -10510,12 +10635,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "ff490463683fff430c011579d62fde55ed236498bd34852a1de5435d59dbb274",
+        "out_sha256": "aff5fbed74d4f690f241aba642929e46942bafbbaa0769d30e9d521e897bd1bc",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 923
+        "out_len": 925
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 925
     },
     {
@@ -10623,12 +10748,12 @@
       "ours": {
         "exit": 2,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a56f5a806fff4dc466e24ee8885646195cd1f9b6241bf62fc212817dce452240",
+        "err_sha256": "ae779f38b3fa6ec96b05df68c0c3223e2ee042cb30d3af16c61421345a5d71fa",
         "Msgs": null,
         "err_head": "panic: runtime error: invalid memory address or nil pointer dereference"
       },
       "status": "exit-diff",
-      "err_text": "panic: runtime error: invalid memory address or nil pointer dereference\n[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x532950]\n\ngoroutine 1 [running]:\ntblgen/internal/record.(*Keeper).evalListComprehension.func1(0xc000132840?, 0x1?)\n\t/home/ubuntu/tablegen-go/internal/record/bang.go:995 +0xd0\nsort.insertionSort_func({0xc00018d300?, 0xc000123830?}, 0x0, 0x5)\n\t/usr/lib/go-1.22/src/sort/zsortfunc.go:12 +0xa7\nsort.stable_func({0xc00018d300?, 0xc000123830?}, 0x5)\n\t/usr/lib/go-1.22/src/sort/zsortfunc.go:343 +0x75\nsort.SliceStable({0x57c0e0?, 0xc000132840?}, 0xc00018d300)\n\t/usr/lib/go-\n... (truncated)"
+      "err_text": "panic: runtime error: invalid memory address or nil pointer dereference\n[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x533550]\n\ngoroutine 1 [running]:\ntblgen/internal/record.(*Keeper).evalListComprehension.func1(0xc000010858?, 0x1?)\n\t/home/ubuntu/tablegen-go/internal/record/bang.go:995 +0xd0\nsort.insertionSort_func({0xc00019b180?, 0xc000015860?}, 0x0, 0x5)\n\t/usr/lib/go-1.22/src/sort/zsortfunc.go:12 +0xa7\nsort.stable_func({0xc00019b180?, 0xc000015860?}, 0x5)\n\t/usr/lib/go-1.22/src/sort/zsortfunc.go:343 +0x75\nsort.SliceStable({0x57f620?, 0xc000010858?}, 0xc00019b180)\n\t/usr/lib/go-\n... (truncated)"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/spurious-semi.td",
@@ -11574,12 +11699,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "cb235ebe3ffcaf9411504d5bf8bc372e437b5b6379894ae50259f2ecc50c47bc",
+        "out_sha256": "76b4bb10d8cab302828bee06975812dd8a8fce2098e0db24a6fadb04577f7783",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 1056
+        "out_len": 1060
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 1060
     },
     {
