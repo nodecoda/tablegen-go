@@ -488,15 +488,30 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 				return int64(uint64(a) >> uint(b)), true
 			}
 		case syntax.XIsA:
-			// IsAOpInit::Fold (Record.cpp:2040-2064): a DefInit is an
-			// instance of the named class when its record inherits it.
-			if env != nil && env.keeper != nil && len(x.Args) == 1 {
-				if name, ok := defRefName(x.Args[0], env); ok {
-					if d := env.keeper.Def(name); d != nil {
-						if d.Type().IsA(env.keeper.tyFromSyntax(x.TypeArg)) {
-							return 1, true
-						}
+			// IsAOpInit::Fold (Record.cpp:2076-2103): the expression's own
+			// type answers the question when it already is the checked type
+			// (`!isa<string>(s)` for a string variable folds to 1), and any
+			// known non-record type that is not the checked one folds to 0
+			// ("We treat non-record types as not castable").
+			if len(x.Args) == 1 {
+				if ty := x.Args[0].Type(); ty.Kind != syntax.InvalidType && ty.Kind != syntax.UnsetType {
+					if sameSyntaxType(ty, x.TypeArg) {
+						return 1, true
+					}
+					if x.TypeArg.Kind != syntax.RecordType && x.TypeArg.Kind != syntax.InvalidType {
 						return 0, true
+					}
+				}
+				// Otherwise the answer needs the record graph: a DefInit is an
+				// instance of the named class when its record inherits it.
+				if env != nil && env.keeper != nil {
+					if name, ok := defRefName(x.Args[0], env); ok {
+						if d := env.keeper.Def(name); d != nil {
+							if d.Type().IsA(env.keeper.tyFromSyntax(x.TypeArg)) {
+								return 1, true
+							}
+							return 0, true
+						}
 					}
 				}
 			}
@@ -1145,7 +1160,12 @@ func rawText(v syntax.Value, env *Env) string {
 				b.WriteByte('"')
 			}
 			b.WriteString(": ")
-			b.WriteString(rawText(a.Value, env))
+			// Record::resolveReferences casts every template argument to the
+			// declared parameter type (CheckTemplateArgValues,
+			// TGParser.cpp:4749-4781), and a cast that cannot fold stays in
+			// the Init tree, so `Target<!foreach(...)>` prints
+			// `!cast<list<bit>>(!foreach(...))`.
+			b.WriteString(rawText(castArgForPrint(x.Class, i, a, env), env))
 		}
 		b.WriteByte('>')
 		return b.String()
@@ -1187,6 +1207,34 @@ func rawText(v syntax.Value, env *Env) string {
 		return bangText(x, env)
 	}
 	return "?"
+}
+
+// castArgForPrint applies the class's declared parameter type to one of its
+// template-argument inits, the way CheckTemplateArgValues does before the
+// application is resolved (TGParser.cpp:4749-4781).
+func castArgForPrint(className string, idx int, a *syntax.Arg, env *Env) syntax.Value {
+	if env == nil || env.keeper == nil || a == nil || a.Value == nil {
+		return a.Value
+	}
+	cl := env.keeper.Class(className)
+	if cl == nil {
+		return a.Value
+	}
+	var ta *RecordVal
+	if a.Name != "" {
+		for _, t := range cl.TArgs {
+			if t.Name == a.Name {
+				ta = t
+				break
+			}
+		}
+	} else if idx < len(cl.TArgs) {
+		ta = cl.TArgs[idx]
+	}
+	if ta == nil || ta.Ty == nil {
+		return a.Value
+	}
+	return env.keeper.implicitCast(ta.Ty, a.Value, nil)
 }
 
 // boolIdx maps an int condition to the index picking between the two arms of
