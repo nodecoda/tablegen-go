@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 22,
-    "status:msg-match": 17,
-    "status:same": 346,
+    "status:diff": 20,
+    "status:msg-match": 10,
+    "status:same": 355,
     "status:skipped": 7
   },
   "cases": [
@@ -930,11 +930,11 @@
           "error: assertion failed: The Objects and Modes lists must be the same length",
           "error: assertion failed in this record"
         ],
-        "full_sha256": "c505d9d281eb827a2913f0451070f166352b961a2ca69badc6287e8fe671f871",
-        "full_len": 329,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/include/llvm/Target/Target.td:54:10: error: assertion failed: The Objects and Modes lists must be the same length\n  assert !eq(ObjectsLength, !size(Modes)),\n         ^\n\u003cfile\u003e:29:5: error: assertion failed in this record\ndef BadDef : ValueTypeByHwMode\u003c[TestMode1, TestMode2, DefaultMode],\n    ^"
+        "full_sha256": "17618549d3d60c19109d5fa1395340c853e3905e53587841ba19065bd980f6e8",
+        "full_len": 354,
+        "full": "Included from \u003cfile\u003e:10:\n/home/ubuntu/llvm/llvm-project/llvm/include/llvm/Target/Target.td:54:10: error: assertion failed: The Objects and Modes lists must be the same length\n  assert !eq(ObjectsLength, !size(Modes)),\n         ^\n\u003cfile\u003e:29:5: error: assertion failed in this record\ndef BadDef : ValueTypeByHwMode\u003c[TestMode1, TestMode2, DefaultMode],\n    ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeSubRegs.td",
@@ -1288,11 +1288,11 @@
         "msgs": [
           "error: Undefined reference to record: 'd1_r1_no_such_record'"
         ],
-        "full_sha256": "4c5f9e96220feaea1e52f9977cb567eeafa276c298bf1a295e6b9ed5e4d9c6cc",
-        "full_len": 128,
-        "full": "\u003cfile\u003e:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'\n\n  def _m01: B\u003c!cast\u003cA\u003e(s#\"_no_such_record\")\u003e;\n      ^"
+        "full_sha256": "e934638fd1fe630e2382d6a5f64485f7d62b1264513f5b3b7d81c33d0b819f1f",
+        "full_len": 297,
+        "full": "\u003cfile\u003e:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'\n\n  def _m01: B\u003c!cast\u003cA\u003e(s#\"_no_such_record\")\u003e;\n      ^\n\u003cfile\u003e:23:13: note: instantiated from multiclass\n  defm _m1: M0\u003cs # \"_r1\"\u003e;\n            ^\n\u003cfile\u003e:31:10: note: instantiated from multiclass\ndefm d1: M1\u003c\"d1\"\u003e;\n         ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm.td",
@@ -2532,7 +2532,7 @@
         ],
         "full_sha256": "d84f8541f0271dbe4f2fa251a7b0312ff1aecf87d1f5e85cbc786b9a6c088886",
         "full_len": 4210,
-        "full": "\u003cfile\u003e:11:8: error: assertion failed: primary name is too long: Name\nassert !le(!size(Name), 20), \"primary name is too long: \" # Name;\n       ^\n\u003cfile\u003e:18:8: error: assertion failed: first name is incorrect: Fred Smith\nassert !eq(!substr(Rec01.name, 0, 3), \"Jane\"),\n       ^\n\u003cfile\u003e:25:8: error: assertion failed: record Rec02 is broken\nassert !not(Rec02.broken), \"record Rec02 is broken\";\n       ^\n\u003cfile\u003e:31:8: error: assertion failed: cube of 9 should be 729\nassert !eq(Cube\u003c9\u003e.result, 81), \"cube of 9 should be 729\";\n       ^\n\u003cfile\u003e:37:10: error: assertion failed: foreach i cannot be 2\n  assert !ne(i, 2), \"foreach i cannot be 2\";\n         ^\n\u003cfile\u003e:51:10: error: assertion failed: primary first name is not \"Grack\"\n  assert !eq(!substr(Name, 0, 5), \"Grack\"), \"primary first name is not \\\"Grack\\\"\";\n         ^\n\u003cfile\u003e:53:10: error: assertion failed: foo field should be \"Foo\"\n  assert !eq(foo, \"foo\"), \"foo field should be \\\"Foo\\\"\";\n         ^\n\u003cfile\u003e:49:5: error: assertion failed in this record\ndef Rec10 {\n    ^\n\u003cfile\u003e:60:10: error: assertion failed: magic field is incorrect: 42\n  assert !eq(magic, 13), \"magic field is incorrect: \" # magic;\n         ^\n\u003cfile\u003e:58:5: error: assertion failed in this record\ndef Rec11 {\n    ^\n\u003cfile\u003e:69:10: error: assertion failed: var field has wrong value: foo_snork\n  assert !eq(var, \"foo_snorx\"), \"var field has wrong value: \" # var;\n         ^\n\u003cfile\u003e:66:5: error: assertion failed in this record\ndef Rec12 {\n    ^\n\u003cfile\u003e:80:10: error: assertion failed: kind field has wrong value: 8\n  assert !eq(kind, 7), \"kind field has wrong value: \" # kind;\n         ^\n\u003cfile\u003e:78:5: error: assertion failed in this record\ndef Rec13 : Kind {\n    ^\n\u003cfile\u003e:87:10: error: assertion failed: double_result should be 54\n  assert !eq(double_result, 53), \"double_result should be 54\";\n         ^\n\u003cfile\u003e:85:5: error: assertion failed in this record\ndef Rec14 : Cube\u003c3\u003e {\n    ^\n\u003cfile\u003e:95:10: error: assertion failed: person name is too long: Donald Uh Oh This Name Is Too Long Knuth\n  assert !le(!size(name), 32), \"person name is too long: \" # name;\n         ^\n\u003cfile\u003e:109:5: error: assertion failed in this record\ndef Rec21 : Person\u003c\"Donald Uh Oh This Name Is Too Long Knuth\", 50\u003e;\n    ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 150\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:113:5: error: assertion failed in this record\ndef Rec22 : Person\u003c\"Donald Knuth\", 150\u003e;\n    ^\n\u003cfile\u003e:95:10: error: assertion failed: person name is too long: Margaret Heafield And More Middle Names Hamilton\n  assert !le(!size(name), 32), \"person name is too long: \" # name;\n         ^\n\u003cfile\u003e:124:17: error: assertion failed in this record\n  string Name = Person\u003c\"Margaret Heafield And More Middle Names Hamilton\", 25\u003e.Name;\n                ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 0\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:132:13: error: assertion failed in this record\n  int Age = Person\u003c\"Margaret Heafield Hamilton\", 0\u003e.Age;\n            ^\n\u003cfile\u003e:142:10: error: assertion failed: MC1 id string is too long\n  assert !le(!size(id), 5), \"MC1 id string is too long\";\n         ^\n\u003cfile\u003e:143:10: error: assertion failed: MC1 seq is too high\n  assert !le(seq, 999999), \"MC1 seq is too high\";\n         ^\n\u003cfile\u003e:157:10: error: assertion failed: MC2 phrase must be secret: secrex code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n         ^\n\u003cfile\u003e:157:10: error: assertion failed: MC2 phrase must be secret: xecret code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n         ^\n\u003cfile\u003e:182:10: error: assertion failed: MC5 name must include a space: Ada_Lovelace\n  assert !ne(!find(name, \" \"), -1), \"MC5 name must include a space: \" # name;\n         ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 666\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:159:7: error: assertion failed in this record\n  def _mc2 {\n      ^\n\u003cfile\u003e:184:15: note: \n... (truncated)"
+        "full": "\u003cfile\u003e:11:8: error: assertion failed: primary name is too long: Name\nassert !le(!size(Name), 20), \"primary name is too long: \" # Name;\n       ^\n\u003cfile\u003e:18:8: error: assertion failed: first name is incorrect: Fred Smith\nassert !eq(!substr(Rec01.name, 0, 3), \"Jane\"),\n       ^\n\u003cfile\u003e:25:8: error: assertion failed: record Rec02 is broken\nassert !not(Rec02.broken), \"record Rec02 is broken\";\n       ^\n\u003cfile\u003e:31:8: error: assertion failed: cube of 9 should be 729\nassert !eq(Cube\u003c9\u003e.result, 81), \"cube of 9 should be 729\";\n       ^\n\u003cfile\u003e:37:10: error: assertion failed: foreach i cannot be 2\n  assert !ne(i, 2), \"foreach i cannot be 2\";\n         ^\n\u003cfile\u003e:51:10: error: assertion failed: primary first name is not \"Grack\"\n  assert !eq(!substr(Name, 0, 5), \"Grack\"), \"primary first name is not \\\"Grack\\\"\";\n         ^\n\u003cfile\u003e:53:10: error: assertion failed: foo field should be \"Foo\"\n  assert !eq(foo, \"foo\"), \"foo field should be \\\"Foo\\\"\";\n         ^\n\u003cfile\u003e:49:5: error: assertion failed in this record\ndef Rec10 {\n    ^\n\u003cfile\u003e:60:10: error: assertion failed: magic field is incorrect: 42\n  assert !eq(magic, 13), \"magic field is incorrect: \" # magic;\n         ^\n\u003cfile\u003e:58:5: error: assertion failed in this record\ndef Rec11 {\n    ^\n\u003cfile\u003e:69:10: error: assertion failed: var field has wrong value: foo_snork\n  assert !eq(var, \"foo_snorx\"), \"var field has wrong value: \" # var;\n         ^\n\u003cfile\u003e:66:5: error: assertion failed in this record\ndef Rec12 {\n    ^\n\u003cfile\u003e:80:10: error: assertion failed: kind field has wrong value: 8\n  assert !eq(kind, 7), \"kind field has wrong value: \" # kind;\n         ^\n\u003cfile\u003e:78:5: error: assertion failed in this record\ndef Rec13 : Kind {\n    ^\n\u003cfile\u003e:87:10: error: assertion failed: double_result should be 54\n  assert !eq(double_result, 53), \"double_result should be 54\";\n         ^\n\u003cfile\u003e:85:5: error: assertion failed in this record\ndef Rec14 : Cube\u003c3\u003e {\n    ^\n\u003cfile\u003e:95:10: error: assertion failed: person name is too long: Donald Uh Oh This Name Is Too Long Knuth\n  assert !le(!size(name), 32), \"person name is too long: \" # name;\n         ^\n\u003cfile\u003e:109:5: error: assertion failed in this record\ndef Rec21 : Person\u003c\"Donald Uh Oh This Name Is Too Long Knuth\", 50\u003e;\n    ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 150\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:113:5: error: assertion failed in this record\ndef Rec22 : Person\u003c\"Donald Knuth\", 150\u003e;\n    ^\n\u003cfile\u003e:95:10: error: assertion failed: person name is too long: Margaret Heafield And More Middle Names Hamilton\n  assert !le(!size(name), 32), \"person name is too long: \" # name;\n         ^\n\u003cfile\u003e:124:17: error: assertion failed in this record\n  string Name = Person\u003c\"Margaret Heafield And More Middle Names Hamilton\", 25\u003e.Name;\n                ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 0\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:132:13: error: assertion failed in this record\n  int Age = Person\u003c\"Margaret Heafield Hamilton\", 0\u003e.Age;\n            ^\n\u003cfile\u003e:142:10: error: assertion failed: MC1 id string is too long\n  assert !le(!size(id), 5), \"MC1 id string is too long\";\n         ^\n\u003cfile\u003e:143:10: error: assertion failed: MC1 seq is too high\n  assert !le(seq, 999999), \"MC1 seq is too high\";\n         ^\n\u003cfile\u003e:157:10: error: assertion failed: MC2 phrase must be secret: secrex code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n         ^\n\u003cfile\u003e:157:10: error: assertion failed: MC2 phrase must be secret: xecret code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n         ^\n\u003cfile\u003e:182:10: error: assertion failed: MC5 name must include a space: Ada_Lovelace\n  assert !ne(!find(name, \" \"), -1), \"MC5 name must include a space: \" # name;\n         ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 666\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:159:7: error: assertion failed in this record\n  def _mc2 {\n      ^\n\u003cfile\u003e:184:15: note: instantiated from multiclass\n  defm _mc5 : MC2\u003cphr\u003e, Person\u003cname, age\u003e;\n              ^\n\u003cfile\u003e:187:14: note: instantiated from multiclass\ndefm Rec45 : MC5\u003c\"secret password\", \"Ada_Lovelace\", 666\u003e;\n             ^"
       },
       "ours": {
         "exit": 1,
@@ -2544,12 +2544,22 @@
           "error: assertion failed: foreach i cannot be 2",
           "error: assertion failed: primary first name is not \"Grack\"",
           "error: assertion failed: foo field should be \"Foo\"",
+          "error: assertion failed in this record",
+          "error: assertion failed: magic field is incorrect: 42",
+          "error: assertion failed in this record",
           "error: assertion failed: var field has wrong value: foo_snork",
+          "error: assertion failed in this record",
           "error: assertion failed: kind field has wrong value: 8",
+          "error: assertion failed in this record",
           "error: assertion failed: double_result should be 54",
+          "error: assertion failed in this record",
           "error: assertion failed: person name is too long: Donald Uh Oh This Name Is Too Long Knuth",
           "error: assertion failed in this record",
           "error: assertion failed: person age is invalid: 150",
+          "error: assertion failed in this record",
+          "error: assertion failed: person name is too long: Margaret Heafield And More Middle Names Hamilton",
+          "error: assertion failed in this record",
+          "error: assertion failed: person age is invalid: 0",
           "error: assertion failed in this record",
           "error: assertion failed: MC1 id string is too long",
           "error: assertion failed: MC1 seq is too high",
@@ -2559,11 +2569,11 @@
           "error: assertion failed: person age is invalid: 666",
           "error: assertion failed in this record"
         ],
-        "full_sha256": "012da26e2e467863c5a3f3e98316b27a3c15a3e4b8ba9a07c47e11be8dd10def",
-        "full_len": 2761,
-        "full": "\u003cfile\u003e:11:1: error: assertion failed: primary name is too long: Name\nassert !le(!size(Name), 20), \"primary name is too long: \" # Name;\n^\n\u003cfile\u003e:18:1: error: assertion failed: first name is incorrect: Fred Smith\nassert !eq(!substr(Rec01.name, 0, 3), \"Jane\"),\n^\n\u003cfile\u003e:25:1: error: assertion failed: record Rec02 is broken\nassert !not(Rec02.broken), \"record Rec02 is broken\";\n^\n\u003cfile\u003e:31:1: error: assertion failed: cube of 9 should be 729\nassert !eq(Cube\u003c9\u003e.result, 81), \"cube of 9 should be 729\";\n^\n\u003cfile\u003e:37:3: error: assertion failed: foreach i cannot be 2\n  assert !ne(i, 2), \"foreach i cannot be 2\";\n  ^\n\u003cfile\u003e:51:3: error: assertion failed: primary first name is not \"Grack\"\n  assert !eq(!substr(Name, 0, 5), \"Grack\"), \"primary first name is not \\\"Grack\\\"\";\n  ^\n\u003cfile\u003e:53:3: error: assertion failed: foo field should be \"Foo\"\n  assert !eq(foo, \"foo\"), \"foo field should be \\\"Foo\\\"\";\n  ^\n\u003cfile\u003e:69:3: error: assertion failed: var field has wrong value: foo_snork\n  assert !eq(var, \"foo_snorx\"), \"var field has wrong value: \" # var;\n  ^\n\u003cfile\u003e:80:3: error: assertion failed: kind field has wrong value: 8\n  assert !eq(kind, 7), \"kind field has wrong value: \" # kind;\n  ^\n\u003cfile\u003e:87:3: error: assertion failed: double_result should be 54\n  assert !eq(double_result, 53), \"double_result should be 54\";\n  ^\n\u003cfile\u003e:95:10: error: assertion failed: person name is too long: Donald Uh Oh This Name Is Too Long Knuth\n  assert !le(!size(name), 32), \"person name is too long: \" # name;\n         ^\n\u003cfile\u003e:109:5: error: assertion failed in this record\ndef Rec21 : Person\u003c\"Donald Uh Oh This Name Is Too Long Knuth\", 50\u003e;\n    ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 150\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:113:5: error: assertion failed in this record\ndef Rec22 : Person\u003c\"Donald Knuth\", 150\u003e;\n    ^\n\u003cfile\u003e:142:3: error: assertion failed: MC1 id string is too long\n  assert !le(!size(id), 5), \"MC1 id string is too long\";\n  ^\n\u003cfile\u003e:143:3: error: assertion failed: MC1 seq is too high\n  assert !le(seq, 999999), \"MC1 seq is too high\";\n  ^\n\u003cfile\u003e:157:3: error: assertion failed: MC2 phrase must be secret: secrex code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n  ^\n\u003cfile\u003e:157:3: error: assertion failed: MC2 phrase must be secret: xecret code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n  ^\n\u003cfile\u003e:182:3: error: assertion failed: MC5 name must include a space: Ada_Lovelace\n  assert !ne(!find(name, \" \"), -1), \"MC5 name must include a space: \" # name;\n  ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 666\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:159:7: error: assertion failed in this record\n  def _mc2 {\n      ^"
+        "full_sha256": "d84f8541f0271dbe4f2fa251a7b0312ff1aecf87d1f5e85cbc786b9a6c088886",
+        "full_len": 4210,
+        "full": "\u003cfile\u003e:11:8: error: assertion failed: primary name is too long: Name\nassert !le(!size(Name), 20), \"primary name is too long: \" # Name;\n       ^\n\u003cfile\u003e:18:8: error: assertion failed: first name is incorrect: Fred Smith\nassert !eq(!substr(Rec01.name, 0, 3), \"Jane\"),\n       ^\n\u003cfile\u003e:25:8: error: assertion failed: record Rec02 is broken\nassert !not(Rec02.broken), \"record Rec02 is broken\";\n       ^\n\u003cfile\u003e:31:8: error: assertion failed: cube of 9 should be 729\nassert !eq(Cube\u003c9\u003e.result, 81), \"cube of 9 should be 729\";\n       ^\n\u003cfile\u003e:37:10: error: assertion failed: foreach i cannot be 2\n  assert !ne(i, 2), \"foreach i cannot be 2\";\n         ^\n\u003cfile\u003e:51:10: error: assertion failed: primary first name is not \"Grack\"\n  assert !eq(!substr(Name, 0, 5), \"Grack\"), \"primary first name is not \\\"Grack\\\"\";\n         ^\n\u003cfile\u003e:53:10: error: assertion failed: foo field should be \"Foo\"\n  assert !eq(foo, \"foo\"), \"foo field should be \\\"Foo\\\"\";\n         ^\n\u003cfile\u003e:49:5: error: assertion failed in this record\ndef Rec10 {\n    ^\n\u003cfile\u003e:60:10: error: assertion failed: magic field is incorrect: 42\n  assert !eq(magic, 13), \"magic field is incorrect: \" # magic;\n         ^\n\u003cfile\u003e:58:5: error: assertion failed in this record\ndef Rec11 {\n    ^\n\u003cfile\u003e:69:10: error: assertion failed: var field has wrong value: foo_snork\n  assert !eq(var, \"foo_snorx\"), \"var field has wrong value: \" # var;\n         ^\n\u003cfile\u003e:66:5: error: assertion failed in this record\ndef Rec12 {\n    ^\n\u003cfile\u003e:80:10: error: assertion failed: kind field has wrong value: 8\n  assert !eq(kind, 7), \"kind field has wrong value: \" # kind;\n         ^\n\u003cfile\u003e:78:5: error: assertion failed in this record\ndef Rec13 : Kind {\n    ^\n\u003cfile\u003e:87:10: error: assertion failed: double_result should be 54\n  assert !eq(double_result, 53), \"double_result should be 54\";\n         ^\n\u003cfile\u003e:85:5: error: assertion failed in this record\ndef Rec14 : Cube\u003c3\u003e {\n    ^\n\u003cfile\u003e:95:10: error: assertion failed: person name is too long: Donald Uh Oh This Name Is Too Long Knuth\n  assert !le(!size(name), 32), \"person name is too long: \" # name;\n         ^\n\u003cfile\u003e:109:5: error: assertion failed in this record\ndef Rec21 : Person\u003c\"Donald Uh Oh This Name Is Too Long Knuth\", 50\u003e;\n    ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 150\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:113:5: error: assertion failed in this record\ndef Rec22 : Person\u003c\"Donald Knuth\", 150\u003e;\n    ^\n\u003cfile\u003e:95:10: error: assertion failed: person name is too long: Margaret Heafield And More Middle Names Hamilton\n  assert !le(!size(name), 32), \"person name is too long: \" # name;\n         ^\n\u003cfile\u003e:124:17: error: assertion failed in this record\n  string Name = Person\u003c\"Margaret Heafield And More Middle Names Hamilton\", 25\u003e.Name;\n                ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 0\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:132:13: error: assertion failed in this record\n  int Age = Person\u003c\"Margaret Heafield Hamilton\", 0\u003e.Age;\n            ^\n\u003cfile\u003e:142:10: error: assertion failed: MC1 id string is too long\n  assert !le(!size(id), 5), \"MC1 id string is too long\";\n         ^\n\u003cfile\u003e:143:10: error: assertion failed: MC1 seq is too high\n  assert !le(seq, 999999), \"MC1 seq is too high\";\n         ^\n\u003cfile\u003e:157:10: error: assertion failed: MC2 phrase must be secret: secrex code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n         ^\n\u003cfile\u003e:157:10: error: assertion failed: MC2 phrase must be secret: xecret code\n  assert !eq(!substr(phr, 0, 6), \"secret\"), \"MC2 phrase must be secret: \" # phr;\n         ^\n\u003cfile\u003e:182:10: error: assertion failed: MC5 name must include a space: Ada_Lovelace\n  assert !ne(!find(name, \" \"), -1), \"MC5 name must include a space: \" # name;\n         ^\n\u003cfile\u003e:100:10: error: assertion failed: person age is invalid: 666\n  assert !and(!ge(age, 1), !le(age, 120)),\n         ^\n\u003cfile\u003e:159:7: error: assertion failed in this record\n  def _mc2 {\n      ^\n\u003cfile\u003e:184:15: note: instantiated from multiclass\n  defm _mc5 : MC2\u003cphr\u003e, Person\u003cname, age\u003e;\n              ^\n\u003cfile\u003e:187:14: note: instantiated from multiclass\ndefm Rec45 : MC5\u003c\"secret password\", \"Ada_Lovelace\", 666\u003e;\n             ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/atomic-store-trunc-patfrags.td",
@@ -2746,13 +2756,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: Zero does not have any true condition in:!cond(!lt(0, 0): \"negative\", !gt(0, 0): \"positive\")"
+          "error: Zero does not have any true condition in:!cond(0: \"negative\", 0: \"positive\")"
         ],
-        "full_sha256": "d4ee9cd1bc7c0454cc4e2c7cd402eca3581d81bccfe0520c522128d5bfa22736",
-        "full_len": 134,
-        "full": "\u003cfile\u003e:9:5: error: Zero does not have any true condition in:!cond(!lt(0, 0): \"negative\", !gt(0, 0): \"positive\")\ndef Zero : C\u003c0\u003e;\n    ^"
+        "full_sha256": "1ee39e3f577bb3291f6573239a29eb80b339fa0f549d8d695ab467e380894e79",
+        "full_len": 118,
+        "full": "\u003cfile\u003e:9:5: error: Zero does not have any true condition in:!cond(0: \"negative\", 0: \"positive\")\ndef Zero : C\u003c0\u003e;\n    ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-empty-list-arg.td",
@@ -3258,11 +3268,11 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "97fccbfc86b7176c57c20aa48c8eae809fa61f37fdfe0602918b039b0c54dcbb",
-        "full_len": 148,
-        "full": "\u003cfile\u003e:10:7: error: reached EOF without matching #endif\n#endif\n      ^\n\u003cfile\u003e:9:7: error: the latest preprocessor control is here\n#ifdef FOO\n      ^"
+        "full_sha256": "ee14194f163185a3833a83f855fe8ad31ff7dfdea3b8fde20c4393f7453233ee",
+        "full_len": 149,
+        "full": "\u003cfile\u003e:10:7: error: reached EOF without matching #endif\n#endif\n      ^\n\u003cfile\u003e:9:8: error: the latest preprocessor control is here\n#ifdef FOO\n       ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eq-unset.td",
@@ -4781,9 +4791,9 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "12d2ffeaaa9c029cd6cc47cc18012f1e65f986438f10604de241325fe1358e41",
-        "full_len": 140,
-        "full": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+        "full_sha256": "37278958b9b217e1e002fdb17244a5cb12ccfb217863f48011eb1ce39a773432",
+        "full_len": 141,
+        "full": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:8: error: the latest preprocessor control is here\n#ifdef DISABLED\n       ^"
       },
       "status": "msg-match"
     },
@@ -4806,11 +4816,11 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "8a153adc72f413a28310a2de3456a184674e5a8cd235938352992e986a4a63c5",
-        "full_len": 273,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
+        "full_sha256": "f56d034e18355708411d48ae6d75a049d2baed58298f7ad73b68be39b15c952c",
+        "full_len": 322,
+        "full": "Included from \u003cfile\u003e:9:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif\n\n^\nIncluded from \u003cfile\u003e:9:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:1:8: error: the latest preprocessor control is here\n#ifdef ENABLED\n       ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12.td",
@@ -4831,9 +4841,9 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "4ba3b30f6db8a69b352e1d6b012ef940c77c274435121d5d49f5894248b60243",
-        "full_len": 273,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
+        "full_sha256": "9f931ccc3ff2621aaff9041173b34e8d44f3c9fc758b9f7cbf3d8a2c3649df86",
+        "full_len": 322,
+        "full": "Included from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\nIncluded from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:8: error: the latest preprocessor control is here\n#ifdef ENABLED\n       ^"
       },
       "status": "msg-match"
     },
@@ -4856,11 +4866,11 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "babf0f08a4d73420a597e652b5052de11e3a808b85a7f44869d01f2462063dfb",
-        "full_len": 141,
-        "full": "\u003cfile\u003e:10:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+        "full_sha256": "325d2baf0f1f538fd5a3f1a83f1e7b9d74d0c6e3653e487e4f8da90a48515cb4",
+        "full_len": 142,
+        "full": "\u003cfile\u003e:10:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:8: error: the latest preprocessor control is here\n#ifdef DISABLED\n       ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag14.td",
@@ -4881,11 +4891,11 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "12d2ffeaaa9c029cd6cc47cc18012f1e65f986438f10604de241325fe1358e41",
-        "full_len": 140,
-        "full": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+        "full_sha256": "37278958b9b217e1e002fdb17244a5cb12ccfb217863f48011eb1ce39a773432",
+        "full_len": 141,
+        "full": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:8: error: the latest preprocessor control is here\n#ifdef DISABLED\n       ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag2.td",
@@ -5077,11 +5087,11 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "5facfb40deb853e639d7f075e13ab93a9384da3e89a093ce12b5f4454114c46c",
-        "full_len": 140,
-        "full": "\u003cfile\u003e:6:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+        "full_sha256": "bdca97ad3423e42ab2c6151fb772811a86e21cd135c935cbc1152c8b399414ba",
+        "full_len": 141,
+        "full": "\u003cfile\u003e:6:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:8: error: the latest preprocessor control is here\n#ifdef DISABLED\n       ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef-diag-1.td",
@@ -5125,9 +5135,9 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "ccf4c002292b42ee421739357111150463eda81809d3a68991ff6a6049185e37",
-        "full_len": 255,
-        "full": "\u003cfile\u003e:4:15: error: only comments are supported after a preprocessing directive\n#ifndef MACRO 42\n              ^\n\u003cfile\u003e:5:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:4:8: error: the latest preprocessor control is here\n#ifndef MACRO 42\n       ^"
+        "full_sha256": "8a6d831a23848c82c08e0a247f446c76b9de3efd6ed282093864c6a206bc9f3e",
+        "full_len": 256,
+        "full": "\u003cfile\u003e:4:15: error: only comments are supported after a preprocessing directive\n#ifndef MACRO 42\n              ^\n\u003cfile\u003e:5:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:4:9: error: the latest preprocessor control is here\n#ifndef MACRO 42\n        ^"
       },
       "status": "diff"
     },
@@ -5208,9 +5218,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "b805d0b3bc1a315fb669ef6a11267d473f66bd6a7c9e8a57933fb56d73d705c4",
-        "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3812679633/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3812679633/a.td:2:\n/tmp/tblgen-split-3812679633/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "ff1472503d4de4ce97d57859705780b8b632d3ff050d0e7ff759912ef037a567",
+        "full_len": 266,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-608707421/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-608707421/a.td:2:\n/tmp/tblgen-split-608707421/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5220,9 +5230,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "8adbf9887a70b8ee6d5e95c55b07d97fafc30428829de775e3fc09fbf9168ebd",
-        "full_len": 724,
-        "full": "/tmp/tblgen-split-3812679633/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3812679633/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3812679633/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\n/tmp/tblgen-split-3812679633/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\n/tmp/tblgen-split-3812679633/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3812679633/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3812679633/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\n/tmp/tblgen-split-3812679633/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full_sha256": "3f068efc0a1f6fe35bfce40a63779bc4d8085bd2d9cca33be9cda85687776b94",
+        "full_len": 1108,
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-608707421/a.td:2:\n/tmp/tblgen-split-608707421/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-608707421/a.td:2:\n/tmp/tblgen-split-608707421/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-608707421/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-608707421/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-608707421/a.td:2:\n/tmp/tblgen-split-608707421/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-608707421/a.td:2:\n/tmp/tblgen-split-608707421/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-608707421/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-608707421/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },
@@ -5769,9 +5779,9 @@
           "error: unexpected character",
           "error: unexpected character"
         ],
-        "full_sha256": "054f6c70074d9669566b84c5b85ebdb03b9a433c743c1a00b23f915c8a0d36db",
-        "full_len": 448,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
+        "full_sha256": "d085efce6c6f636ed0fb3dc1c331e6f4a7aa313f482036893cf0ddc3afdaa7d1",
+        "full_len": 472,
+        "full": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
       },
       "status": "diff"
     },
@@ -5793,9 +5803,9 @@
         "msgs": [
           "error: unterminated code block"
         ],
-        "full_sha256": "9a0f7e9ad45afc4734fc64d4843f5facc5a1aacb321a62a12f7b9f9cf0c6f6ac",
-        "full_len": 170,
-        "full": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
+        "full_sha256": "84cb23ddd3a7c5668f2c3e6ff531c21bcda8dd409a8f77985dc629702aef7196",
+        "full_len": 194,
+        "full": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
       },
       "status": "diff"
     },

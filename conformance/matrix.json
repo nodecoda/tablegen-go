@@ -4,10 +4,10 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 76,
-    "status:err-wording": 26,
+    "status:err-diff": 75,
+    "status:err-wording": 20,
     "status:out-diff": 1,
-    "status:same": 211,
+    "status:same": 218,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -3207,14 +3207,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "4c5f9e96220feaea1e52f9977cb567eeafa276c298bf1a295e6b9ed5e4d9c6cc",
+        "err_sha256": "e934638fd1fe630e2382d6a5f64485f7d62b1264513f5b3b7d81c33d0b819f1f",
         "Msgs": [
           "error: Undefined reference to record: 'd1_r1_no_such_record'"
         ],
         "err_head": "\u003cfile\u003e:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'\n\n  def _m01: B\u003c!cast\u003cA\u003e(s#\"_no_such_record\")\u003e;\n      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm.td",
@@ -4751,7 +4750,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "012da26e2e467863c5a3f3e98316b27a3c15a3e4b8ba9a07c47e11be8dd10def",
+        "err_sha256": "d84f8541f0271dbe4f2fa251a7b0312ff1aecf87d1f5e85cbc786b9a6c088886",
         "Msgs": [
           "error: assertion failed: primary name is too long: Name",
           "error: assertion failed: first name is incorrect: Fred Smith",
@@ -4760,12 +4759,22 @@
           "error: assertion failed: foreach i cannot be 2",
           "error: assertion failed: primary first name is not \"Grack\"",
           "error: assertion failed: foo field should be \"Foo\"",
+          "error: assertion failed in this record",
+          "error: assertion failed: magic field is incorrect: 42",
+          "error: assertion failed in this record",
           "error: assertion failed: var field has wrong value: foo_snork",
+          "error: assertion failed in this record",
           "error: assertion failed: kind field has wrong value: 8",
+          "error: assertion failed in this record",
           "error: assertion failed: double_result should be 54",
+          "error: assertion failed in this record",
           "error: assertion failed: person name is too long: Donald Uh Oh This Name Is Too Long Knuth",
           "error: assertion failed in this record",
           "error: assertion failed: person age is invalid: 150",
+          "error: assertion failed in this record",
+          "error: assertion failed: person name is too long: Margaret Heafield And More Middle Names Hamilton",
+          "error: assertion failed in this record",
+          "error: assertion failed: person age is invalid: 0",
           "error: assertion failed in this record",
           "error: assertion failed: MC1 id string is too long",
           "error: assertion failed: MC1 seq is too high",
@@ -4775,10 +4784,9 @@
           "error: assertion failed: person age is invalid: 666",
           "error: assertion failed in this record"
         ],
-        "err_head": "\u003cfile\u003e:11:1: error: assertion failed: primary name is too long: Name"
+        "err_head": "\u003cfile\u003e:11:8: error: assertion failed: primary name is too long: Name"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:11:1: error: assertion failed: primary name is too long: Name\nassert !le(!size(Name), 20), \"primary name is too long: \" # Name;\n^\n\u003cfile\u003e:18:1: error: assertion failed: first name is incorrect: Fred Smith\nassert !eq(!substr(Rec01.name, 0, 3), \"Jane\"),\n^\n\u003cfile\u003e:25:1: error: assertion failed: record Rec02 is broken\nassert !not(Rec02.broken), \"record Rec02 is broken\";\n^\n\u003cfile\u003e:31:1: error: assertion failed: cube of 9 should be 729\nassert !eq(Cube\u003c9\u003e.result, 81), \"cube of 9 should be 729\";\n^\n\u003cfile\u003e:37:3: error: assertion failed: foreach i cannot be 2\n  assert !ne(i, 2), \"foreach i cannot be \n... (truncated)"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/atomic-store-trunc-patfrags.td",
@@ -6081,15 +6089,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "97fccbfc86b7176c57c20aa48c8eae809fa61f37fdfe0602918b039b0c54dcbb",
+        "err_sha256": "ee14194f163185a3833a83f855fe8ad31ff7dfdea3b8fde20c4393f7453233ee",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
         "err_head": "\u003cfile\u003e:10:7: error: reached EOF without matching #endif"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:10:7: error: reached EOF without matching #endif\n#endif\n      ^\n\u003cfile\u003e:9:7: error: the latest preprocessor control is here\n#ifdef FOO\n      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eq-unset.td",
@@ -7213,14 +7220,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "4a90fbd8edaf8e510e1fe3a487303054e4a86852df856a62d4dd49494d94c59d",
+        "err_sha256": "3c0b6961e718e884eba3d45db0dd7810fce95ce65d40ae796024982b6379da5c",
         "Msgs": [
           "error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)"
         ],
         "err_head": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)\n\n  def : TestPattern\u003c(!cast\u003cTestInstruction\u003e(NAME) foo)\u003e;\n  ^"
+      "err_text": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)\n\n  def : TestPattern\u003c(!cast\u003cTestInstruction\u003e(NAME) foo)\u003e;\n  ^\n\u003cfile\u003e:191:18: note: instantiated from multiclass\ndefm testInst0 : TestInstructionAndPattern\u003c[7]\u003e;\n                 ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-empty-list-arg.td",
@@ -9354,7 +9361,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "12d2ffeaaa9c029cd6cc47cc18012f1e65f986438f10604de241325fe1358e41",
+        "err_sha256": "37278958b9b217e1e002fdb17244a5cb12ccfb217863f48011eb1ce39a773432",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
@@ -9362,7 +9369,7 @@
         "err_head": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif"
       },
       "status": "err-wording",
-      "err_text": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+      "err_text": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:8: error: the latest preprocessor control is here\n#ifdef DISABLED\n       ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11.td",
@@ -9385,15 +9392,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "8a153adc72f413a28310a2de3456a184674e5a8cd235938352992e986a4a63c5",
+        "err_sha256": "f56d034e18355708411d48ae6d75a049d2baed58298f7ad73b68be39b15c952c",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif"
+        "err_head": "Included from \u003cfile\u003e:9:"
       },
-      "status": "err-wording",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12.td",
@@ -9416,15 +9422,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "4ba3b30f6db8a69b352e1d6b012ef940c77c274435121d5d49f5894248b60243",
+        "err_sha256": "9f931ccc3ff2621aaff9041173b34e8d44f3c9fc758b9f7cbf3d8a2c3649df86",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif"
+        "err_head": "Included from \u003cfile\u003e:8:"
       },
       "status": "err-wording",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
+      "err_text": "Included from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\nIncluded from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:8: error: the latest preprocessor control is here\n#ifdef ENABLED\n       ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag13.td",
@@ -9447,15 +9453,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "babf0f08a4d73420a597e652b5052de11e3a808b85a7f44869d01f2462063dfb",
+        "err_sha256": "325d2baf0f1f538fd5a3f1a83f1e7b9d74d0c6e3653e487e4f8da90a48515cb4",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
         "err_head": "\u003cfile\u003e:10:1: error: reached EOF without matching #endif"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:10:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag14.td",
@@ -9478,15 +9483,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "12d2ffeaaa9c029cd6cc47cc18012f1e65f986438f10604de241325fe1358e41",
+        "err_sha256": "37278958b9b217e1e002fdb17244a5cb12ccfb217863f48011eb1ce39a773432",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
         "err_head": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag2.td",
@@ -9572,7 +9576,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "5ad7903a33323b3c5f7d8bbe259ef3dc3ba422d4fcbfbfb3870c21a0b6056c40",
+        "err_sha256": "a54657272f5e6fc457af73b68ca1af41c3f41cdcdcb9b4067f4e35c952541b6c",
         "Msgs": [
           "error: only comments are supported after a preprocessing directive",
           "error: reached EOF without matching #endif",
@@ -9581,7 +9585,7 @@
         "err_head": "\u003cfile\u003e:12:3: error: only comments are supported after a preprocessing directive"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:12:3: error: only comments are supported after a preprocessing directive\n*/class C;\n  ^\n\u003cfile\u003e:15:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:4:7: error: the latest preprocessor control is here\n#ifdef DIAG1\n      ^"
+      "err_text": "\u003cfile\u003e:12:3: error: only comments are supported after a preprocessing directive\n*/class C;\n  ^\n\u003cfile\u003e:15:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:4:8: error: the latest preprocessor control is here\n#ifdef DIAG1\n       ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag3.td",
@@ -9786,15 +9790,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "5facfb40deb853e639d7f075e13ab93a9384da3e89a093ce12b5f4454114c46c",
+        "err_sha256": "bdca97ad3423e42ab2c6151fb772811a86e21cd135c935cbc1152c8b399414ba",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
         "err_head": "\u003cfile\u003e:6:1: error: reached EOF without matching #endif"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:6:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:7: error: the latest preprocessor control is here\n#ifdef DISABLED\n      ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef-diag-1.td",
@@ -9840,7 +9843,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "ccf4c002292b42ee421739357111150463eda81809d3a68991ff6a6049185e37",
+        "err_sha256": "8a6d831a23848c82c08e0a247f446c76b9de3efd6ed282093864c6a206bc9f3e",
         "Msgs": [
           "error: only comments are supported after a preprocessing directive",
           "error: reached EOF without matching #endif",
@@ -9849,7 +9852,7 @@
         "err_head": "\u003cfile\u003e:4:15: error: only comments are supported after a preprocessing directive"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:4:15: error: only comments are supported after a preprocessing directive\n#ifndef MACRO 42\n              ^\n\u003cfile\u003e:5:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:4:8: error: the latest preprocessor control is here\n#ifndef MACRO 42\n       ^"
+      "err_text": "\u003cfile\u003e:4:15: error: only comments are supported after a preprocessing directive\n#ifndef MACRO 42\n              ^\n\u003cfile\u003e:5:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:4:9: error: the latest preprocessor control is here\n#ifndef MACRO 42\n        ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef.td",
@@ -9938,12 +9941,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2773070343/inc",
-        "/tmp/tblgen-split-2773070343/main.td",
+        "/tmp/tblgen-split-195529655/inc",
+        "/tmp/tblgen-split-195529655/main.td",
         "-o",
-        "/tmp/tblgen-split-2773070343/out.td",
+        "/tmp/tblgen-split-195529655/out.td",
         "-d",
-        "/tmp/tblgen-split-2773070343/out.d"
+        "/tmp/tblgen-split-195529655/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9963,12 +9966,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-2773070343/inc",
-        "/tmp/tblgen-split-2773070343/main.td",
+        "/tmp/tblgen-split-195529655/inc",
+        "/tmp/tblgen-split-195529655/main.td",
         "-o",
-        "/tmp/tblgen-split-2773070343/out.td",
+        "/tmp/tblgen-split-195529655/out.td",
         "-d",
-        "/tmp/tblgen-split-2773070343/out2.d"
+        "/tmp/tblgen-split-195529655/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9989,10 +9992,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2773070343/inc",
-        "/tmp/tblgen-split-2773070343/main.td",
+        "/tmp/tblgen-split-195529655/inc",
+        "/tmp/tblgen-split-195529655/main.td",
         "-d",
-        "/tmp/tblgen-split-2773070343/out.d"
+        "/tmp/tblgen-split-195529655/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10079,8 +10082,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1982350462",
-        "/tmp/tblgen-split-1982350462/main.td"
+        "/tmp/tblgen-split-3430131777",
+        "/tmp/tblgen-split-3430131777/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10104,8 +10107,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1982350462",
-        "/tmp/tblgen-split-1982350462/multi.td"
+        "/tmp/tblgen-split-3430131777",
+        "/tmp/tblgen-split-3430131777/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -11796,16 +11799,16 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "054f6c70074d9669566b84c5b85ebdb03b9a433c743c1a00b23f915c8a0d36db",
+        "err_sha256": "d085efce6c6f636ed0fb3dc1c331e6f4a7aa313f482036893cf0ddc3afdaa7d1",
         "Msgs": [
           "error: unterminated comment",
           "error: unexpected character",
           "error: unexpected character"
         ],
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment"
+        "err_head": "Included from \u003cfile\u003e:5:"
       },
       "status": "err-diff",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
+      "err_text": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block.td",
@@ -11828,14 +11831,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9a0f7e9ad45afc4734fc64d4843f5facc5a1aacb321a62a12f7b9f9cf0c6f6ac",
+        "err_sha256": "84cb23ddd3a7c5668f2c3e6ff531c21bcda8dd409a8f77985dc629702aef7196",
         "Msgs": [
           "error: unterminated code block"
         ],
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block"
+        "err_head": "Included from \u003cfile\u003e:5:"
       },
       "status": "err-diff",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
+      "err_text": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/usevalname.td",

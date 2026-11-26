@@ -111,7 +111,13 @@ func (l *Lowerer) errorAt(err error, fallback diag.Span) {
 		if e.Note.File != "" {
 			l.diags.Diags = append(l.diags.Diags, diag.Diagnostic{
 				Severity: diag.Error, Code: "E_SEMANTIC", Message: e.Msg, Span: span,
-				Notes: []diag.Note{{Message: "location of previous definition", Pos: e.Note}},
+				Notes: append([]diag.Note{{Message: "location of previous definition", Pos: e.Note}}, e.Notes...),
+			})
+			return
+		}
+		if len(e.Notes) > 0 {
+			l.diags.Diags = append(l.diags.Diags, diag.Diagnostic{
+				Severity: diag.Error, Code: "E_SEMANTIC", Message: e.Msg, Span: span, Notes: e.Notes,
 			})
 			return
 		}
@@ -321,7 +327,11 @@ func (l *Lowerer) assert(st *syntax.AssertStmt, env *Env, rec *Record) {
 			msg = s.S
 		}
 	}
-	l.diags.Error("E_ASSERT", "assertion failed: "+msg, st.Span())
+	// CheckAssert is called with the condition's location, so the caret lands
+	// on the expression rather than on the `assert` keyword
+	// (TGParser::ParseAssert passes Assert->Loc, which ParseValue set to the
+	// start of the condition).
+	l.diags.Error("E_ASSERT", "assertion failed: "+msg, st.Cond.Span())
 }
 
 // class builds a class record. Classes keep unresolved field expressions; a
@@ -455,13 +465,11 @@ func (l *Lowerer) bodyItem(rec *Record, item syntax.BodyItem, env *Env) error {
 	case *syntax.AssertStmt:
 		l.preFold(t.Cond, env)
 		l.preFold(t.Message, env)
-		if rec.IsClass {
-			// Checked when a def inherits the class, with the class arguments
-			// bound by the caller (Record::checkAssertions).
-			rec.Asserts = append(rec.Asserts, Assertion{Cond: t.Cond, Message: t.Message, Env: env})
-			return nil
-		}
-		l.assert(t, env, rec)
+		// TGParser::ParseAssert hands a body assertion to the current record
+		// (CurRec->addAssertion, TGParser.cpp:4302) and Record::
+		// checkRecordAssertions evaluates it in addDefOne - for a class only
+		// when a def inherits it, with the class arguments bound.
+		rec.Asserts = append(rec.Asserts, Assertion{Cond: t.Cond, Message: t.Message, Env: env})
 		return nil
 	case *syntax.DumpStmt:
 		return nil
@@ -623,7 +631,7 @@ func (l *Lowerer) finishDef(rec *Record, anonymous bool) error {
 	}
 	if !l.namesOnly {
 		if err := rec.resolveAll(); err != nil {
-			return err
+			return withDefmLocs(rec, err)
 		}
 	}
 	if l.namesOnly {
@@ -639,17 +647,34 @@ func (l *Lowerer) finishDef(rec *Record, anonymous bool) error {
 	// `field`. Anonymous class applications skip this (VarDefInit::instantiate
 	// does not call checkConcrete), so it lives here, not in instantiate.
 	if err := l.k.checkConcrete(rec); err != nil {
-		return err
+		return withDefmLocs(rec, err)
 	}
 	// Record::checkRecordAssertions runs in addDefOne, after every field and
 	// let of the def has been applied.
-	for _, as := range rec.Asserts {
-		l.k.checkAssertion(as, rec)
-	}
+	l.k.checkAssertions(rec)
 	if err := l.k.addDef(rec); err != nil {
 		return err
 	}
 	return l.recordLoopDef(rec)
+}
+
+// withDefmLocs appends the "instantiated from multiclass" notes LLVM prints
+// for every location a defm generated record carries beyond its own
+// (Record::getLoc returns the whole chain; Error.cpp:34-41 prints the first
+// and a note for each of the rest).
+func withDefmLocs(rec *Record, err error) error {
+	if err == nil || len(rec.Locs) < 2 {
+		return err
+	}
+	ee, ok := err.(*EvalError)
+	if !ok {
+		return err
+	}
+	cp := *ee
+	for _, p := range rec.Locs[1:] {
+		cp.Notes = append(cp.Notes, diag.Note{Message: "instantiated from multiclass", Pos: p})
+	}
+	return &cp
 }
 
 // recordLoopDef publishes a def created by a statement-level loop so the

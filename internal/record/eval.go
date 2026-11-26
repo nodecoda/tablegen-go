@@ -794,6 +794,14 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 				return nil, err
 			}
 		}
+		// A parse-time fold (preFold) creates the record only to reproduce
+		// llvm-tblgen's anonymous numbering: its arguments may still be
+		// references, so LLVM would not have instantiated it yet and there was
+		// nothing to check. The first concrete evaluation instantiates it for
+		// real and checks the assertions there (Record.cpp:2408-2419).
+		if !k.parseFold && !k.readOnly {
+			k.checkRecordAsserts(cached)
+		}
 		return cached, nil
 	}
 	if k.readOnly {
@@ -833,10 +841,8 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 	// A pre-parse fold allocates the record only to reproduce anonymous-name
 	// numbering; its arguments may still be references, so there is no value
 	// to check yet. LLVM instantiates lazily and would not reach this point.
-	if !k.parseFold {
-		for _, as := range rec.Asserts {
-			k.checkAssertion(as, rec)
-		}
+	if !k.parseFold && !k.readOnly {
+		k.checkRecordAsserts(rec)
 	}
 	return rec, nil
 }
@@ -1008,22 +1014,58 @@ func (k *Keeper) preFoldExprBound(e Expr, rec *Record, requireApply bool) {
 	k.parseFold = prev
 }
 
+// checkAssertions is Record::checkRecordAssertions: every assertion prints its
+// own message, and one "assertion failed in this record" follows them all when
+// any of them failed (Record.cpp:3106-3124).
+func (k *Keeper) checkAssertions(rec *Record) { k.checkRecordAsserts(rec) }
+
+// checkRecordAsserts is the body of Record::checkRecordAssertions. The record
+// level diagnostic is PrintError(this, ...) (Record.cpp:3122), so it carries
+// the record's own first location: the `def` keyword for a named record, the
+// class application for an anonymous one (VarDefInit::get stores that SMLoc).
+// A record is checked at most once, because a parse-time fold leaves the
+// checks to the concrete evaluation that follows.
+func (k *Keeper) checkRecordAsserts(rec *Record) {
+	if rec.AssertsChecked {
+		return
+	}
+	rec.AssertsChecked = true
+	failed := false
+	for _, as := range rec.Asserts {
+		if k.checkAssertion(as, rec) {
+			failed = true
+		}
+	}
+	if !failed || len(rec.Locs) == 0 {
+		return
+	}
+	at := rec.Locs[0]
+	var notes []diag.Note
+	for _, p := range rec.Locs[1:] {
+		notes = append(notes, diag.Note{Message: "instantiated from multiclass", Pos: p})
+	}
+	k.diags.Diags = append(k.diags.Diags, diag.Diagnostic{
+		Severity: diag.Error, Code: "E_ASSERT_RECORD",
+		Message: "assertion failed in this record", Span: diag.Span{Start: at, End: at}, Notes: notes,
+	})
+}
+
 // checkAssertion evaluates one deferred class assertion against a concrete
-// record. LLVM prints the failed expression at the assert site and a second
-// error at the record that inherited it.
-func (k *Keeper) checkAssertion(as Assertion, rec *Record) {
+// record. LLVM prints the failed expression at the assert site; the record
+// level error is printed once by checkRecordAsserts, after every assertion.
+func (k *Keeper) checkAssertion(as Assertion, rec *Record) bool {
 	cond, err := k.evalSyntax(as.Cond, as.Env, rec)
 	if err != nil {
 		k.diags.Error("E_ASSERT", err.Error(), as.Cond.Span())
-		return
+		return true
 	}
 	n, err := k.asInt(cond)
 	if err != nil {
 		k.diags.Error("E_ASSERT", err.Error(), as.Cond.Span())
-		return
+		return true
 	}
 	if n != 0 {
-		return
+		return false
 	}
 	msg := "(assert message is not a string)"
 	if mv, err := k.evalSyntax(as.Message, as.Env, rec); err == nil {
@@ -1032,10 +1074,7 @@ func (k *Keeper) checkAssertion(as Assertion, rec *Record) {
 		}
 	}
 	k.diags.Error("E_ASSERT", "assertion failed: "+msg, as.Cond.Span())
-	if len(rec.Locs) > 0 {
-		at := rec.Locs[0]
-		k.diags.Error("E_ASSERT_RECORD", "assertion failed in this record", diag.Span{Start: at, End: at})
-	}
+	return true
 }
 
 // bindArgs turns an argument list into a frame of lexical bindings. Missing

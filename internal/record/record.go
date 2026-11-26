@@ -329,6 +329,13 @@ type Record struct {
 	// stored with the environment that binds the class arguments.
 	Asserts []Assertion
 
+	// AssertsChecked records that Record::checkRecordAssertions already ran
+	// for this record. An anonymous instance is often created during a
+	// parse-time fold, where there is nothing to check yet, and is then
+	// reached again by the concrete evaluation; LLVM checks the assertions
+	// exactly once, right after RecordKeeper::addDef (Record.cpp:2408-2419).
+	AssertsChecked bool
+
 	keeper *Keeper
 
 	// PendingAdd marks an anonymous instance that was created while a
@@ -789,6 +796,10 @@ type EvalError struct {
 	Msg  string
 	Span diag.Span
 	Note diag.Pos
+	// Notes are the additional source locations a diagnostic prints after the
+	// message, e.g. "instantiated from multiclass" for every extra loc a defm
+	// generated record carries (Error.cpp:34-41).
+	Notes []diag.Note
 	// AtRecord marks errors llvm-tblgen prints with CurRec->getLoc(): failures
 	// that only surface while a record's field is resolved are reported at the
 	// record, not at the expression.
