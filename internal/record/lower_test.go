@@ -50,6 +50,38 @@ func TestParseTimeAnonymousNames(t *testing.T) {
 		want string
 	}{
 		{
+			// TGParser unrolls a concrete foreach when its closing brace is
+			// parsed (addEntry -> resolve, TGParser.cpp:426) and resolves the
+			// copies with the loop substitutions, so the class application in
+			// a parent's argument list takes its anonymous name before the
+			// next statement in the body is parsed (VarDefInit::
+			// resolveReferences, Record.cpp:2423). T therefore numbers 1 and 2,
+			// between the two H defs.
+			name: "multiclass body loop unrolled where it closes",
+			src: `def OP;
+
+class T<int V> {
+  int P = V;
+}
+
+class H<dag D> {
+  dag Y = D;
+}
+
+multiclass MC {
+  foreach V = [1, 2] in {
+    def : H<(OP (T<V>.P))>;
+  }
+  foreach W = [3] in {
+    def : H<(OP 3)>;
+  }
+}
+
+defm D : MC;
+`,
+			want: `{"!instanceof":{"H":["anonymous_0","anonymous_3","anonymous_4"],"T":["anonymous_1","anonymous_2"]},"!tablegen_json_version":1,"OP":{"!anonymous":false,"!fields":[],"!locs":["t.td:1"],"!name":"OP","!superclasses":[]},"anonymous_0":{"!anonymous":true,"!fields":[],"!locs":["t.td:13","t.td:20"],"!name":"anonymous_0","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":1,"printable":"(1)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (1))"}},"anonymous_1":{"!anonymous":true,"!fields":[],"!locs":["t.td:13"],"!name":"anonymous_1","!superclasses":["T"],"P":1},"anonymous_2":{"!anonymous":true,"!fields":[],"!locs":["t.td:13"],"!name":"anonymous_2","!superclasses":["T"],"P":2},"anonymous_3":{"!anonymous":true,"!fields":[],"!locs":["t.td:16","t.td:20"],"!name":"anonymous_3","!superclasses":["H"],"Y":{"args":[[3,null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP 3)"}},"anonymous_4":{"!anonymous":true,"!fields":[],"!locs":["t.td:13","t.td:20"],"!name":"anonymous_4","!superclasses":["H"],"Y":{"args":[[{"args":[],"kind":"dag","operator":2,"printable":"(2)"},null]],"kind":"dag","operator":{"def":"OP","kind":"def","printable":"OP"},"printable":"(OP (2))"}}}`,
+		},
+		{
 			// LLVM instantiates `X<1>` while parsing the (unused) class body.
 			name: "unused class body",
 			src: `class X<int n> { int v = n; }

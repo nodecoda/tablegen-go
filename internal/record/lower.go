@@ -155,8 +155,17 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 	case *syntax.MultiClassStmt:
 		l.mcs[t.Name] = t
 		l.mcLets[t.Name] = lets
-		l.reserveAnonNames(t.Body)
-		l.preExpandBody(t.Body, nil)
+		// TGParser parses a multiclass body statement by statement: a `def`
+		// takes its anonymous name when ParseDef runs, and a foreach whose
+		// list is already concrete is unrolled the moment its closing brace is
+		// reached (addEntry -> resolve, TGParser.cpp:426-430), resolving the
+		// copied records with the loop substitutions and instantiating the
+		// class applications they contain. Doing both in source order keeps
+		// those instantiations ahead of the names the later statements take.
+		for _, o := range t.Body {
+			l.reserveAnonNames([]syntax.Object{o})
+			l.preExpandBody([]syntax.Object{o}, nil)
+		}
 	case *syntax.DefvarStmt:
 		if l.scope == 0 {
 			l.k.defineGlobal(t.Name, &AstExpr{V: t.Value, Env: env})
@@ -959,7 +968,13 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 			l.preExpandInnerDefm(t)
 		case *syntax.DefStmt:
 			l.preFold(t.Name, env)
-			l.preFoldParents(t.Parents)
+			// TGParser::resolve copies a multiclass-body def and resolves
+			// the copy with the loop substitutions (TGParser.cpp:556-564), so
+			// a class application written in a parent's argument list -
+			// `def : Pat<(VT (f (SVEType<VT>.Packed ...)))>` - instantiates
+			// its anonymous record here, not when the enclosing defm's record
+			// is finished (VarDefInit::resolveReferences, Record.cpp:2423).
+			l.preFoldParentArgs(t.Parents, env)
 			l.preFoldBodyItems(t.Body, env)
 		}
 	}
@@ -985,9 +1000,17 @@ func (l *Lowerer) preFoldBodyItems(items []syntax.BodyItem, env *Env) {
 }
 
 func (l *Lowerer) preFoldParents(parents []*syntax.ParentRef) {
+	l.preFoldParentArgs(parents, nil)
+}
+
+// preFoldParentArgs folds the argument list of every superclass application.
+// A multiclass body is resolved with the loop substitutions applied, so the
+// arguments see the iterator bindings (unlike a class body, which is resolved
+// when a def inherits it).
+func (l *Lowerer) preFoldParentArgs(parents []*syntax.ParentRef, env *Env) {
 	for _, p := range parents {
 		for _, a := range p.Args {
-			l.preFold(a.Value, nil)
+			l.preFold(a.Value, env)
 		}
 	}
 }
