@@ -47,6 +47,9 @@ type Lexer struct {
 	// failed records a ReturnError path: the token stream ends there and the
 	// parser stops, so no further diagnostics may be produced.
 	failed bool
+	// errSpan is where the failed token sits; it becomes the Error token the
+	// parser reports at.
+	errSpan diag.Span
 	// includes maps an included file to where it was included from. LLVM
 	// stores this as BufferInfo::IncludeLoc and prints it as the
 	// "Included from <file>:<line>:" chain in front of every diagnostic
@@ -166,6 +169,7 @@ func (l *Lexer) errorf(code, msg string, from diag.Pos) {
 func (l *Lexer) errorSpan(code, msg string, span diag.Span) {
 	l.diags.Error(code, msg, span)
 	l.failed = true
+	l.errSpan = span
 }
 
 // recoverLine makes progress after a malformed construct: drop everything to
@@ -185,6 +189,13 @@ func (l *Lexer) recoverLine() {
 func (l *Lexer) Lex() ([]Token, []diag.Diagnostic) {
 	for !l.done && !l.failed {
 		l.next()
+	}
+	// A failed lex ends with tgtok::Error at the location that failed, not
+	// with Eof (TGLexer.cpp:867 leaves the error token in place). The parser
+	// then reports the token it found, which is why a broken code block is
+	// followed by "Unknown or reserved token when parsing a value".
+	if l.failed {
+		l.toks = append(l.toks, Token{Kind: ErrorTok, Span: l.errSpan})
 	}
 	l.toks = append(l.toks, Token{Kind: Eof, Span: diag.Span{Start: l.pos(), End: l.pos()}})
 	if !l.failed {

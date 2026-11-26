@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 28,
-    "status:err-wording": 21,
-    "status:same": 265,
+    "status:err-diff": 21,
+    "status:err-wording": 19,
+    "status:same": 274,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -168,14 +168,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "f9ab9242679023ec0fd279af09dc0f4f8e99dd6754e18d0f4690ad2e7e6f44be",
+        "err_sha256": "5508c39b35e045f21c4daffb665bfc3fd9eee8fd3336664d4ae79fedf9430b5e",
         "Msgs": [
-          "error: number out of range"
+          "error: number out of range",
+          "error: Unknown or reserved token when parsing a value",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:9:18: error: number out of range"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:9:18: error: number out of range\n  bits\u003c64\u003e Val = -9223372036854775809;\n                 ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/64-bit-int.td",
@@ -199,14 +200,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "f5c3b548e14d972842ad6bb78e38ef5a03e889f61ad31406b3ed20de4d7702fe",
+        "err_sha256": "31b81d23798bc194dc9ddb0c61ea34fa96fd0cf2ac9719fc47715a107294700b",
         "Msgs": [
-          "error: number out of range"
+          "error: number out of range",
+          "error: Unknown or reserved token when parsing a value",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:13:18: error: number out of range"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:13:18: error: number out of range\n  bits\u003c64\u003e Val = 0b10000000000000000000000000000000000000000000000000000000000000000;\n                 ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/64-bit-int.td",
@@ -230,14 +232,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6a147ccb26d31d6ffde800ef4b542dc45bd4bfce9fd5a131ecd06b5cf681b751",
+        "err_sha256": "99853c48069fd486c54911e42950528f2d059f3acbcc493d12c161a25004d9fb",
         "Msgs": [
-          "error: number out of range"
+          "error: number out of range",
+          "error: Unknown or reserved token when parsing a value",
+          "error: expected ';' after declaration"
         ],
         "err_head": "\u003cfile\u003e:17:18: error: number out of range"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:17:18: error: number out of range\n  bits\u003c64\u003e Val = 0x10000000000000000;\n                 ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AMDGPUTargetDefErrors.td",
@@ -4922,14 +4925,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6927ca654bf15ec172adaaef4abbb3610e11e83e278a088bd807cf05a4bce139",
+        "err_sha256": "38d71a30a9c94ef9df394348abbe8afb14427e6ed41e4e2c2c55ebf243b702dd",
         "Msgs": [
-          "error: value of type 'A' is incompatible with 'B'"
+          "error: Expected type 'B', got 'A' in: !cast\u003cB\u003e(\"A0\")"
         ],
-        "err_head": "\u003cfile\u003e:13:1: error: value of type 'A' is incompatible with 'B'"
+        "err_head": "\u003cfile\u003e:13:5: error: Expected type 'B', got 'A' in: !cast\u003cB\u003e(\"A0\")"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:13:1: error: value of type 'A' is incompatible with 'B'\ndef Test : C\u003c\"A0\"\u003e;\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast.td",
@@ -5500,19 +5502,19 @@
       "oracle": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "73dd83f4b6b8dcdf95f07332f02f244968632607860ef75200acad596d818b8d",
+        "err_sha256": "a395878810e1bce871a1386513be5342bff259a1657ded1eb2ae20fb5ac0c317",
         "Msgs": null,
-        "err_head": "llvm-tblgen: Too many positional arguments specified!"
+        "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "95c5894f158d155c69ad73eaed22ae3c23a0a55f72424f81498b8d15e8a45e0a",
+        "err_sha256": "8dcbab47aab6091d7c5989c36af32cf6ddca06a3ec362a10d8cd5cd6952bf5a1",
         "Msgs": null,
-        "err_head": "tblgen: Too many positional arguments specified!"
+        "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
       "status": "err-wording",
-      "err_text": "tblgen: Too many positional arguments specified!\nCan specify at most 1 positional argument: See tblgen --help."
+      "err_text": "\u003cprog\u003e: Too many positional arguments specified!\nCan specify at most 1 positional argument: See tblgen --help."
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defmclass.td",
@@ -5994,19 +5996,19 @@
       "oracle": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "73dd83f4b6b8dcdf95f07332f02f244968632607860ef75200acad596d818b8d",
+        "err_sha256": "a395878810e1bce871a1386513be5342bff259a1657ded1eb2ae20fb5ac0c317",
         "Msgs": null,
-        "err_head": "llvm-tblgen: Too many positional arguments specified!"
+        "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "95c5894f158d155c69ad73eaed22ae3c23a0a55f72424f81498b8d15e8a45e0a",
+        "err_sha256": "8dcbab47aab6091d7c5989c36af32cf6ddca06a3ec362a10d8cd5cd6952bf5a1",
         "Msgs": null,
-        "err_head": "tblgen: Too many positional arguments specified!"
+        "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
       "status": "err-wording",
-      "err_text": "tblgen: Too many positional arguments specified!\nCan specify at most 1 positional argument: See tblgen --help."
+      "err_text": "\u003cprog\u003e: Too many positional arguments specified!\nCan specify at most 1 positional argument: See tblgen --help."
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/duplicate-include.td",
@@ -6192,19 +6194,18 @@
       "oracle": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "64af8667cbe282a0b73ea46f69508be52d3bd3b2ce1e52f3d98212ad15d26d76",
+        "err_sha256": "a23bb3ce5922cd3f669dc16fcee23c86a11d33eeba3292c01a14e3c539052c1d",
         "Msgs": null,
-        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file 'main #$.td': No such file or directory"
+        "err_head": "\u003cprog\u003e: Could not open input file 'main #$.td': No such file or directory"
       },
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "478a43a7cf7865cb7d2e5070c2cc016652ac095a5845c552667a934d104d14e1",
+        "err_sha256": "a23bb3ce5922cd3f669dc16fcee23c86a11d33eeba3292c01a14e3c539052c1d",
         "Msgs": null,
-        "err_head": "./tblgen: Could not open input file 'main #$.td': No such file or directory"
+        "err_head": "\u003cprog\u003e: Could not open input file 'main #$.td': No such file or directory"
       },
-      "status": "err-wording",
-      "err_text": "./tblgen: Could not open input file 'main #$.td': No such file or directory"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-non-string.td",
@@ -6592,15 +6593,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "71a5749bf90d1d9594f040ad38b458a1f849648abcc1b6c42dd61dd81d55f7d1",
+        "err_sha256": "6d5124ba365bafefa2291dd7eb36dfdaa21a1aefd6d93297aa0af8e37a697e7f",
         "Msgs": [
           "error: Unknown or reserved token when parsing a value",
+          "error: expected integer value as end of range",
           "error: expected declaration in for"
         ],
         "err_head": "\u003cfile\u003e:17:22: error: Unknown or reserved token when parsing a value"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:17:22: error: Unknown or reserved token when parsing a value\nforeach Index = 0 -  in {\n                     ^\n\u003cfile\u003e:17:22: error: expected declaration in for\nforeach Index = 0 -  in {\n                     ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors1.td",
@@ -7449,14 +7450,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "f5feae7969b093dc7bb1e59138d5d81ae609fe212ced07d2d17d48deee6efdd9",
+        "err_sha256": "74b0631d2da4f68056df6dfc358ea8b4a0e6f84787282be4cf77953306b1fb7e",
         "Msgs": [
-          "error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'"
+          "error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'",
+          "error: Initializer of 'D' in 'y' could not be fully resolved: !add(F, 1)"
         ],
         "err_head": "\u003cfile\u003e:15:14: error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:15:14: error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'\n  string F = \"0\";\n             ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/inhibit-pset.td",
@@ -7982,9 +7983,9 @@
       "oracle": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "3d06fe069a905ca10114268c8ceda49c0dc857b629344344042fe5e22f8da71c",
+        "err_sha256": "6562a83ff5a91d43eabba3a36e093ea75dde58ae34147c612c2a5f52db727507",
         "Msgs": null,
-        "err_head": "llvm-tblgen: for the -D option: requires a value!"
+        "err_head": "\u003cprog\u003e: for the -D option: requires a value!"
       },
       "ours": {
         "exit": 1,
@@ -9898,12 +9899,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1460679364/inc",
-        "/tmp/tblgen-split-1460679364/main.td",
+        "/tmp/tblgen-split-3806831008/inc",
+        "/tmp/tblgen-split-3806831008/main.td",
         "-o",
-        "/tmp/tblgen-split-1460679364/out.td",
+        "/tmp/tblgen-split-3806831008/out.td",
         "-d",
-        "/tmp/tblgen-split-1460679364/out.d"
+        "/tmp/tblgen-split-3806831008/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9923,12 +9924,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-1460679364/inc",
-        "/tmp/tblgen-split-1460679364/main.td",
+        "/tmp/tblgen-split-3806831008/inc",
+        "/tmp/tblgen-split-3806831008/main.td",
         "-o",
-        "/tmp/tblgen-split-1460679364/out.td",
+        "/tmp/tblgen-split-3806831008/out.td",
         "-d",
-        "/tmp/tblgen-split-1460679364/out2.d"
+        "/tmp/tblgen-split-3806831008/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9949,28 +9950,27 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-1460679364/inc",
-        "/tmp/tblgen-split-1460679364/main.td",
+        "/tmp/tblgen-split-3806831008/inc",
+        "/tmp/tblgen-split-3806831008/main.td",
         "-d",
-        "/tmp/tblgen-split-1460679364/out.d"
+        "/tmp/tblgen-split-3806831008/out.d"
       ],
       "negate": true,
       "oracle": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "8dc5bad9021bb4909d89d53ed6d9766f13767999535da42668055d5fb5d0f055",
+        "err_sha256": "0a5f2acf6685fc88e7981ed5d4d044508d744c8eea44cedc17d67c3f309721f6",
         "Msgs": null,
-        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: the option -d must be used together with -o"
+        "err_head": "\u003cprog\u003e: the option -d must be used together with -o"
       },
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "60b0224d383b4effd78db63146d6e6cab19ef77bcd04da7ba5ca6fa84d107d35",
+        "err_sha256": "0a5f2acf6685fc88e7981ed5d4d044508d744c8eea44cedc17d67c3f309721f6",
         "Msgs": null,
-        "err_head": "./tblgen: the option -d must be used together with -o"
+        "err_head": "\u003cprog\u003e: the option -d must be used together with -o"
       },
-      "status": "err-wording",
-      "err_text": "./tblgen: the option -d must be used together with -o"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-errors.td",
@@ -10039,8 +10039,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2402405225",
-        "/tmp/tblgen-split-2402405225/main.td"
+        "/tmp/tblgen-split-203534203",
+        "/tmp/tblgen-split-203534203/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10064,8 +10064,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2402405225",
-        "/tmp/tblgen-split-2402405225/multi.td"
+        "/tmp/tblgen-split-203534203",
+        "/tmp/tblgen-split-203534203/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -11772,14 +11772,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "84cb23ddd3a7c5668f2c3e6ff531c21bcda8dd409a8f77985dc629702aef7196",
+        "err_sha256": "1bfd62305a70ef585a229dbe0b98c65f61c18d39df0ae21b12b06faca5db3d7f",
         "Msgs": [
-          "error: unterminated code block"
+          "error: unterminated code block",
+          "error: Unknown or reserved token when parsing a value"
         ],
         "err_head": "Included from \u003cfile\u003e:5:"
       },
-      "status": "err-diff",
-      "err_text": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/usevalname.td",

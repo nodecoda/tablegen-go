@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 3,
-    "status:msg-match": 4,
-    "status:same": 378,
+    "status:diff": 2,
+    "status:msg-match": 2,
+    "status:same": 381,
     "status:skipped": 7
   },
   "cases": [
@@ -3330,17 +3330,17 @@
       "run": "rm -rf %t \u0026\u0026 split-file %s %t \u0026\u0026 cd %t ; env LLVM_WINDOWS_PREFER_FORWARD_SLASH=0 llvm-tblgen \\ ; -d out.d -o 'out #$.td' 'main #$.td' ; FileCheck %s --input-file=out.d --match-full-lines ; env LLVM_WINDOWS_PREFER_FORWARD_SLASH=1 llvm-tblgen \\ ; -d out.d -o 'out #$.td' 'main #$.td' ; FileCheck %s --input-file=out.d --match-full-lines \\ ; %if system-windows %{ --check-prefix=FORWARD %}",
       "oracle": {
         "exit": 1,
-        "full_sha256": "75ee08f00b8de196b406debfe5b560f1097abb8d3ce6b4c8fe9c4a8f0d6f8842",
-        "full_len": 117,
-        "full": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '\u003cfile\u003e': No such file or directory"
+        "full_sha256": "d5f28b22da060725f3d3fb61b9994f4c5f23cda192f90d491d3a0772207628e5",
+        "full_len": 69,
+        "full": "\u003cprog\u003e: Could not open input file '\u003cfile\u003e': No such file or directory"
       },
       "ours": {
         "exit": 1,
-        "full_sha256": "e37ad4f1f68cdb9583c5c426f675fd712353d6207f56afa7fb4d5324f6198522",
-        "full_len": 71,
-        "full": "./tblgen: Could not open input file '\u003cfile\u003e': No such file or directory"
+        "full_sha256": "d5f28b22da060725f3d3fb61b9994f4c5f23cda192f90d491d3a0772207628e5",
+        "full_len": 69,
+        "full": "\u003cprog\u003e: Could not open input file '\u003cfile\u003e': No such file or directory"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-non-string.td",
@@ -5164,17 +5164,17 @@
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t/inc %t/main.td -o %t/out.td -d %t/out.d ; FileCheck %s --input-file=%t/out.d --match-full-lines -DDIR=%t ; llvm-tblgen -I %t/inc %t/main.td -o %t/out.td -d %t/out2.d ; cmp %t/out.d %t/out2.d ; not llvm-tblgen -E -I %t/inc %t/main.td -d %t/out.d 2\u003e\u00261 | FileCheck %s --check-prefix=NO-OUTPUT",
       "oracle": {
         "exit": 1,
-        "full_sha256": "75ee08f00b8de196b406debfe5b560f1097abb8d3ce6b4c8fe9c4a8f0d6f8842",
-        "full_len": 117,
-        "full": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '\u003cfile\u003e': No such file or directory"
+        "full_sha256": "d5f28b22da060725f3d3fb61b9994f4c5f23cda192f90d491d3a0772207628e5",
+        "full_len": 69,
+        "full": "\u003cprog\u003e: Could not open input file '\u003cfile\u003e': No such file or directory"
       },
       "ours": {
         "exit": 1,
-        "full_sha256": "e37ad4f1f68cdb9583c5c426f675fd712353d6207f56afa7fb4d5324f6198522",
-        "full_len": 71,
-        "full": "./tblgen: Could not open input file '\u003cfile\u003e': No such file or directory"
+        "full_sha256": "d5f28b22da060725f3d3fb61b9994f4c5f23cda192f90d491d3a0772207628e5",
+        "full_len": 69,
+        "full": "\u003cprog\u003e: Could not open input file '\u003cfile\u003e': No such file or directory"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-errors.td",
@@ -5210,9 +5210,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "1e51bd29f94cc84222261ee2d5fd6d5d76ed405809c87abaa3b663763bbfe482",
-        "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3050786774/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "bd2490fdadad095464a4cc48cba6c5f2c4e0caedbbecf046c722fd4788747d8e",
+        "full_len": 266,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-242281734/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-242281734/a.td:2:\n/tmp/tblgen-split-242281734/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5222,9 +5222,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "649526d53d181bbabba83c7f127b251d86c379c6dbc75233a021495e309b0f83",
-        "full_len": 1120,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full_sha256": "17a7d756eedf3102fb66fce776e0184bb2bbd0a0d3151147eb425836061c9273",
+        "full_len": 1108,
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-242281734/a.td:2:\n/tmp/tblgen-split-242281734/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-242281734/a.td:2:\n/tmp/tblgen-split-242281734/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-242281734/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-242281734/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-242281734/a.td:2:\n/tmp/tblgen-split-242281734/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-242281734/a.td:2:\n/tmp/tblgen-split-242281734/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-242281734/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-242281734/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },
@@ -5791,13 +5791,14 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: unterminated code block"
+          "error: unterminated code block",
+          "error: Unknown or reserved token when parsing a value"
         ],
-        "full_sha256": "84cb23ddd3a7c5668f2c3e6ff531c21bcda8dd409a8f77985dc629702aef7196",
-        "full_len": 194,
-        "full": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
+        "full_sha256": "1bfd62305a70ef585a229dbe0b98c65f61c18d39df0ae21b12b06faca5db3d7f",
+        "full_len": 412,
+        "full": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^\nIncluded from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: Unknown or reserved token when parsing a value\ndef foo : test\u003c[{ hello world!\n               ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/usevalname.td",

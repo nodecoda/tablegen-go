@@ -58,6 +58,11 @@ var (
 	// llvm-tblgen ends a failing run with "<argv0>: N errors."; our binary stays
 	// silent. Treat the summary as noise, not as a diagnostic.
 	errSummaryRe = regexp.MustCompile(`(?m)^\S*: \d+ errors?\.\n?`)
+	// LLVM prefixes its own argv[0] to a few messages ("<path>/llvm-tblgen:
+	// Could not open input file ..."). The harness runs two differently named
+	// binaries, so the program name is an artefact of the invocation, not a
+	// difference in behaviour.
+	progPrefixRe = regexp.MustCompile(`(?m)^\S*tblgen: `)
 	severityRe   = regexp.MustCompile(`: (error|warning): `)
 )
 
@@ -69,6 +74,7 @@ func normalizeStderr(text, file string) string {
 		text = strings.ReplaceAll(text, file, "<file>")
 	}
 	text = errSummaryRe.ReplaceAllString(text, "")
+	text = progPrefixRe.ReplaceAllString(text, "<prog>: ")
 	lines := strings.Split(text, "\n")
 	for i, l := range lines {
 		lines[i] = strings.TrimRight(l, " \t\r")

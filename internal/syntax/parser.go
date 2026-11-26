@@ -161,11 +161,12 @@ func TokenizeFile(file, src string, macros, includeDirs []string) *Tokens {
 // matching LLVM: the parser's first Lex() returns Error and the parse aborts,
 // so the lexer diagnostic is the only one reported.
 func (t *Tokens) Parse(file, src string, includeDirs []string, known map[int][]KnownDef, opts Options) (*File, []diag.Diagnostic) {
-	for _, d := range t.Diags {
-		if d.Severity == diag.Error {
-			return &File{}, t.Diags
-		}
-	}
+	// A lexer error leaves an Error token in the stream at the point it
+	// failed (TGLexer.cpp:867). LLVM lexes on demand, so the parser has
+	// already consumed everything before it and reports what it finds there:
+	// at the top level ParseFile returns silently (TGParser.cpp:4754-4758),
+	// while a value being parsed reports the token (TGParser.cpp:3350).
+	// Parsing the prefix is therefore required; only the Error token stops it.
 	p := &Parser{
 		file:         file,
 		src:          src,
@@ -423,7 +424,7 @@ func (p *Parser) defineClassGlobal(name string, rec *recordInfo) {
 
 func (p *Parser) parseFile() *File {
 	f := &File{}
-	for p.cur().Kind != Eof {
+	for p.cur().Kind != Eof && !p.at(ErrorTok) {
 		if !p.cur().Kind.IsObjectStart() && !p.at(Include) {
 			p.errTok("E_PARSE_TOPLEVEL", "Unexpected token at top level")
 			p.advance()
