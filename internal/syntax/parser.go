@@ -146,12 +146,15 @@ type Tokens struct {
 	Toks    []Token
 	Diags   []diag.Diagnostic
 	Sources []string
+	// Includes maps each included file to the site of the include statement
+	// that opened it, for the "Included from" diagnostic prefix.
+	Includes map[string]diag.Pos
 }
 
 // TokenizeFile lexes one file and keeps everything a later Parse needs.
 func TokenizeFile(file, src string, macros, includeDirs []string) *Tokens {
-	toks, diags, sources := TokenizeWithDeps(file, src, macros, includeDirs)
-	return &Tokens{Toks: toks, Diags: diags, Sources: sources}
+	toks, diags, sources, includes := TokenizeWithDeps(file, src, macros, includeDirs)
+	return &Tokens{Toks: toks, Diags: diags, Sources: sources, Includes: includes}
 }
 
 // Parse runs the parser over t's tokens. Lexer errors suppress parsing,

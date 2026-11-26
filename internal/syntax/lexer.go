@@ -44,6 +44,11 @@ type Lexer struct {
 	// deps are the resolved include paths in encounter order, for the
 	// make-style dependency file (-d). SourceMgr keeps the same list.
 	deps []string
+	// includes maps an included file to where it was included from. LLVM
+	// stores this as BufferInfo::IncludeLoc and prints it as the
+	// "Included from <file>:<line>:" chain in front of every diagnostic
+	// (SourceMgr::PrintIncludeStack, SourceMgr.cpp:288-299).
+	includes map[string]diag.Pos
 }
 
 // includeFrame is the lexer state of an including file. LLVM pushes a new
@@ -93,15 +98,15 @@ func Tokenize(file, src string, macros []string) ([]Token, []diag.Diagnostic) {
 
 // TokenizeWithDirs is Tokenize with -I directories for include resolution.
 func TokenizeWithDirs(file, src string, macros, includeDirs []string) ([]Token, []diag.Diagnostic) {
-	toks, diags, _ := TokenizeWithDeps(file, src, macros, includeDirs)
+	toks, diags, _, _ := TokenizeWithDeps(file, src, macros, includeDirs)
 	return toks, diags
 }
 
 // TokenizeWithDeps also returns the resolved include paths, which -d writes.
-func TokenizeWithDeps(file, src string, macros, includeDirs []string) ([]Token, []diag.Diagnostic, []string) {
+func TokenizeWithDeps(file, src string, macros, includeDirs []string) ([]Token, []diag.Diagnostic, []string, map[string]diag.Pos) {
 	l := NewLexerWithDirs(file, src, macros, includeDirs)
 	toks, diags := l.Lex()
-	return toks, diags, l.deps
+	return toks, diags, l.deps, l.includes
 }
 
 func (l *Lexer) pos() diag.Pos { return diag.Pos{File: l.file, Line: l.line, Col: l.col} }
@@ -485,6 +490,10 @@ func (l *Lexer) lexInclude(from diag.Pos) {
 		prep: l.prep, lineStart: l.lineStart,
 	})
 	l.deps = append(l.deps, path)
+	if l.includes == nil {
+		l.includes = map[string]diag.Pos{}
+	}
+	l.includes[path] = from
 	l.file, l.src, l.i, l.line, l.col = path, src, 0, 1, 1
 	l.prep = nil
 	l.lineStart = true
@@ -860,6 +869,14 @@ func (l *Lexer) handleDirective(kind Kind, live bool) bool {
 	ctrlAt := l.pos()
 	switch kind {
 	case Ifdef, Ifndef:
+		// prepLexMacroName advances TokStart to the macro name, and LLVM
+		// stores SMLoc(TokStart) as the directive's location, so the
+		// "latest preprocessor control is here" note points at the name
+		// rather than at the space after the keyword (TGLexer.cpp:806).
+		for l.peek(0) == ' ' || l.peek(0) == '\t' {
+			l.advance()
+		}
+		ctrlAt = l.pos()
 		name := l.prepLexMacroName()
 		if name == "" {
 			// LLVM points at the macro-name position, not at the '#'.

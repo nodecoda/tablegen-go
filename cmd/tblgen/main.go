@@ -108,9 +108,9 @@ func main() {
 		os.Exit(1)
 	}
 	if *printExpandedSource {
-		toks, diags, sources := syntax.TokenizeWithDeps(inputName, string(src), macros, includes)
+		toks, diags, sources, incs := syntax.TokenizeWithDeps(inputName, string(src), macros, includes)
 		for _, d := range diags {
-			fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName))
+			fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName, incs))
 		}
 		if code := diagExit(diags); code != 0 {
 			os.Exit(code)
@@ -163,7 +163,7 @@ func main() {
 		if d.Soft {
 			softErr = true
 		}
-		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName))
+		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName, tokens.Includes))
 	}
 	if code := diagExit(diags); code != 0 {
 		os.Exit(code)
@@ -179,7 +179,7 @@ func main() {
 		if d.Soft {
 			softErr = true
 		}
-		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName))
+		fmt.Fprint(os.Stderr, renderDiag(d, string(src), inputName, tokens.Includes))
 	}
 	if code := diagExit(lowerDiags); code != 0 {
 		os.Exit(code)
@@ -432,7 +432,7 @@ func dumpTokensTo(path string, macros, includes []string) int {
 		fmt.Printf("%d:%d\t%s\t%s\n", t.Span.Start.Line, t.Span.Start.Col, t.Kind, text)
 	}
 	for _, d := range diags {
-		fmt.Fprint(os.Stderr, renderDiag(d, string(src), path))
+		fmt.Fprint(os.Stderr, renderDiag(d, string(src), path, nil))
 	}
 	return diagExit(diags)
 }
@@ -460,9 +460,9 @@ func validMacroName(s string) bool {
 // renderDiag gives the diagnostic renderer access to included files: a
 // diagnostic can point into an include, and printing the main file's line there
 // would show the wrong source text.
-func renderDiag(d diag.Diagnostic, src, inputName string) string {
+func renderDiag(d diag.Diagnostic, src, inputName string, includes map[string]diag.Pos) string {
 	cache := map[string]string{}
-	return d.RenderWith(src, func(file string) (string, bool) {
+	return d.RenderAll(src, func(file string) (string, bool) {
 		if file == inputName || file == "-" || file == "" {
 			return src, true
 		}
@@ -475,5 +475,8 @@ func renderDiag(d diag.Diagnostic, src, inputName string) string {
 		}
 		cache[file] = string(b)
 		return string(b), true
+	}, func(file string) (diag.Pos, bool) {
+		p, ok := includes[file]
+		return p, ok
 	})
 }

@@ -5,6 +5,7 @@ package diag
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -74,13 +75,25 @@ func (d Diagnostic) String() string {
 func (d Diagnostic) Render(src string) string { return d.RenderWith(src, nil) }
 
 func (d Diagnostic) RenderWith(src string, load func(string) (string, bool)) string {
+	return d.RenderAll(src, load, nil)
+}
+
+// IncludeChain reports where a file was included from, mirroring
+// SourceMgr::BufferInfo::IncludeLoc. RenderAll prints one
+// "Included from <file>:<line>:" line per level above the location, outermost
+// first, exactly like SourceMgr::PrintIncludeStack (SourceMgr.cpp:288-299).
+type IncludeChain func(file string) (Pos, bool)
+
+func (d Diagnostic) RenderAll(src string, load func(string) (string, bool), parent IncludeChain) string {
 	var b strings.Builder
+	writeIncludeStack(&b, d.Span.Start.File, parent)
 	b.WriteString(d.String())
 	b.WriteByte('\n')
 	if line, ok := renderAt(src, d.Span.Start, load); ok {
 		b.WriteString(line)
 	}
 	for _, n := range d.Notes {
+		writeIncludeStack(&b, n.Pos.File, parent)
 		b.WriteString(n.Pos.String())
 		b.WriteString(": note: ")
 		b.WriteString(n.Message)
@@ -90,6 +103,23 @@ func (d Diagnostic) RenderWith(src string, load func(string) (string, bool)) str
 		}
 	}
 	return b.String()
+}
+
+// writeIncludeStack emits the include chain that leads to file, if any.
+func writeIncludeStack(b *strings.Builder, file string, parent IncludeChain) {
+	if parent == nil || file == "" {
+		return
+	}
+	pos, ok := parent(file)
+	if !ok {
+		return
+	}
+	writeIncludeStack(b, pos.File, parent)
+	b.WriteString("Included from ")
+	b.WriteString(pos.File)
+	b.WriteString(":")
+	b.WriteString(strconv.Itoa(pos.Line))
+	b.WriteString(":\n")
 }
 
 // renderAt prints one source line plus a caret at pos. llvm-tblgen reports at an
