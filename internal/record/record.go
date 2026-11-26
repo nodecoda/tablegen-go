@@ -1,0 +1,664 @@
+package record
+
+import (
+	"sort"
+	"strings"
+
+	"tblgen/internal/diag"
+	"tblgen/internal/syntax"
+)
+
+// Expr is an unevaluated initializer. Class fields stay as expressions until a
+// concrete def inherits them, which is what lets one class body be reused with
+// different template arguments without a closure or a second AST.
+type Expr interface{ isExpr() }
+
+// AstExpr is a parser expression plus the lexical frame that binds template
+// arguments visible at that point.
+type AstExpr struct {
+	V   syntax.Value
+	Env *Env
+}
+
+// AppendExpr is `let append|prepend field = value`.
+type AppendExpr struct {
+	Base    Expr
+	Add     Expr
+	Prepend bool
+	Kind    TyKind
+}
+
+// BitsExpr is `let field{hi...lo} = value`.
+type BitsExpr struct {
+	Base  Expr
+	Add   Expr
+	Bits  []int32 // ascending, as C++ stores them after std::reverse
+	Width int     // declared width of the field being patched
+}
+
+// BindExpr evaluates a captured variable binding. AddParentClass exposes a
+// class's template arguments to every expression in its body through a flat
+// MapResolver, which also reaches references that were captured inside another
+// binding's environment; a plain Env frame cannot. The pre-fold stand-in
+// record uses this to reproduce that behaviour.
+type BindExpr struct {
+	B   Binding
+	Env *Env
+	Rec *Record
+}
+
+func (*BindExpr) isExpr()   {}
+func (*AstExpr) isExpr()    {}
+func (*AppendExpr) isExpr() {}
+func (*BitsExpr) isExpr()   {}
+
+// Binding is one name in an environment. Dynamic bindings (class template-arg
+// defaults) are evaluated in the environment of the concrete instantiation;
+// lexical bindings (caller-provided arguments, loop variables) are evaluated
+// in the environment where they were written.
+type Binding struct {
+	V       syntax.Value
+	Val     Value // already-evaluated binding (loop variables)
+	Env     *Env
+	Rec     *Record // lexical record for caller-provided expressions
+	Owner   *Record // class the expression was written in (for qualification)
+	Sep     string
+	Dynamic bool
+	Ty      *Ty    // declared type of a template argument, coerced on use
+	Self    string // qualified name to hide while evaluating this default
+	// ParseTime marks bindings LLVM would already know while parsing (loop
+	// variables substituted by a parse-time-unrolled foreach). Anything that
+	// depends on a multiclass template argument is not parse-time known.
+	ParseTime bool
+}
+
+// Env is a stack of template-argument frames. Values are parser expressions,
+// not evaluated Values: a frame installed on a class field must see the
+// concrete arguments of whichever def finally inherits it. Frames are searched
+// from the innermost (last) outward.
+type Env struct {
+	frames   []map[string]Binding
+	owner    *Record // class or multiclass whose template arguments live here
+	ownerSep string  // ":" for classes, "::" for multiclasses
+	hidden   map[string]bool
+}
+
+func (e *Env) Lookup(name string) (Binding, bool) {
+	if e == nil || e.hidden[name] {
+		return Binding{}, false
+	}
+	for i := len(e.frames) - 1; i >= 0; i-- {
+		if v, ok := e.frames[i][name]; ok {
+			return v, true
+		}
+	}
+	return Binding{}, false
+}
+
+func (e *Env) With(vars map[string]Binding) *Env {
+	out := &Env{}
+	if e != nil {
+		out.frames = append(out.frames, e.frames...)
+		out.owner = e.owner
+		out.ownerSep = e.ownerSep
+		if len(e.hidden) > 0 {
+			out.hidden = make(map[string]bool, len(e.hidden))
+			for k, v := range e.hidden {
+				out.hidden[k] = v
+			}
+		}
+	}
+	if vars != nil {
+		out.frames = append(out.frames, vars)
+	}
+	return out
+}
+
+// StackOn builds the environment a substituted Init tree must be resolved in:
+// the lexical environment it was written in, with the frames of the current
+// application site on top. LLVM's MapResolver rewrites a parent's field with
+// the caller's Init and then keeps resolving inside that Init, so a qualified
+// name from an outer application (BBB:vals reaching through BB) must see the
+// newer frame. owner stays the lexical one, which is what QualifyName uses.
+func (e *Env) StackOn(base *Env) *Env {
+	if base == nil {
+		return e
+	}
+	out := &Env{}
+	out.frames = make([]map[string]Binding, 0, len(base.frames)+len(e.frames))
+	out.frames = append(out.frames, base.frames...)
+	out.frames = append(out.frames, e.frames...)
+	out.owner = base.owner
+	out.ownerSep = base.ownerSep
+	switch {
+	case len(base.hidden) > 0 && len(e.hidden) > 0:
+		out.hidden = make(map[string]bool, len(base.hidden)+len(e.hidden))
+		for k := range base.hidden {
+			out.hidden[k] = true
+		}
+		for k := range e.hidden {
+			out.hidden[k] = true
+		}
+	case len(base.hidden) > 0:
+		out.hidden = base.hidden
+	case len(e.hidden) > 0:
+		out.hidden = e.hidden
+	}
+	return out
+}
+
+// LexicalOnly drops the frames that bind class and multiclass template
+// arguments (their keys are qualified as "Owner:name" / "Owner::name") and
+// clears the implicit-name owner. What is left is what TGParser had already
+// substituted while parsing: loop variables, defvar inlines, and nothing else.
+// LLVM's parse-time VarDefInit::Fold uses an empty resolver, so a template
+// argument or a record field is still a VarInit there; it must not make a
+// `Class<...>` application look concrete and allocate an anonymous name early.
+func (e *Env) LexicalOnly() *Env {
+	if e == nil {
+		return nil
+	}
+	out := &Env{}
+	for _, f := range e.frames {
+		var keep map[string]Binding
+		for k, b := range f {
+			if b.Owner != nil || b.Self != "" || strings.Contains(k, ":") {
+				continue
+			}
+			if keep == nil {
+				keep = make(map[string]Binding, len(f))
+			}
+			keep[k] = b
+		}
+		if keep != nil {
+			out.frames = append(out.frames, keep)
+		}
+	}
+	return out
+}
+
+// Qualify prefixes a template-argument name the way TGParser's QualifyName
+// does. Without it, a class argument named `vals` would be shadowed by an
+// inherited field named `vals` (see ListArgs.td).
+func (e *Env) Qualify(name string) (string, bool) {
+	if e == nil || e.owner == nil {
+		return "", false
+	}
+	sep := e.ownerSep
+	if sep == "" {
+		sep = ":"
+	}
+	return e.owner.Name + sep + name, true
+}
+
+// rebindAssert prepends a template-argument frame to a deferred assertion.
+func rebindAssert(a Assertion, vars map[string]Binding) Assertion {
+	return rebindAssertFrames(a, nil, vars)
+}
+
+func rebindAssertFrames(a Assertion, defaults, vars map[string]Binding) Assertion {
+	env := a.Env
+	if len(defaults) > 0 {
+		env = env.With(defaults)
+	}
+	return Assertion{Cond: a.Cond, Message: a.Message, Env: env.With(vars)}
+}
+
+// rebind prepends a template-argument frame to every expression in e. It is
+// how a class body is instantiated for a concrete def: the class's own
+// defaults stay in the chain, the caller's arguments win.
+func rebind(e Expr, vars map[string]Binding) Expr {
+	return rebindFrames(e, nil, vars)
+}
+
+// rebindFrames is rebind with an extra frame below the caller's arguments.
+// Instantiation needs it for the class's defaulted template arguments: a field
+// inherited from a parent class is resolved against the parent's expression
+// environment, which never saw the child's own template frame. Without the
+// defaults frame a reference like Versioned's `min` has no binding at all and
+// only the parser's inlined literal keeps it alive (which the strict pre-fold
+// path rejects, allocating an anonymous name for an instance that then fails).
+func rebindFrames(e Expr, defaults, vars map[string]Binding) Expr {
+	if len(defaults) == 0 && len(vars) == 0 {
+		return e
+	}
+	with := func(env *Env) *Env {
+		if len(defaults) > 0 {
+			env = env.With(defaults)
+		}
+		return env.With(vars)
+	}
+	switch x := e.(type) {
+	case *AstExpr:
+		return &AstExpr{V: x.V, Env: with(x.Env)}
+	case *AppendExpr:
+		return &AppendExpr{Base: rebindFrames(x.Base, defaults, vars), Add: rebindFrames(x.Add, defaults, vars), Prepend: x.Prepend, Kind: x.Kind}
+	case *BitsExpr:
+		return &BitsExpr{Base: rebindFrames(x.Base, defaults, vars), Add: rebindFrames(x.Add, defaults, vars), Bits: x.Bits, Width: x.Width}
+	default:
+		return e
+	}
+}
+
+type valState uint8
+
+const (
+	unresolved valState = iota
+	resolving
+	resolved
+	failed
+)
+
+// RecordVal is one field (or class template argument) of a record.
+type RecordVal struct {
+	Name        string
+	Ty          *Ty
+	Nonconcrete bool
+	Expr        Expr
+	Loc         diag.Pos
+
+	state    valState
+	val      Value
+	err      error
+	selfBase Value // value of the old expression while a BitsExpr is resolving
+}
+
+// Record is a class, a def, or an anonymous instance of a class. Classes keep
+// unresolved field expressions; defs are resolved when they are added.
+type Record struct {
+	Name        string
+	IsClass     bool
+	IsAnonymous bool
+	Locs        []diag.Pos
+
+	TArgs []*RecordVal
+	Vals  []*RecordVal
+	Super []*Record // direct superclasses, in source order
+
+	// Env binds this class's template arguments to their defaults.
+	Env *Env
+
+	// Asserts are class-body assertions. LLVM checks them when a concrete
+	// record inherits the class, not when the class is defined, so they are
+	// stored with the environment that binds the class arguments.
+	Asserts []Assertion
+
+	keeper *Keeper
+}
+
+// Assertion is a deferred `assert cond, msg;` from a class body.
+type Assertion struct {
+	Cond    syntax.Value
+	Message syntax.Value
+	Env     *Env
+}
+
+func (r *Record) Val(name string) *RecordVal {
+	for _, v := range r.Vals {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
+func (r *Record) addVal(v *RecordVal) {
+	if old := r.Val(v.Name); old != nil {
+		old.Ty = v.Ty
+		old.Expr = v.Expr
+		old.Nonconcrete = v.Nonconcrete
+		old.Loc = v.Loc
+		old.state, old.val, old.err = unresolved, nil, nil
+		return
+	}
+	v.state, v.val, v.err = unresolved, nil, nil
+	r.Vals = append(r.Vals, v)
+}
+
+// Field resolves one field on demand. Recursion through fields is legal in
+// TableGen (`int a = b; int b = 1;`), so resolution is lazy and cycle-checked.
+func (r *Record) Field(name string) (Value, error) {
+	v := r.Val(name)
+	if v == nil {
+		return nil, &EvalError{Msg: "Record '" + r.Name + "' does not have a field named '" + name + "'"}
+	}
+	return r.evalVal(v)
+}
+
+func (r *Record) evalVal(v *RecordVal) (Value, error) {
+	switch v.state {
+	case resolved:
+		return v.val, nil
+	case failed:
+		return nil, v.err
+	case resolving:
+		if v.selfBase != nil {
+			// `let x{1} = ... x{0} ...` reads the previous value of x.
+			return v.selfBase, nil
+		}
+		return nil, &EvalError{Msg: "Recursion / self-assignment forbidden: '" + v.Name + "'", Span: v.locSpan()}
+	}
+	v.state = resolving
+	if bx, ok := v.Expr.(*BitsExpr); ok {
+		if base, err := r.keeper.eval(bx.Base, r, v.Ty); err == nil {
+			v.selfBase = base
+			defer func() { v.selfBase = nil }()
+		}
+	}
+	val, err := r.keeper.eval(v.Expr, r, v.Ty)
+	if err == nil {
+		val, err = r.keeper.coerce(val, v.Ty)
+	}
+	if err != nil {
+		if ee, ok := err.(*EvalError); ok && ee.AtRecord && !r.IsClass && len(r.Locs) > 0 {
+			ee.Span = diag.Span{Start: r.Locs[0], End: r.Locs[0]}
+			ee.AtRecord = false
+		}
+		v.state, v.err = failed, err
+		return nil, err
+	}
+	v.state, v.val = resolved, val
+	return val, nil
+}
+
+func (v *RecordVal) locSpan() diag.Span { return diag.Span{Start: v.Loc, End: v.Loc} }
+
+// SuperClasses returns all superclasses in post-order, with duplicates kept.
+// LLVM's JSON backend exposes exactly this list, duplicates included.
+// Type is Record::getType(): the canonical set of direct superclasses, sorted
+// by name (RecordRecTy::get sorts). A def without superclasses has the "any
+// record" type. Classes themselves are referenced by name, not by this set.
+func (r *Record) Type() *Ty {
+	if r.IsClass {
+		return &Ty{Kind: RecordTy, Recs: []*Record{r}, Names: []string{r.Name}}
+	}
+	if len(r.Super) == 0 {
+		return &Ty{Kind: RecordTy}
+	}
+	recs := append([]*Record(nil), r.Super...)
+	sort.Slice(recs, func(i, j int) bool { return recs[i].Name < recs[j].Name })
+	out := recs[:0]
+	for _, sc := range recs {
+		if len(out) == 0 || out[len(out)-1].Name != sc.Name {
+			out = append(out, sc)
+		}
+	}
+	names := make([]string, len(out))
+	for i, sc := range out {
+		names[i] = sc.Name
+	}
+	return &Ty{Kind: RecordTy, Recs: out, Names: names}
+}
+
+func (r *Record) SuperClasses() []*Record {
+	var out []*Record
+	var walk func(*Record)
+	walk = func(x *Record) {
+		for _, sc := range x.Super {
+			walk(sc)
+			out = append(out, sc)
+		}
+	}
+	walk(r)
+	return out
+}
+
+// DumpText renders a record the way llvm-tblgen's operator<< does, which is
+// what !repr(record) returns: name, template args, superclass comment, and one
+// line per value (non-concrete fields first).
+func (r *Record) DumpText() (string, error) {
+	var b strings.Builder
+	b.WriteString(r.Name)
+	if len(r.TArgs) > 0 {
+		b.WriteString("<")
+		for i, ta := range r.TArgs {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(ta.Ty.String())
+			b.WriteString(" ")
+			// TGParser stores the qualified name, so `class P<int i>` prints
+			// `int P:i = ?`.
+			if r.IsClass {
+				b.WriteString(r.Name)
+				b.WriteString(":")
+			}
+			b.WriteString(ta.Name)
+			b.WriteString(" = ")
+			b.WriteString(r.exprText(ta))
+		}
+		b.WriteString(">")
+	}
+	b.WriteString(" {")
+	if scs := r.SuperClasses(); len(scs) > 0 {
+		b.WriteString("\t//")
+		for _, sc := range scs {
+			b.WriteString(" ")
+			b.WriteString(sc.Name)
+		}
+	}
+	b.WriteString("\n")
+	writeVal := func(v *RecordVal) error {
+		b.WriteString("  ")
+		if v.Nonconcrete {
+			b.WriteString("field ")
+		}
+		var val Value
+		if !r.IsClass {
+			var err error
+			val, err = r.evalVal(v)
+			if err != nil {
+				return err
+			}
+		}
+		// RecordVal::getPrintType follows the value: a string field holding a
+		// code literal prints as `code`.
+		tyText := v.Ty.String()
+		if v.Ty.Kind == StringTy {
+			code := false
+			if r.IsClass {
+				if e, ok := v.Expr.(*AstExpr); ok {
+					if sv, ok := e.V.(*syntax.StringValue); ok && sv.Code {
+						code = true
+					}
+				}
+			} else if sv, ok := val.(*Str); ok {
+				code = sv.Code
+			}
+			if code {
+				tyText = "code"
+			} else {
+				tyText = "string"
+			}
+		}
+		b.WriteString(tyText)
+		b.WriteString(" ")
+		b.WriteString(v.Name)
+		b.WriteString(" = ")
+		if r.IsClass {
+			// Class bodies are never resolved; the dump shows the Init tree.
+			b.WriteString(r.exprText(v))
+		} else {
+			b.WriteString(val.String())
+		}
+		b.WriteString(";\n")
+		return nil
+	}
+	for _, v := range r.Vals {
+		if v.Nonconcrete {
+			if err := writeVal(v); err != nil {
+				return "", err
+			}
+		}
+	}
+	for _, v := range r.Vals {
+		if !v.Nonconcrete {
+			if err := writeVal(v); err != nil {
+				return "", err
+			}
+		}
+	}
+	b.WriteString("}\n")
+	return b.String(), nil
+}
+
+func (r *Record) IsSubClassOf(name string) bool {
+	for _, sc := range r.Super {
+		if sc.Name == name || sc.IsSubClassOf(name) {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveAll forces every field in insertion order. The order matters: it is
+// the order in which anonymous class applications get their names, and the
+// JSON backend must see the same anonymous_0, anonymous_1, ... as llvm-tblgen.
+func (r *Record) resolveAll() error {
+	for _, v := range r.Vals {
+		if _, err := r.evalVal(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Keeper owns the class/def tables and the global variables of one file.
+type Keeper struct {
+	classes map[string]*Record
+	defs    map[string]*Record
+	globals map[string]*Global
+
+	anon      int
+	anonCache map[string]*Record
+	// defOrder keeps defs in creation order; defset lists are built from it.
+	defOrder []*Record
+	diags    *diag.Collector
+	file     string
+	depth    int
+	// parseFold is set while a value is being evaluated at the point where
+	// TGParser would have folded it. A record field is still VarInit there,
+	// even though the parser inlines its initializer for type checking.
+	parseFold bool
+	anonLoc   diag.Pos
+
+	// loopDefs records the defs created while expanding a statement-level
+	// foreach, keyed by syntax.ForeachStmt.Seq. The parser uses them to make
+	// dynamically named records visible to later statements.
+	loopDefs map[int][]LoopDef
+
+	// shapeLoc maps a class application's parsed shape to the location of its
+	// first parse; resolvedSite maps a resolved argument fingerprint to the
+	// location stamped on the anonymous def it instantiates. See sites.go.
+	shapeLoc     map[string]diag.Pos
+	resolvedSite map[string]diag.Pos
+}
+
+// LoopDef is a record created by a statement-level foreach.
+type LoopDef struct {
+	Name    string
+	Parents []string
+}
+
+type Global struct {
+	Name     string
+	Expr     Expr
+	state    valState
+	val      Value
+	err      error
+	selfBase Value // value of the old expression while a BitsExpr is resolving
+}
+
+func NewKeeper(file string, diags *diag.Collector) *Keeper {
+	return &Keeper{
+		classes:   map[string]*Record{},
+		defs:      map[string]*Record{},
+		globals:   map[string]*Global{},
+		anonCache: map[string]*Record{},
+		loopDefs:  map[int][]LoopDef{},
+		diags:     diags,
+		file:      file,
+	}
+}
+
+func (k *Keeper) Class(name string) *Record { return k.classes[name] }
+func (k *Keeper) Def(name string) *Record   { return k.defs[name] }
+
+// LoopDefs returns the defs each statement-level foreach created, by Seq.
+func (k *Keeper) LoopDefs() map[int][]LoopDef { return k.loopDefs }
+
+func (k *Keeper) Classes() []*Record { return sortedRecords(k.classes) }
+func (k *Keeper) Defs() []*Record    { return sortedRecords(k.defs) }
+
+func sortedRecords(m map[string]*Record) []*Record {
+	names := make([]string, 0, len(m))
+	for n := range m {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	out := make([]*Record, len(names))
+	for i, n := range names {
+		out[i] = m[n]
+	}
+	return out
+}
+
+func (k *Keeper) newAnonymous(loc diag.Pos) *Record {
+	name := "anonymous_" + itoa(k.anon)
+	k.anon++
+	return &Record{Name: name, IsAnonymous: true, Locs: []diag.Pos{loc}, keeper: k}
+}
+
+func (k *Keeper) addDef(r *Record) error {
+	if old := k.defs[r.Name]; old != nil {
+		return &EvalError{Msg: "def already exists: " + r.Name, Span: diag.Span{Start: r.Locs[0], End: r.Locs[0]}, Note: old.Locs[0]}
+	}
+	k.defs[r.Name] = r
+	k.defOrder = append(k.defOrder, r)
+	return nil
+}
+
+// Global resolves a top-level defvar on demand.
+func (k *Keeper) Global(name string) (Value, bool, error) {
+	g := k.globals[name]
+	if g == nil {
+		return nil, false, nil
+	}
+	switch g.state {
+	case resolved:
+		return g.val, true, nil
+	case failed:
+		return nil, true, g.err
+	case resolving:
+		return nil, true, &EvalError{Msg: "Recursion / self-assignment forbidden: '" + name + "'"}
+	}
+	g.state = resolving
+	v, err := k.eval(g.Expr, nil, nil)
+	if err != nil {
+		g.state, g.err = failed, err
+		return nil, true, err
+	}
+	g.state, g.val = resolved, v
+	return v, true, nil
+}
+
+func (k *Keeper) defineGlobal(name string, e Expr) {
+	k.globals[name] = &Global{Name: name, Expr: e}
+}
+
+// EvalError carries the source position of the failing expression so the
+// driver can render a normal diagnostic.
+type EvalError struct {
+	Msg  string
+	Span diag.Span
+	Note diag.Pos
+	// AtRecord marks errors llvm-tblgen prints with CurRec->getLoc(): failures
+	// that only surface while a record's field is resolved are reported at the
+	// record, not at the expression.
+	AtRecord bool
+	// NoLoc marks PrintFatalError(Twine) diagnostics, which carry no source
+	// location at all ("error: invalid regex '...'").
+	NoLoc bool
+}
+
+func (e *EvalError) Error() string { return e.Msg }

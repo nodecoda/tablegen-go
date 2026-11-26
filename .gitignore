@@ -1,0 +1,4 @@
+/tblgen
+*.test
+*.prof
+conformance/*.local.json

@@ -1,0 +1,3958 @@
+{
+  "tool": "",
+  "oracle": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen",
+  "oracle_version": "LLVM version 24.0.0git",
+  "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
+  "counts": {
+    "oracle:invalid": 35,
+    "oracle:valid": 150,
+    "scope:in-scope": 185,
+    "scope:needs-include": 207
+  },
+  "cases": [
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/2003-08-03-PassCode.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "375f68a62d4aeade44938737ebf07703fd5caaf2aa9f8d5721142b2f116f8a94",
+        "out_len": 200
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/2006-09-18-LargeInt.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "d2d57799bf9dcdbfbccff5a53b792d9b7a7259c0cb815db16145244e51ec1bac",
+        "out_len": 167
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/2010-03-24-PrematureDefaults.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "a0bd1c2fe7c344b670429c8889b43b2bca44c2ef9452efed6f6e7da92e6c5621",
+        "out_len": 1005,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/2010-03-24-PrematureDefaults.td:20:13: warning: unused template argument: B:k"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/64-bit-int.td",
+      "run": "llvm-tblgen -print-records %s | FileCheck %s ; not llvm-tblgen -DOOR1 -print-records %s 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-OOR ; not llvm-tblgen -DOOR2 -print-records %s 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-OOR ; not llvm-tblgen -DOOR3 -print-records %s 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-OOR",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7b9a3eb65fbf38fdb3056adf7abe2eb39a7a94113be260a539cdb51bb0116991",
+        "out_len": 1006
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AMDGPUTargetDefErrors.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-alias.td 2\u003e\u00261 \\ ; | FileCheck %t/bad-alias.td -DFILE=%t/bad-alias.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/dup-processor.td 2\u003e\u00261 \\ ; | FileCheck %t/dup-processor.td -DFILE=%t/dup-processor.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/alias-shadows-processor.td 2\u003e\u00261 \\ ; | FileCheck %t/alias-shadows-processor.td -DFILE=%t/alias-shadows-processor.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-isa-version.td 2\u003e\u00261 \\ ; | FileCheck %t/bad-isa-version.td -DFILE=%t/bad-isa-version.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/oversized-major.td 2\u003e\u00261 \\ ; | FileCheck %t/oversized-major.td -DFILE=%t/oversized-major.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/oversized-minor.td 2\u003e\u00261 \\ ; | FileCheck %t/oversized-minor.td -DFILE=%t/oversized-minor.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/oversized-stepping.td 2\u003e\u00261 \\ ; | FileCheck %t/oversized-stepping.td -DFILE=%t/oversized-stepping.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/negative-component.td 2\u003e\u00261 \\ ; | FileCheck %t/negative-component.td -DFILE=%t/negative-component.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-stepping.td 2\u003e\u00261 \\ ; | FileCheck %t/bad-stepping.td -DFILE=%t/bad-stepping.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-feature-superset.td 2\u003e\u00261 \\ ; | FileCheck %t/generic-feature-superset.td -DFILE=%t/generic-feature-superset.td --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AMDGPUTargetDefGenericFeatures.td",
+      "run": "split-file %s %t ; llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/valid.td \\ ; | FileCheck %t/valid.td ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/missing-any.td 2\u003e\u00261 \\ ; | FileCheck %t/missing-any.td -DFILE=%t/missing-any.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/missing-all.td 2\u003e\u00261 \\ ; | FileCheck %t/missing-all.td -DFILE=%t/missing-all.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/implied-all.td 2\u003e\u00261 \\ ; | FileCheck %t/implied-all.td -DFILE=%t/implied-all.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/missing-private.td 2\u003e\u00261 \\ ; | FileCheck %t/missing-private.td -DFILE=%t/missing-private.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/implied-private.td 2\u003e\u00261 \\ ; | FileCheck %t/implied-private.td -DFILE=%t/implied-private.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/numeric-mismatch.td 2\u003e\u00261 \\ ; | FileCheck %t/numeric-mismatch.td -DFILE=%t/numeric-mismatch.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/empty-members.td 2\u003e\u00261 \\ ; | FileCheck %t/empty-members.td -DFILE=%t/empty-members.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/self-member.td 2\u003e\u00261 \\ ; | FileCheck %t/self-member.td -DFILE=%t/self-member.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/generic-member.td 2\u003e\u00261 \\ ; | FileCheck %t/generic-member.td -DFILE=%t/generic-member.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/pseudo-member.td 2\u003e\u00261 \\ ; | FileCheck %t/pseudo-member.td -DFILE=%t/pseudo-member.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/unregistered-member.td 2\u003e\u00261 \\ ; | FileCheck %t/unregistered-member.td -DFILE=%t/unregistered-member.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/r600-member.td 2\u003e\u00261 \\ ; | FileCheck %t/r600-member.td -DFILE=%t/r600-member.td --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AMDGPUTargetDefLDSAllocGranularity.td",
+      "run": "split-file %s %t ; llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../include -I %p/../../lib/Target/AMDGPU %t/valid.td \\ ; | FileCheck %t/valid.td ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../include -I %p/../../lib/Target/AMDGPU %t/missing.td 2\u003e\u00261 \\ ; | FileCheck %t/missing.td -DFILE=%t/missing.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../include -I %p/../../lib/Target/AMDGPU %t/missing-encoding.td 2\u003e\u00261 \\ ; | FileCheck %t/missing-encoding.td -DFILE=%t/missing-encoding.td --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AMDGPUTargetDefSubArchSpelling.td",
+      "run": "llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AcquireAtCycle.td",
+      "run": "llvm-tblgen -gen-subtarget -DCORRECT -I %p/../../include %s 2\u003e\u00261 | \\ ; FileCheck %s  --check-prefix=CORRECT ; not llvm-tblgen -gen-subtarget -DWRONG_SIZE -I %p/../../include %s 2\u003e\u00261 | \\ ; FileCheck %s --check-prefix=WRONG_SIZE ; not llvm-tblgen -gen-subtarget -DWRONG_VALUE -I %p/../../include %s 2\u003e\u00261 | \\ ; FileCheck %s --check-prefix=WRONG_VALUE ; not llvm-tblgen -gen-subtarget -DNEGATIVE_INVALID -I %p/../../include %s 2\u003e\u00261 | \\ ; FileCheck %s --check-prefix=NEGATIVE_INVALID",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AliasAsmString.td",
+      "run": "llvm-tblgen -gen-asm-writer -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AllowDuplicateRegisterNames.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AnonDefinitionOnDemand.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "3cc9796d400e2a82a676fa856843b34f8b20d633aeec27b3ea3db3398a92345d",
+        "out_len": 1053
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ArtificialRegs.td",
+      "run": "llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2\u003e\u00261 \u003e/dev/null | FileCheck %s --implicit-check-not=RegisterClass",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ArtificialSubregs.td",
+      "run": "llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2\u003e\u00261 \u003e/dev/null | FileCheck %s --check-prefix=CHECK",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmMatcherCoerceFromRegClass.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s ; not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_DUPLICATE_NAME 2\u003e\u00261 | FileCheck %s --check-prefix=ERR-DUPLICATE-NAME",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmMatcherFullCustomConversionMethod.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmMatcherPredicateUsesSubtarget.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmMatcherPrioritizeFeature.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s -o - | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmMatcherPrioritizeFeatureErrors.td",
+      "run": "not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -o /dev/null 2\u003e\u00261 | FileCheck %s --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmMatcherTokens.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s ; llvm-tblgen -gen-asm-matcher -asmparsernum=1 -I %p/../../include %s | FileCheck %s --check-prefix CHECK-CLASS-NAME",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmPredicateCombining.td",
+      "run": "llvm-tblgen -gen-disassembler -ignore-non-decodable-operands -I %p/../../include %s | \\ ; FileCheck --check-prefix=DISASS %s ; llvm-tblgen -gen-asm-matcher -I %p/../../include %s | \\ ; FileCheck --check-prefix=MATCHER %s ; llvm-tblgen -gen-asm-writer -I %p/../../include %s | \\ ; FileCheck --check-prefix=WRITER %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmPredicateCombiningRISCV.td",
+      "run": "llvm-tblgen -gen-compress-inst-emitter -I %p/../../include %s | \\ ; FileCheck --check-prefix=COMPRESS %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmVariant.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/AsmWriterPCRelOp.td",
+      "run": "llvm-tblgen -gen-asm-writer -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BigEncoder.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitOffsetDecoder.td",
+      "run": "llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInit.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "dfd280d0e8bb43b2a00553a72229699a6f2d931095469b460130ec7e7b3dcd32",
+        "out_len": 597
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitErrors.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitErrors.td:9:15: error: Field 'a' of type 'bits\u003c2\u003e' is incompatible with value '{ opc{1}, opc{0}, opc2{1}, opc2{0} }' of type bit initializer w...",
+        "err_line": 9
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitListErrors.td",
+      "run": "not llvm-tblgen -DNOT_A_BIT %s 2\u003e\u00261 | FileCheck %s -check-prefix=NOT_A_BIT ; not llvm-tblgen -DAFTER_BITS %s 2\u003e\u00261 | FileCheck %s -check-prefix=AFTER_BITS ; not llvm-tblgen -DNO_RBRACE %s 2\u003e\u00261 | FileCheck %s -check-prefix=NO_RBRACE",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitOverflow.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/BitsInitOverflow.td:7:1: error: Initializer of 'X' in 'anonymous_0' could not be fully resolved: { !cast\u003cbits\u003c2\u003e\u003e(5){1}, !cast\u003cbits\u003c2\u003e\u003e(5){0} }",
+        "err_line": 7
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/CPtrWildcard.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include %s -o - | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/CStyleComment.td",
+      "run": "llvm-tblgen \u003c %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "a3a873b182b732d397cf7531c1d4c97e75f7d22713610029ecd8a281fda51dd0",
+        "out_len": 147
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ClassInstanceValue.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "270fa4ccac35243f47919986407a5b1f3a822a178eed6a26bcef5eb74cb19d4d",
+        "out_len": 399
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/CodeEmitterBaseEncodingPool.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/CodeGenSchedule-duplicate-instrw.td",
+      "run": "not llvm-tblgen --gen-subtarget -I %p/../../include -I %p/Common %s -o - 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/CompressWriteLatencyEntry.td",
+      "run": "llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConcatenatedSubregs.td",
+      "run": "llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2\u003e\u00261 \u003e/dev/null | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking1.td",
+      "run": "not llvm-tblgen -gen-asm-writer -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking2.td",
+      "run": "not llvm-tblgen -gen-asm-writer -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking3.td",
+      "run": "not llvm-tblgen -gen-asm-writer -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking4.td",
+      "run": "not llvm-tblgen -gen-asm-writer -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking5.td",
+      "run": "not llvm-tblgen -gen-asm-writer -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking6.td",
+      "run": "not llvm-tblgen -gen-asm-writer -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking7.td",
+      "run": "not llvm-tblgen -gen-asm-writer -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ConstraintChecking8.td",
+      "run": "not llvm-tblgen -gen-asm-writer -DT0 -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s ; not llvm-tblgen -gen-asm-writer -DT1 -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK1 ; not llvm-tblgen -gen-asm-writer -DT2 -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK2 ; not llvm-tblgen -gen-asm-writer -DT3 -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK3 ; not llvm-tblgen -gen-asm-writer -DT4 -I %p -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK4",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/DAGDefaultOps.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include %s -o %t ; FileCheck --check-prefix=ADD %s \u003c %t ; FileCheck --check-prefix=ADDINT %s \u003c %t ; FileCheck --check-prefix=SUB %s \u003c %t ; FileCheck --check-prefix=MULINT %s \u003c %t ; FileCheck --check-prefix=MUL %s \u003c %t",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/DFAPacketizer.td",
+      "run": "llvm-tblgen -gen-dfa-packetizer -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/Dag.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b1377c70ae24efe8cafa7969ed79a7cbc710182fcb089396c9da201b48a1fc69",
+        "out_len": 3196
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/DefmInherit.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8e7f783d000c8c02791511acf5a6cde46b80aafab9f78738cd644230b6deb836",
+        "out_len": 1754
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/DefmInsideMultiClass.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "ad0cad90e241cbb01e37b2499816b7771dafcc099aad9489388788709e15787f",
+        "out_len": 3773
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/DuplicateFieldValues.td",
+      "run": "llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/DuplicateProcessorFeatures.td",
+      "run": "llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ExegesisRawPfmCounters.td",
+      "run": "llvm-tblgen --gen-exegesis -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/FastISelEmitter.td",
+      "run": "llvm-tblgen --gen-fast-isel -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/FieldAccess.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "935f1db18b28ee6a358685cfde2cc45f0b6bdc75b31551de585ec1c951464ce2",
+        "out_len": 616
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ForeachList.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "d6c541b592553275685c17b161142438e7f9c31f57a21860bd25ef31522e4eae",
+        "out_len": 2989
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ForeachLoop.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "e1ccdf8c3f31d36f437d22b8faf9556b60527b46065c73288deb75abd50e82b4",
+        "out_len": 3828
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ForwardRef.td",
+      "run": "llvm-tblgen %s -o -",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2bb08a771d436f954c82eeb1e476bdace1a5ceed7753182951715504c4d55e99",
+        "out_len": 72
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/GenTags.td",
+      "run": "llvm-tblgen --gen-ctags %s | FileCheck %s -DFILE=%s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "a18f1c5f3f939a2092b509d528f8b6a0f049a51b8acb467aee98c1683d9b0bd3",
+        "out_len": 52
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/GeneralList.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "435228129953a70ed473c77d941588d84088f0556035e29b6f19392d72deed75",
+        "out_len": 54
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HasNoUse.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s -o - \u003c %s | FileCheck -check-prefix=SDAG %s ; llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -I %p/../../include -I %p/Common %s -o - \u003c %s | FileCheck -check-prefix=GISEL %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeBitSet.td",
+      "run": "llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2\u003e\u00261 \u003e/dev/null | FileCheck %s --check-prefix=CHECK-REG ; llvm-tblgen -gen-subtarget -I %p/../../include %s -o - 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-SUBTARGET",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeEncodeAPInt.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | \\ ; FileCheck %s --check-prefix=ENCODER",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeEncodeDecode.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | FileCheck %s --check-prefix=ENCODER ; llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s --check-prefix=DECODER",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeEncodeDecode2.td",
+      "run": "llvm-tblgen -gen-disassembler -I %p/../../include %s | \\ ; FileCheck %s --check-prefix=DECODER ; llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates=O2 -I \\ ; %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeEncodeDecode3.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | \\ ; FileCheck %s --check-prefix=ENCODER ; llvm-tblgen -gen-disassembler -I %p/../../include %s | \\ ; FileCheck %s --check-prefix=DECODER ; llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates=O1 -I \\ ; %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS-O1 ; llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates=O2 -I \\ ; %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS-O2",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeSelect.td",
+      "run": "not llvm-tblgen -gen-dag-isel -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/HwModeSubRegs.td",
+      "run": "llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2\u003e\u00261 \u003e/dev/null | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/Include.td",
+      "run": "llvm-tblgen -I %p %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/IntBitInit.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "c6f3e9e366304f33012f391016a67f9929aa4deeb364becce99d2b39c5922098",
+        "out_len": 174
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/IntSpecialValues.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "53aafbe4b66da750488c3aa64760bb573deedfd76a4f293fc9eede7467d430db",
+        "out_len": 215
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/InvalidMCSchedClassDesc.td",
+      "run": "llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/JSON-locs.td",
+      "run": "llvm-tblgen -dump-json %s | %python %S/JSON-check.py %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "86e13d5ed73b7eebcde5fbdc497ec393f7ea8ed98657700501a4f43f3685c111",
+        "out_len": 1696
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/JSON.td",
+      "run": "llvm-tblgen -dump-json %s | %python %S/JSON-check.py %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "647b59bcfbf1208bd60423cc05aba6639714eeb4f904d827463bd8d84d5da6c3",
+        "out_len": 2690
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/LazyChange.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "798a4db7fb625f04763854caf2373841218faece30c81afd49674f1e05cb1bd2",
+        "out_len": 168
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/LetInsideMultiClasses.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7ee4535270e95f561e83bd9d5f269ea3befb25ff54b1022b4e04a87bab016e1d",
+        "out_len": 1583
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListArgs.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "4e2011e4052f31a7bd7d6a3e71a89db71d28cb077d9e1525af096b0cf136c02d",
+        "out_len": 532
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListArgsSimple.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "29690f7ac32ad02a452a1fbeea442a97af7dedd5bca77b949545df3961e5e320",
+        "out_len": 69
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListConversion.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8ad790900ebdb39b5bc664d823fab23c2bd73abe475ea97455800b8a1d868ecc",
+        "out_len": 387
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListManip.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "27153266d5796ce33febc51cf1f9fe8597c28c8cec40a2ff8fa5dedd38ea4cf2",
+        "out_len": 63
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListOfList.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "412073e60b1f0b5391c1b531971b3c7644acbe1cdacb02d7edb52dfc153ababe",
+        "out_len": 208
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListSlices-fail.td",
+      "run": "not llvm-tblgen %s -DERR0 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR0 ; not llvm-tblgen %s -DERR1 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR1 ; not llvm-tblgen %s -DERR2 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR2 ; not llvm-tblgen %s -DERR3 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR3 ; not llvm-tblgen %s -DERR4 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR4 ; not llvm-tblgen %s -DERR5 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR5 ; not llvm-tblgen %s -DERR6 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR6 ; not llvm-tblgen %s -DERR7 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR7 ; not llvm-tblgen %s -DERR8 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR8 ; not llvm-tblgen %s -DERR9 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR9 ; not llvm-tblgen %s -DERRA 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERRA",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListSlices.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "a146923f720e1311cf181e0cf1e2800a6e816b2304582b14181b4b7560852538",
+        "out_len": 2549
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/LoLoL.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "84f728bde787f45248885a923a830600a665647d85b37ef23cc8a0039d5be153",
+        "out_len": 398
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MacroFusion.td",
+      "run": "llvm-tblgen -gen-macro-fusion-pred -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-PREDICATOR ; llvm-tblgen -gen-subtarget -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-SUBTARGET",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MacroFusionDuplicate.td",
+      "run": "not llvm-tblgen -gen-macro-fusion-pred -DFUSION_FOR -I %p/../../include %s 2\u003e\u00261 | FileCheck --check-prefix=FUSION-FOR %s ; not llvm-tblgen -gen-macro-fusion-pred -DFUSION -I %p/../../include %s 2\u003e\u00261 | FileCheck --check-prefix=FUSION %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MacroFusionFor.td",
+      "run": "llvm-tblgen -gen-macro-fusion-pred -I %p/../../include %s | FileCheck --check-prefix=CHECK-PREDICATOR %s ; llvm-tblgen -gen-subtarget -I %p/../../include %s | FileCheck --check-prefix=CHECK-SUBTARGET %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MatchRegisterAltNameWithIndex.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s ; llvm-tblgen -gen-asm-matcher -DDUPLICATES -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MissingOperandField.td",
+      "run": "not llvm-tblgen -gen-emitter -I %p/../../include %s 2\u003e\u00261 | FileCheck %s --implicit-check-not=error:",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MixedCasedMnemonic.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s --check-prefix=MATCHER ; llvm-tblgen -gen-asm-writer -I %p/../../include %s | FileCheck %s --check-prefix=WRITER ; llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s --check-prefix=ALIAS",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MnemonicAlias.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-def-fail.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-def-fail.td:9:12: error: Couldn't find class 'M2'. Use 'defm' if you meant to use multiclass 'M2'",
+        "err_line": 9
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm-fail.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm-fail.td:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'",
+        "err_line": 15
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "4802e45b0f671b5015c91706a64fff452c438a377631a9ee9f5b2e1052330008",
+        "out_len": 1208
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "73e0af85d283a3471b0b2d233abaf9b0abd3f617b2c21670aa110d72889dd11d",
+        "out_len": 1037
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClassDefName.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "51768f2d7734d8d73f7870cebd1f4c60d25351e0b3a9746239dd7d0ea345262c",
+        "out_len": 2319
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClassInherit.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "fb357a5a51b2d877cb8e038d1495e780715e5abafeafc9186c2a7cf1c53816e9",
+        "out_len": 5679
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiPat.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "d6c71a77475a23ac6e62e7f492104f4e92698c79ec2f4c28b76bf13be358db9d",
+        "out_len": 9324
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/NestedForeach.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7d36aec1f88bd2f0c41fc4aa66b00c960d3de41c540765a89a3d1962ec2d85b3",
+        "out_len": 9825
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/NotFirstMnemonic.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/Paste.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "5ca6688d29d70a810e481282d720473b3288a03b604fe4b69e404b4933362aca",
+        "out_len": 1360
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/PerWriteCycleCount.td",
+      "run": "llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s ; not llvm-tblgen -gen-subtarget -I %p/../../include -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/PredicateExpander.td",
+      "run": "llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ProcessorAlias.td",
+      "run": "llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ProcessorAliasErrors.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t ; not llvm-tblgen -gen-subtarget -I %p/../../include %t/non-existent.td 2\u003e\u00261 \\ ; | FileCheck %t/non-existent.td -DFILE=%t/non-existent.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-subtarget -I %p/../../include %t/dup-processor.td 2\u003e\u00261 \\ ; | FileCheck %t/dup-processor.td -DFILE=%t/dup-processor.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-subtarget -I %p/../../include %t/dup-alias.td 2\u003e\u00261 \\ ; | FileCheck %t/dup-alias.td -DFILE=%t/dup-alias.td --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ProcessorUniqueNames.td",
+      "run": "not llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ReadAdvanceInvalidWrite.td",
+      "run": "not llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RedundantInstRW.td",
+      "run": "llvm-tblgen -gen-subtarget -I %p/../../include %s -o /dev/null 2\u003e\u00261 | FileCheck %s --implicit-check-not=warning:",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegBankFromRegClass.td",
+      "run": "llvm-tblgen -gen-register-bank -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegClassByHwMode.td",
+      "run": "llvm-tblgen -gen-instr-info   -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=INSTRINFO %s ; llvm-tblgen -gen-asm-matcher  -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=ASMMATCHER %s ; llvm-tblgen -gen-disassembler -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=DISASM %s ; llvm-tblgen -gen-dag-isel     -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=ISEL-SDAG %s ; llvm-tblgen -gen-global-isel  -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=ISEL-GISEL %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegClassByHwModeAlias.td",
+      "run": "llvm-tblgen -gen-asm-writer  -I %S -I %p/../../include %s -o - | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegClassByHwModeCompressPat.td",
+      "run": "llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -o - | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegClassByHwModeCompressPat4Modes.td",
+      "run": "llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -o - | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegClassByHwModeCompressPatError.td",
+      "run": "not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -DERROR_UNRESOLVED 2\u003e\u00261 | FileCheck %s --check-prefix=UNRESOLVED ; not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -DERROR_CONTRADICTORY_PAT 2\u003e\u00261 | FileCheck %s --check-prefix=CONTRADICTORY_PAT ; not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -DERROR_WRONG_PRED 2\u003e\u00261 | FileCheck %s --check-prefix=WRONG_PRED ; not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -DERROR_CONTRADICTORY_MODE 2\u003e\u00261 | FileCheck %s --check-prefix=CONTRADICTORY_MODE ; not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -DERROR_INCOMPATIBLE_HWMODE 2\u003e\u00261 | FileCheck %s --check-prefix=INCOMPATIBLE_HWMODE ; not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %S %s -DERROR_NON_ASM_PRED_MODE 2\u003e\u00261 | FileCheck %s --check-prefix=NON_ASM_PRED_MODE",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegClassByHwModeErrors.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t ; not llvm-tblgen --gen-asm-matcher -I %p/../../include -I %t -I %S \\ ; %t/inst-alias-bad-reg.td -o /dev/null 2\u003e\u00261 | FileCheck %t/inst-alias-bad-reg.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-asm-matcher -I %p/../../include -I %t -I %S \\ ; %t/inst-alias-static-predicates.td -o /dev/null 2\u003e\u00261 | FileCheck %t/inst-alias-static-predicates.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %t -I %S \\ ; %t/compress-regclass-by-hwmode.td -o /dev/null 2\u003e\u00261 | FileCheck %t/compress-regclass-by-hwmode.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %t -I %S \\ ; %t/compress-regclass-by-hwmode-2.td -o /dev/null 2\u003e\u00261 | FileCheck %t/compress-regclass-by-hwmode-2.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-dag-isel  -I %p/../../include -I %t -I %S \\ ; %t/vt-by-hwmode-missing.td -o /dev/null 2\u003e\u00261 | FileCheck %t/vt-by-hwmode-missing.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-dag-isel -I %p/../../include -I %t -I %S \\ ; %t/multiple-entries-for-same-mode.td -o /dev/null 2\u003e\u00261 | FileCheck %t/multiple-entries-for-same-mode.td --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegClassEmptyAllocationOrder.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t ; not llvm-tblgen -gen-register-info -I %p/../../include -I %t \\ ; %t/explicit.td -o %t/explicit.inc 2\u003e\u00261 | FileCheck %t/explicit.td --implicit-check-not=\"error:\" ; not llvm-tblgen -gen-register-info -I %p/../../include -I %t \\ ; %t/inferred.td -o %t/inferred.inc 2\u003e\u00261 | FileCheck %t/inferred.td --implicit-check-not=\"error:\" ; llvm-tblgen -gen-register-info -I %p/../../include -I %t \\ ; %t/no-members.td -o %t/no-members.inc 2\u003e\u00261 | FileCheck %t/no-members.td --allow-empty --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterBankEmitter.td",
+      "run": "llvm-tblgen -gen-register-bank -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterByHwMode.td",
+      "run": "llvm-tblgen --gen-subtarget -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=SUBTARGET %s ; llvm-tblgen --gen-instr-info -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=INSTRINFO %s ; llvm-tblgen --gen-asm-matcher -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=ASMMATCHER %s ; llvm-tblgen --gen-pseudo-lowering -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=PSEUDO %s ; llvm-tblgen --gen-asm-writer -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=ASMWRITER %s ; llvm-tblgen --gen-register-info -I %p/../../include -I %S %s -o %t.inc ; FileCheck %s --input-file=%tEnums.inc --check-prefix=REGINFO-HEADER ; FileCheck %s --input-file=%tMCDesc.inc --check-prefix=REGINFO-MCDESC",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterByHwModeErrors.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t ; not llvm-tblgen --gen-asm-matcher -I %t -I %p/../../include -I %S \\ ; %t/bad-regclass.td -o /dev/null 2\u003e\u00261 | FileCheck %t/bad-regclass.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-asm-matcher -I %t -I %p/../../include -I %S \\ ; %t/bad-regclass-by-mode.td -o /dev/null 2\u003e\u00261 | FileCheck %t/bad-regclass-by-mode.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-asm-matcher -I %t -I %p/../../include -I %S \\ ; %t/bad-not-regclass.td -o /dev/null 2\u003e\u00261 | FileCheck %t/bad-not-regclass.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-asm-matcher -I %t -I %p/../../include -I %S \\ ; %t/duplicate-entry.td -o /dev/null 2\u003e\u00261 | FileCheck %t/duplicate-entry.td --implicit-check-not=\"error:\" ; not llvm-tblgen --gen-dag-isel -I %t -I %p/../../include -I %S \\ ; %t/isel-not-supported-yet.td -o /dev/null 2\u003e\u00261 | FileCheck %t/isel-not-supported-yet.td --implicit-check-not=\"error:\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterClassCopyCost.td",
+      "run": "llvm-tblgen --gen-register-info -I %p/../../include %s 2\u003e\u00261 | FileCheck %s ; not llvm-tblgen --gen-register-info -I %p/../../include -DERROR %s 2\u003e\u00261 | FileCheck -check-prefix=ERROR %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterEncoder.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-BaseClassOrder.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-errors.td",
+      "run": "not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR0 2\u003e\u00261 | FileCheck %s --check-prefix=ERROR0 ; not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR1 2\u003e\u00261 | FileCheck %s --check-prefix=ERROR1 ; not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR2 2\u003e\u00261 | FileCheck %s --check-prefix=ERROR2 ; not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR3 2\u003e\u00261 | FileCheck %s --check-prefix=ERROR3 ; not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR4 2\u003e\u00261 | FileCheck %s --check-prefix=ERROR4 ; not llvm-tblgen -gen-register-bank -I %p/../../include %s -DERROR5 2\u003e\u00261 | FileCheck %s --check-prefix=ERROR5 ; not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR6 2\u003e\u00261 | FileCheck %s --check-prefix=ERROR6",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-inherit-properties.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-noncovered-subreg-lanemask.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-regcost-list.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-regcost-tuple.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-regcost.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-superreg-masks.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RegisterInfoEmitter-tsflags.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RelTest.td",
+      "run": "not llvm-tblgen -gen-instr-info -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ResolveSchedClass.td",
+      "run": "llvm-tblgen -gen-subtarget -I %p/../../include %s -o - | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-attributes-errors.td",
+      "run": "not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_FN_ATTR %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-FN-ATTR %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_PARAM_ATTR %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-PARAM-ATTR %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_RET_ATTR %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-RET-ATTR %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_INT_ATTR %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-INT-ATTR %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_TOO_MANY_PARAM_ATTRS %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-TOO-MANY-ATTRS %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_TOO_MANY_POINTEE_TYPES %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-TOO-MANY-POINTEE %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_POINTEE_NON_PTR %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-POINTEE-NON-PTR %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-attributes.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-bad-library-name-error.td",
+      "run": "not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_SYSTEM_NAME %s 2\u003e\u00261 | FileCheck -check-prefix=SYSTEM %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_EXCLUSION_NAME %s 2\u003e\u00261 | FileCheck -check-prefix=EXCLUSION %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_LIBRARY_MEMBER %s 2\u003e\u00261 | FileCheck -check-prefix=LIBRARY %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-calling-conv.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-intrinsic-to-libcall-errors.td",
+      "run": "not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_DUP_INTRINSIC %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-DUP %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_NO_LIBCALL %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-NO-LIBCALL %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_NO_LIBCALL_NO_INTRINSIC %s 2\u003e\u00261 | FileCheck -check-prefix=ERR-NO-LIBCALL-NO-INTRIN %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-intrinsic-to-libcall.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-by-name.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-default-cc.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-dispatch.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-exclusion.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-grouping.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-isolated.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-name-merge.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-library-unreferenced.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-multiple-impls.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s 2\u003e %t.err | FileCheck %s ; count 0 \u003c %t.err",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-nested-predicates-error.td",
+      "run": "not llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s 2\u003e\u00261 | FileCheck -check-prefix=ERR %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-predicate-cc-sort.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-predicate-dag-errors.td",
+      "run": "not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_NOT_ATOM %s 2\u003e\u00261 | FileCheck -check-prefix=NOT-ATOM %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_BAD_OP %s 2\u003e\u00261 | FileCheck -check-prefix=BAD-OP %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_NOT_ARITY %s 2\u003e\u00261 | FileCheck -check-prefix=NOT-ARITY %s ; not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_EMPTY %s 2\u003e\u00261 | FileCheck -check-prefix=EMPTY %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-predicate-dag.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-variant-beats-exclusion.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter-vector-mask-argument.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/RuntimeLibcallEmitter.td",
+      "run": "llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SchedModelError.td",
+      "run": "not llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SetTheory.td",
+      "run": "llvm-tblgen -print-sets %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8a8f2555afb7626f9db027e07d9f318a2fa1915fa337e2acfb78c8ff11a91c9a",
+        "out_len": 21340
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SiblingForeach.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "320df588d86f74895b11e1f918f2c72b6c69de83900bfa07e918baedede92bfc",
+        "out_len": 8171
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/Slice.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7b09212e8277429ed53bee609cff34d23124d98816694b833e75020408b8bfae",
+        "out_len": 7071
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/String.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "254337434d41cbeaf98405c11738d1e1ca4af124e2c7ba5950e7de721cdad3d8",
+        "out_len": 52
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SubRegsAndAliases.td",
+      "run": "llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2\u003e\u00261 \u003e/dev/null | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SubRegsLaneBitmask.td",
+      "run": "not llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2\u003e\u00261  | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SubtargetFeatureUniqueNames.td",
+      "run": "not llvm-tblgen -gen-subtarget -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SuperSubclassSameName.td",
+      "run": "llvm-tblgen \u003c %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "487ffc818b4f7ec04be2f4a22570836ad8824482bb4d61355b76af1756f43172",
+        "out_len": 379
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/SystemZInsnDirectiveEmitter.td",
+      "run": "llvm-tblgen -gen-insn-directive-match-table %p/../../lib/Target/SystemZ/SystemZ.td \\ ; -I %p/../../lib/Target/SystemZ -I %p/../../include | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/TargetInstrInfo.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8635edb8af9648a28967f07d29605ba19723884adae742efe6ec63afa16717ab",
+        "out_len": 14147
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/TargetInstrSpec.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "75bcf637a5a880e8c0db4a47fb11c2d697eab9e2d65a9ac7b189dd71ca9946b5",
+        "out_len": 7203
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/TargetLibraryInfo.td",
+      "run": "llvm-tblgen -gen-target-library-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/TemplateArgRename.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2dcc0fe626b72ba701c5fe284201b64dc637d658f55217b1fd703619b698f3df",
+        "out_len": 188,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/TemplateArgRename.td:6:18: warning: unused template argument: Before:XX"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/Tree.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "25d43add0ad740b5634f69f34b72d6c5fd0e643b0a7b8ac5961861dff9985464",
+        "out_len": 1590
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/TreeNames.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "d2a0529bcc88c6856a3c20a377a4478a77eef5d1b7e2dc82f6e942f0b93f5ab5",
+        "out_len": 1105
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/TwoLevelName.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "952a46a25504d02330c2c531c7149a782248cef52934b5ac4239cae3e349bf5c",
+        "out_len": 1713
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/UnsetBitInit.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2fed684b81b251cb2c3c1d1d833c41ff2ed05588b525d761b8d7ebe1df279824",
+        "out_len": 577
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/UnterminatedComment.td",
+      "run": "not llvm-tblgen \u003c %s \u003e /dev/null 2\u003e\u00261",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/UnterminatedComment.td:5:1: error: unterminated comment",
+        "err_line": 5
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ValidIdentifiers.td",
+      "run": "llvm-tblgen -gen-ctags %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "457a45913b30195b74bb8cb4fa462ed87797727fc00f39708a9b895e5cac8422",
+        "out_len": 527
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ValueTypeByHwModeMissingRegInfo.td",
+      "run": "not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -o - 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/VarLenEncoder.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/VarLenEncoderHwModes.td",
+      "run": "llvm-tblgen -gen-emitter -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/aarch64-apple-tuning-features.td",
+      "run": "llvm-tblgen -print-records %p/../../lib/Target/AArch64/AArch64.td -I %p/../../lib/Target/AArch64 -I %p/../../include \\ ; | awk '{gsub(/\\[/,\"[\\n\"); gsub(/, /,\",\\n\"); print}' \\ ; | FileCheck %s --implicit-check-not=\"def TuneApple\"",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/aarch64-register-info-stats.td",
+      "run": "llvm-tblgen -gen-register-info -stats \\ ; -I %p/../../lib/Target/AArch64 -I %p/../../include \\ ; %s -o %t.inc 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/address-space-patfrags.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include %s 2\u003e\u00261 | FileCheck -check-prefix=SDAG %s ; llvm-tblgen -gen-global-isel -optimize-match-table=false -I %p/../../include %s -o - \u003c %s | FileCheck -check-prefix=GISEL %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ambiguous-composition.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/anonymous-location.td",
+      "run": "llvm-tblgen --print-detailed-records %s | FileCheck %s -DFILE=%{s:basename}",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8a3db77dbae0e704437997e8142c2593e5f778b43f74638efa3d705d00a5469b",
+        "out_len": 473
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/arithmetic.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "9b3700129fbe9453214692a9d1805fca4da5834044d4ab08108abab51d5d60ff",
+        "out_len": 474
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/assert.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/assert.td:11:8: error: assertion failed: primary name is too long: Name",
+        "err_line": 11
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/atomic-store-trunc-patfrags.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s | FileCheck -check-prefix=SDAG %s ; llvm-tblgen -gen-global-isel -optimize-match-table=false -I %p/../../include -I %p/Common %s | FileCheck -check-prefix=GISEL %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/bare-minimum-psets.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast-list-initializer.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7d1d696607f2fd63058fc16c2f9aa3d39f13366b05906c5d3e87413d078b692a",
+        "out_len": 241
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast-multiclass.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8ffc2a5001d99beb1b6aa25b21784e5a25f2195ad2a3e62617805e849daadb2d",
+        "out_len": 753
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast-string.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2d9ec93c791c33f4575432efe05cfd628a107d3749a19bc0a784bc8ea198fdd3",
+        "out_len": 778
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast-typeerror.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast-typeerror.td:13:5: error: Expected type 'B', got 'A' in: !cast\u003cB\u003e(\"A0\")",
+        "err_line": 13
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "873fd6b7a21d0bdc8df94e5a0067289ea103cc4eecc2cce5fc2f268156163fbd",
+        "out_len": 8954
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cc-assign-to-reg-tuple.td",
+      "run": "llvm-tblgen -gen-callingconv -I %p/../../include -I %p/Common %s | FileCheck %s ; not llvm-tblgen -gen-callingconv -DERROR1 -I %p/../../include -I %p/Common %s 2\u003e\u00261 | FileCheck --check-prefix=CHECK-ERROR1 %s ; not llvm-tblgen -gen-callingconv -DERROR2 -I %p/../../include -I %p/Common %s 2\u003e\u00261 | FileCheck --check-prefix=CHECK-ERROR2 %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/check-duplicate-tuple-regs.td",
+      "run": "not llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/code.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "4216cecede42d93cd281e0c01b60402fe4cca4b102d5e29506765259a713fd88",
+        "out_len": 882
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/compare.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "39a4d048a6c0d1b9a05acd860c16cb799367330d03605aaf13851dce11ddd2c7",
+        "out_len": 2597
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-bitlist.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "9c4762cd354c28828a79d67e5690d9ba093111794cdd3e7057e99fdd4c1bc0e8",
+        "out_len": 682
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-default.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-default.td:9:5: error: Zero does not have any true condition in:!cond(0: \"negative\", 0: \"positive\")",
+        "err_line": 9
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-empty-list-arg.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "655d127696c6a4460cf0a733d01e65e9b57d1bb5f8fdbddf56f251f1059f4a65",
+        "out_len": 353
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-inheritance.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7231bbf0977318bfd90c0971a8dbceebb6bce3068c05bcfdce626bdeda575392",
+        "out_len": 481
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-let.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "6d564c04be755c6d05570f285f576cc62486f12451e81b98fcf667577dd2fc03",
+        "out_len": 690
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-list.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "232f6a953dd072ba0fb3bcfff908a1d9607e5f715736e5ca30c3485bbbe468d4",
+        "out_len": 714
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-subclass.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "eb942a0dd7c1c264c6f32d2bee2b1603d9007a7503317c00b7ab34658fdf4c73",
+        "out_len": 656,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-subclass.td:5:13: warning: unused template argument: E:dummy"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-type.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-type.td:3:13: warning: unused template argument: A:dummy",
+        "err_line": 9
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cond-usage.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "ba088ab4d9e984fa1874a87e3b52b26d4bf20a937eb3ec2033add46fcaf6207b",
+        "out_len": 670
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/condsbit.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "127bed93dc8904de32cf01b09dfa9d304b232bc3c17987fb7a74f268ecffc979",
+        "out_len": 297
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-functional.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "9ea293747f2f4adbdd3c9306e241c4fb54ac8156ef5a0f140b60b02f8bb84985",
+        "out_len": 4066
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-isel-complexpattern.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-isel-instrument.td",
+      "run": "llvm-tblgen -gen-dag-isel -instrument-coverage -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-isel-regclass-emit-enum.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-isel-res-order.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-isel-subregs.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-pattern-crash-on-set.td",
+      "run": "not llvm-tblgen -gen-dag-isel -I %p/../../include -o /dev/null %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-pattern-invalid-instruction-result.td",
+      "run": "not llvm-tblgen -gen-instr-info -I %p/../../include %s -o /dev/null 2\u003e\u00261 | FileCheck %s ; llvm-tblgen -gen-instr-info -I %p/../../include %s -DVALID_RESULT -o /dev/null ; not llvm-tblgen -gen-dag-isel -I %p/../../include %s -o /dev/null 2\u003e\u00261 | FileCheck %s ; llvm-tblgen -gen-dag-isel -I %p/../../include %s -DVALID_RESULT -o /dev/null",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-subst.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "803cd2709dec954f10b1680da8410491d145112e962100585a20321d7478ad16",
+        "out_len": 1974
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/def-multiple-operands.td",
+      "run": "llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defm-dump-parent-class.td",
+      "run": "llvm-tblgen %s -o - 2\u003e\u00261 \u003e/dev/null | FileCheck %s -DFILE=%s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "bc87d6d627544595ba56566bc2d2d9262abf6ec8d3819f96acb3df7ba6fed2e0",
+        "out_len": 549,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defm-dump-parent-class.td:11:3: note: one"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defmclass.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b67d924e26b8c60a7cb1ef47884644afe16820f15d6977eb2db7959f062ad988",
+        "out_len": 1947,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defmclass.td:42:30: warning: unused template argument: SomeAnonymous::x"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defset-typeerror.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defset-typeerror.td:12:7: error: adding record of incompatible type 'A' to defset",
+        "err_line": 12
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defset.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b2fb00de1b02584c5833605da17d04535cebf5fc5f6b6ee8e153c314e858f39f",
+        "out_len": 3025
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/deftype.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s ; not llvm-tblgen -DERROR5 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR5 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "9d3b9e6c3e7e403211ff0ae7802bc88f07b5a731a32f70296085c9ebc16c4abe",
+        "out_len": 1046
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defvar.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s ; not llvm-tblgen -DERROR5 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR5 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "6ddd1541d2d4ce3673443cd7f003afe0eb93376954de29f1d121487a1be75aaa",
+        "out_len": 3776
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/depfile.td",
+      "run": "llvm-tblgen -print-records %s -o %t.out -d %t.d ; FileCheck %s --input-file=%t.d ; llvm-tblgen -print-records - -o %t.stdin.out -d %t.stdin.d \u003c %s ; FileCheck %s --check-prefix=STDIN --input-file=%t.stdin.d",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "d355caed057e7c8db76936a8863d51752592885160bd31165feb530e8302c23c",
+        "out_len": 149
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/detailed-records.td",
+      "run": "llvm-tblgen -print-detailed-records %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "c6ee28ca20e1a8dd00b97472fdb72ed8e1192c3efd89c80bfc3350602110ee70",
+        "out_len": 572,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/detailed-records.td:34:18: warning: unused template argument: Class3:Arg"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/directive1.td",
+      "run": "llvm-tblgen -gen-directive-decl -I %p/../../include %s | FileCheck -match-full-lines %s ; llvm-tblgen -gen-directive-impl -I %p/../../include %s | FileCheck -match-full-lines %s -check-prefix=IMPL",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/directive2.td",
+      "run": "llvm-tblgen -gen-directive-decl -I %p/../../include %s | FileCheck -match-full-lines %s ; llvm-tblgen -gen-directive-impl -I %p/../../include %s | FileCheck -match-full-lines %s -check-prefix=IMPL",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/directive3.td",
+      "run": "not llvm-tblgen -gen-directive-decl -I %p/../../include %s 2\u003e\u00261 | FileCheck -match-full-lines %s ; not llvm-tblgen -gen-directive-impl -I %p/../../include %s 2\u003e\u00261 | FileCheck -match-full-lines %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dump.td",
+      "run": "llvm-tblgen %s -o -  2\u003e\u00261 \u003e/dev/null | FileCheck %s -DFILE=%s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "9bcd2d5bff2fa603118068aba1b4881e53dfa2754032106263d2e2ad765b7b51",
+        "out_len": 2423,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dump.td:4:1: note: Debug message"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/duplicate-include.td",
+      "run": "llvm-tblgen -I %p %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/empty-psets.td",
+      "run": "not llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/empty.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "41b31d02a187333d45c0155b88eb778e466b6a6104c62a5ac19a38891e9ad7d7",
+        "out_len": 1373
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eof-after-endif.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eof-after-endif.td:10:7: error: reached EOF without matching #endif",
+        "err_line": 10
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eq-unset.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eq-unset.td:8:15: error: expected value to be a typed value, got '?'",
+        "err_line": 8
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eq.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "85841d569d41168cfb2c63319a1b66162d768b263bc7f9b495d3b4d02340f974",
+        "out_len": 450
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/eqbit.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2f58de61db42d657256aec07164031ccd89cf7978a819891b04ca812d38b1412",
+        "out_len": 275
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/escape-dependency-filenames.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t \u0026\u0026 cd %t ; env LLVM_WINDOWS_PREFER_FORWARD_SLASH=0 llvm-tblgen \\ ; -d out.d -o 'out #$.td' 'main #$.td' ; FileCheck %s --input-file=out.d --match-full-lines ; env LLVM_WINDOWS_PREFER_FORWARD_SLASH=1 llvm-tblgen \\ ; -d out.d -o 'out #$.td' 'main #$.td' ; FileCheck %s --input-file=out.d --match-full-lines \\ ; %if system-windows %{ --check-prefix=FORWARD %}",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/escape-dependency-filenames.td:38:9: error: could not find include file 'normal-file.td'",
+        "err_line": 38
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-non-string.td",
+      "run": "not llvm-tblgen --no-warn-on-unused-template-args %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-non-string.td:7:27: error: expected string type argument in !exists operator",
+        "err_line": 7
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-record.td",
+      "run": "not llvm-tblgen --no-warn-on-unused-template-args %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-record.td:7:27: error: expected string type argument in !exists operator, please use !isa instead",
+        "err_line": 7
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-uninitialized.td",
+      "run": "not llvm-tblgen --no-warn-on-unused-template-args %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-uninitialized.td:7:27: error: expected string type argument in !exists operator",
+        "err_line": 7
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "134cda486f8dd37ec22e9edde1c7bedb85f533f8ee69f375ed242f9b58167e60",
+        "out_len": 1869
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/field-access-initializers.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "5c9cfb0fc22510a0e5a6a69ff5f25fafd465ebe15f1bf90c6bdfb92232ed362e",
+        "out_len": 338
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/field-keyword.td",
+      "run": "not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/filter.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "1a8b6ea4f1f93d7e4f9fd33af19eab5665812b1dbbe6f3886d52fc04da6ac6e3",
+        "out_len": 2364
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/find.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "93bd483b565582130d76555e2702f8cb94e630bec8391a131849e66a97bb855f",
+        "out_len": 787
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foldl.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "550c491b2c2b374d12b39a32a6c341a3960f31f7b0c8a4629825e065712b66cc",
+        "out_len": 1345
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-eval.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b88894f1f873fe39ae5c38262d98350d1643e14bca38444a36ba746cda53dede",
+        "out_len": 2735
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-leak.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "78a60779720364720a952a315dc289df1f3fd241ac23bb29adb9903ed3e36892",
+        "out_len": 507
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-multiclass.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "e06f5a2be5be06b1792f84feec1460b9683070b05c4a7bf7e9a7e12cd8f6e3f2",
+        "out_len": 3191
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors0.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck -DFILE=%s %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors0.td:17:22: error: Unknown or reserved token when parsing a value",
+        "err_line": 17
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors1.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck -DFILE=%s %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors1.td:5:20: error: invalid range, cannot be negative",
+        "err_line": 5
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors2.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck -DFILE=%s %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors2.td:11:38: error: invalid range, cannot be negative",
+        "err_line": 11
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors3.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck -DFILE=%s %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors3.td:5:21: error: expected integer or bitrange",
+        "err_line": 5
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors4.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck -DFILE=%s %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors4.td:6:17: error: Variable not defined: 'foo'",
+        "err_line": 6
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors5.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck -DFILE=%s %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors5.td:5:23: error: expected integer or bitrange",
+        "err_line": 5
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-variable-range.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "9df6e089021bcfddf185a8b9e4e0881ac67dff9979db1f96f4b48b15750eb0ce",
+        "out_len": 8141
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "993f3922d09f2b09990f39d467c4e6d0bd4283c33d9493e51f6663723c9fa567",
+        "out_len": 1211
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/generic-tables-instruction.td",
+      "run": "llvm-tblgen -gen-searchable-tables -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/generic-tables-return-range.td",
+      "run": "llvm-tblgen -gen-searchable-tables -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/generic-tables.td",
+      "run": "llvm-tblgen -gen-searchable-tables -I %p/../../include %s | FileCheck %s ; not llvm-tblgen -gen-searchable-tables -I %p/../../include -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/get-named-operand-idx.td",
+      "run": "llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/get-operand-type-no-expand.td",
+      "run": "llvm-tblgen -gen-instr-info -I %p/../../include %s \\ ; -instr-info-expand-mi-operand-info=1 \\ ; | FileCheck %s --check-prefix=CHECK-EXPAND ; llvm-tblgen -gen-instr-info -I %p/../../include %s \\ ; -instr-info-expand-mi-operand-info=0 \\ ; | FileCheck %s --check-prefix=CHECK-NOEXPAND",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/get-operand-type.td",
+      "run": "llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getRegClassFromMatchKind.td",
+      "run": "llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s --check-prefixes=CHECK,UNIQUE ; llvm-tblgen -gen-register-info -I %p/../../include %s -o %t.inc ; FileCheck %s --check-prefix=REGINFO-ENUM --input-file=%tEnums.inc ; FileCheck %s --check-prefix=REGINFO-DESC --input-file=%tMCDesc.inc ; llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DAMBIGUOUS | FileCheck %s --check-prefixes=CHECK",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getbit-cond.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "4d4d643c66ecafee7670b83c7497a5af12cf0202ff05284fcce80476689f3ce9",
+        "out_len": 214
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getbit-foldl.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "a4809f7ee226c5c2a5f28451f210946f35215d4bbddba2fab65a4ff4a99a2fbd",
+        "out_len": 215
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s ; not llvm-tblgen -DERROR5 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR5 %s ; not llvm-tblgen -DERROR6 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR6 %s ; not llvm-tblgen -DERROR7 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR7 %s ; not llvm-tblgen -DERROR8 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR8 %s ; not llvm-tblgen -DERROR9 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR9 %s ; not llvm-tblgen -DERROR10 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR10 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "954999afbafd0e8495ff13451b46dd282333b4023052668eee4f86a6695fdef9",
+        "out_len": 6664
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-empty-list-arg.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "947f70f47ae90fc7932964cb9ab826222be937dc9cda50057d1049403a5209cb",
+        "out_len": 52
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-type.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-type.td:3:13: warning: unused template argument: A:dummy",
+        "err_line": 9
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-unresolved-cast.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "error: Undefined reference to record: ''"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "3228cf621968dde8c7739d029a08f1b165b368a12f489a55cfc61ea724e9b18a",
+        "out_len": 3180,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if.td:85:13: warning: unused template argument: E:dummy"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ifbit.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "3f5a81d271ac794a9883a1f0deea54f7209bab43e886195341ad4f45a509a4f5",
+        "out_len": 291
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ifdef-cr-instead-of-newline.td",
+      "run": "printf \"#ifdef FOO\\rhello\\r#endif\\r#endif\\r\" | not llvm-tblgen 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ifstmt.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "828fe5c5f3dbfdc40af6095b20deca3d13faaaf4a511fa9f64bf570d55c7d64a",
+        "out_len": 1661
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/incompatible-field-override.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/incompatible-field-override.td:15:14: error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'",
+        "err_line": 15
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/inhibit-pset.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/initialized.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "f05bbf1128dde9c953556bd755318e220aafd2cdc9bea7627fc671cf600bb84a",
+        "out_len": 1470
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/instances.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "023b99b44584486a33a2e4239cddab8bfceccc9418a5b513a2a65e2673d02f99",
+        "out_len": 5477,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/instances.td:97:13: warning: unused template argument: D:n"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/interleave.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7b74cf34ff75665d930352e8bf0cb83ab7a40b126a34bc774c94a952fa8d0f9f",
+        "out_len": 1530
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-arginfo.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-attr-errors.td",
+      "run": "not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DFN_ATTR %s 2\u003e\u00261 | FileCheck --check-prefix=FN-ATTR %s ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DPARAM_ATTR %s 2\u003e\u00261 | FileCheck --check-prefix=PARAM-ATTR %s ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DRET_ATTR %s 2\u003e\u00261 | FileCheck --check-prefix=RET-ATTR %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-attrs.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-default-args.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NEGATIVE 2\u003e\u00261 | FileCheck %s --check-prefix=ERR-NEGATIVE ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_RANGE 2\u003e\u00261 | FileCheck %s --check-prefix=ERR-RANGE ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NONINT 2\u003e\u00261 | FileCheck %s --check-prefix=ERR-NONINT ; llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DTEST_OVERLOADED | FileCheck %s --check-prefix=OVERLOADED ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_GAP 2\u003e\u00261 | FileCheck %s --check-prefix=ERR-GAP",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-duplicate-name.td",
+      "run": "not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-long-name.td",
+      "run": "llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-manual-name.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-overload-conflict.td",
+      "run": "llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s ; not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DCONFLICT 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK-CONFLICT",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-overload-dependent-type-validation.td",
+      "run": "not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST0 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK-TEST0 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST1 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK-TEST1 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST2 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK-TEST2 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST3 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK-TEST3 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST4 2\u003e\u00261 | FileCheck %s -DFILE=%s --check-prefix=CHECK-TEST4",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-overload-index-oor.td",
+      "run": "not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST0 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST0 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST1 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST1 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST2 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST2 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST3 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST3",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-prefix-error.td",
+      "run": "not llvm-tblgen -gen-intrinsic-enums --intrinsic-prefix=gen3 -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-rangeset-errors.td",
+      "run": "not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DEMPTY %s 2\u003e\u00261 | FileCheck --check-prefix=EMPTY %s -DFILE=%s ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DBAD_BOUNDS %s 2\u003e\u00261 | FileCheck --check-prefix=BAD-BOUNDS %s -DFILE=%s ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DOVERLAP %s 2\u003e\u00261 | FileCheck --check-prefix=OVERLAP %s -DFILE=%s ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DMISSING_IMMARG %s 2\u003e\u00261 | FileCheck --check-prefix=MISSING-IMMARG %s -DFILE=%s ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DDUPLICATE %s 2\u003e\u00261 | FileCheck --check-prefix=DUPLICATE %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-rangeset.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-struct.td",
+      "run": "llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-ENUM ; llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s  | FileCheck %s --check-prefix=CHECK-IMPL ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DENABLE_ERROR 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-ERROR",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-target-features.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-target-prefix-for-target-independent.td",
+      "run": "not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s 2\u003e\u00261 | FileCheck %s -DFILE=%s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-varargs-validation.td",
+      "run": "not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST0 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST0 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST1 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST1 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST2 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST2 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST3 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST3 ; not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST4 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST4",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/intrinsic-varargs.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/invalid-macro-name-command-line.td",
+      "run": "not llvm-tblgen %s -DMACRO=1 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST-1 ; not llvm-tblgen %s -D0MAC 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST-2 ; not llvm-tblgen %s -D_MAC# 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST-3 ; not llvm-tblgen %s -D 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-TEST-4",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/invalid-type-cast-patfrags.td",
+      "run": "not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/invalid_typecast_assert.td",
+      "run": "not llvm-tblgen -gen-dag-isel -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/isa-non-primary.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "633d89457e03910c21f48da721ce60ab99c6b15a45236fcaa1d52fdf0fca185e",
+        "out_len": 626
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/isa.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "6999fbb541ca3e7847218d2966c6bb0749ddb9cfd4474cbe83ce67e7a5476d4a",
+        "out_len": 1067,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/isa.td:21:13: warning: unused template argument: A:dummy"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-append-bitrange-error.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-append-bitrange-error.td:11:14: error: Cannot use append/prepend with bit range",
+        "err_line": 11
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-append-error.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-append-error.td:11:14: error: Cannot append to field 'count' of type 'int' (expected list, string, code, or dag)",
+        "err_line": 11
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-append-toplevel.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "5096f429435f7b5dc099acb5046e8f193a5b5e73aeb5831889d072c987c18187",
+        "out_len": 1340
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-append.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "80fc551d2832aa72cd247e4da2f9838ddd360a4ad4e88e29e5cbfada47fd9897",
+        "out_len": 5090
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-prepend-error.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/let-prepend-error.td:11:15: error: Cannot prepend to field 'count' of type 'int' (expected list, string, code, or dag)",
+        "err_line": 11
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/letUnknownValue.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s --strict-whitespace",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/letUnknownValue.td:5:7: error: Value 'abc' unknown!",
+        "err_line": 5
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/lisp.td",
+      "run": "llvm-tblgen %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2f20f59b27df5209c72e85c38c2e47df516d654702216b666682b0021f140892",
+        "out_len": 550
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/list-element-bitref.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8f9a6c29caf586c4cb86623c765dfcfa1cb5c53bfbdd56e222a03466ec9c849e",
+        "out_len": 200
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listconcat.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "214e62d5d8b33f65606532c4e6e356859b1f5ed359406ddbd644a9c646db72bf",
+        "out_len": 578
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listflatten-error.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s  -DFILE=%s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listflatten-error.td:5:33: error: expected list type argument in unary operator",
+        "err_line": 5
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listflatten.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "f89df01103ea0b752b253002c2d3cccec3cac7aa3221229ee1f6dd42791cfeb6",
+        "out_len": 441
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listpaste.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "99700d6e87ea47f983c958f44da70d2bac08707cb5c81e046fb6c58c62beb584",
+        "out_len": 682
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listremove.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "1687a94b483f624fc8abc7ca89e3c180ecbbd8cd365d2c4968111026989cc97e",
+        "out_len": 52
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/listsplat.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "ddf9c2c3731c7f015c854cbc5daca7c42485533b9638600713badb2c6b98cc7d",
+        "out_len": 1644
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/match.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "f9d65587705e9bcf5c6b1c5bad9f21187d24fe50b6a2221896ea7ac47709ef2e",
+        "out_len": 164
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/math.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s ; not llvm-tblgen -DERROR5 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR5 %s ; not llvm-tblgen -DERROR6 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR6 %s ; not llvm-tblgen -DERROR7 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR7 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "cea97a8226f489a85df80d86d88a59981d3acd954578cf013a8e48db2f29036b",
+        "out_len": 3580
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/multiple-type-casts-patfrags.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s | FileCheck -check-prefix=SDAG %s ; llvm-tblgen -gen-global-isel -optimize-match-table=false -warn-on-skipped-patterns -I %p/../../include -I %p/Common %s -o - \u003c %s | FileCheck -check-prefix=GISEL %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/name-resolution-consistency.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b70d36976b9678d1448f4c45e8319af14583b652fcab8b6aea9e23f15af31ee4",
+        "out_len": 2089
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/named-arguments.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s ; not llvm-tblgen -DERROR5 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR5 %s ; not llvm-tblgen -DERROR6 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR6 %s ; not llvm-tblgen -DERROR7 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR7 %s ; not llvm-tblgen -DERROR8 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR8 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2c86406f5f86add116d053f53339bdda52c64f4d91ec91e3fd2dbce6feacd22a",
+        "out_len": 3518
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/nested-comment.td",
+      "run": "llvm-tblgen \u003c %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7377d33c4b549cffab02177fd5c2bd980a491cbeda74760145274d43bb3d256a",
+        "out_len": 148
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/nested_ifdef_main.td",
+      "run": "llvm-tblgen -I %p %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/nul-char.td",
+      "run": "cat %s | tr '@' '\\0' \u003e %t ; not llvm-tblgen -DERROR1 %t 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/opt-parser-alias-of.td",
+      "run": "not llvm-tblgen -gen-opt-parser-defs -I %p/../../include %s -DUNKNOWN 2\u003e\u00261 | FileCheck %s --check-prefix=UNKNOWN ; not llvm-tblgen -gen-opt-parser-defs -I %p/../../include %s -DCONDITION 2\u003e\u00261 | FileCheck %s --check-prefix=CONDITION",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/paste-reserved.td",
+      "run": "not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/pr8330.td",
+      "run": "llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "ddc4b03faffc2428dba5c970dcaada6feb814d60940b9588d6a23392e6c949a1",
+        "out_len": 515,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/pr8330.td:7:22: warning: unused template argument: Whatev:x"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/predicate-patfags.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s 2\u003e\u00261 | FileCheck -check-prefixes=SDAG,SCUSTOM %s ; llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s -DHASONEUSE 2\u003e\u00261 | FileCheck -check-prefixes=SDAG,SBUILTIN %s ; llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s 2\u003e\u00261 | FileCheck -check-prefixes=GISEL,GCUSTOM %s ; llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s -DHASONEUSE 2\u003e\u00261 | FileCheck -check-prefixes=GISEL,GBUILTIN %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag1.td",
+      "run": "not llvm-tblgen -DDIAG1 -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG1 %s ; not llvm-tblgen -DDIAG4 -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG4 %s ; not llvm-tblgen -DDIAG2 -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG2 %s ; not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG3 %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag10.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag13.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag14.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag2.td",
+      "run": "not llvm-tblgen -DDIAG1 -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG1 %s ; not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG2 %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag3.td",
+      "run": "not llvm-tblgen -DDIAG1 -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG1 %s ; not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck --check-prefixes=DIAG2 %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag4.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag5.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag6.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag7.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag8.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag9.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef-diag-1.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef-diag-1.td:4:9: error: expected macro name after #ifndef",
+        "err_line": 4
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef-diag-2.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef-diag-2.td:4:15: error: only comments are supported after #ifndef NAME",
+        "err_line": 4
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef.td",
+      "run": "llvm-tblgen %s -DMACRO | FileCheck %s ; llvm-tblgen %s | FileCheck %s --check-prefix=CHECK-NOMACRO",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "6e8f4b3be1c8727fb2ce44301bef5007ae9c59b8b22fe02031c53786714aa1c6",
+        "out_len": 156
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-region-processing.td",
+      "run": "llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s --implicit-check-not warning:",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t/inc %t/main.td -o %t/out.td -d %t/out.d ; FileCheck %s --input-file=%t/out.d --match-full-lines -DDIR=%t ; llvm-tblgen -I %t/inc %t/main.td -o %t/out.td -d %t/out2.d ; cmp %t/out.d %t/out2.d ; not llvm-tblgen -E -I %t/inc %t/main.td -d %t/out.d 2\u003e\u00261 | FileCheck %s --check-prefix=NO-OUTPUT",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-errors.td",
+      "run": "echo '/* unterminated' | not llvm-tblgen -E 2\u003e\u00261 | FileCheck %s --check-prefix=COMMENT ; echo 'include \"foo\"' | not llvm-tblgen -E 2\u003e\u00261 | FileCheck %s --check-prefix=INCLUDE ; echo '!foo' | not llvm-tblgen -E 2\u003e\u00261 | FileCheck %s --check-prefix=OPERATOR ; echo '#else' | not llvm-tblgen -E 2\u003e\u00261 | FileCheck %s --check-prefix=ELSE",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-format.td",
+      "run": "llvm-tblgen -E %s | FileCheck %s --match-full-lines --strict-whitespace ; llvm-tblgen -E %s -o %t.td ; llvm-tblgen %s -o %t1 ; llvm-tblgen %t.td -o %t2 ; cmp %t1 %t2 ; echo '// Only a comment.' | llvm-tblgen -E | count 0",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "0b6eff70b0cd9b7aeb7cab1969aa9d8d83aff674dd4063616c9d38d378b9a3c9",
+        "out_len": 2381
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-include.td",
+      "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t %t/main.td | FileCheck %s --match-full-lines --strict-whitespace ; llvm-tblgen -E -I %t %t/multi.td | FileCheck %s --check-prefix=MULTI --match-full-lines --strict-whitespace",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-macros.td",
+      "run": "llvm-tblgen -E %s | FileCheck %s --check-prefix=NONE --match-full-lines --strict-whitespace ; llvm-tblgen -E %s -DA | FileCheck %s --check-prefix=A --match-full-lines --strict-whitespace ; llvm-tblgen -E %s -DA -DB | FileCheck %s --check-prefix=AB --match-full-lines --strict-whitespace",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "21c408f35af32670a5168ccb85e830840f717cd47caaf84ccc2c3101c8e357b4",
+        "out_len": 272
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/pset-enum.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s ; llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common -DUSE_NAMESPACE %s | FileCheck --check-prefixes=CHECK,NAMESPACE %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/pseudo-inst-expansion.td",
+      "run": "llvm-tblgen -gen-pseudo-lowering -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-lists.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "45e979b6263d496efd128dc087697a15a559b5f750682c0cd57348fe74972447",
+        "out_len": 2473
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-op-fail.td",
+      "run": "not llvm-tblgen %s -DERR_LIST_INT 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR_LIST_INT ; not llvm-tblgen %s -DERR_INT_LIST 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR_INT_LIST ; not llvm-tblgen %s -DERR_TOO_MANY_ARGS 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR_TOO_MANY_ARGS ; not llvm-tblgen %s -DERR_UNEXPECTED_TYPE_0 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR_UNEXPECTED_TYPE_0 ; not llvm-tblgen %s -DERR_UNEXPECTED_TYPE_1 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR_UNEXPECTED_TYPE_1 ; not llvm-tblgen %s -DERR_UNEXPECTED_TYPE_2 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR_UNEXPECTED_TYPE_2 ; not llvm-tblgen %s -DERR_EMPTY_ARG 2\u003e\u00261 | FileCheck -DFILE=%s %s --check-prefix=ERR_EMPTY_ARG",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/range-op.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "a20108298a7e34ec8c9ad19b1d04dfd35bd0dab75a02119ae9a03d7078c53f41",
+        "out_len": 506
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/rc-weight-override.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/regunit-intervals-impossible.td",
+      "run": "not llvm-tblgen -gen-register-info -I %p/../../include %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/regunit-intervals.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/repr.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "25b2eee1bd3f0718729009b8f7be58fd07c9d3599ec70bd1b02d2fb5f83c9af7",
+        "out_len": 1238
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/riscv-target-def.td",
+      "run": "llvm-tblgen -gen-riscv-target-def -I %p/../../include %s | FileCheck %s ; not llvm-tblgen -gen-riscv-target-def -DDUPLICATE -I %p/../../include %s 2\u003e\u00261 | FileCheck %s --check-prefix=DUPLICATE",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/searchabletables-intrinsic.td",
+      "run": "llvm-tblgen -gen-searchable-tables -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/searchabletables-multi-string-key.td",
+      "run": "llvm-tblgen -gen-searchable-tables -I %p/../../include %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference-recursion.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference-recursion.td:8:5: error: Attempting to access field 'x' of 'A0' is a forbidden self-reference",
+        "err_line": 8
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference-typeerror.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference-typeerror.td:13:15: error: Value specified for template argument 'Cl:rec' is of type {}; expected type Cl: !cast\u003c{}\u003e(\"Rec0\")",
+        "err_line": 13
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/self-reference.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "01cecfaa8e666ccb2f0dd81e00b220464603841f5cd3d24f158c827cb1bd0d25",
+        "out_len": 2592
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/simplify-patfrag.td",
+      "run": "llvm-tblgen -gen-dag-isel -I %p/../../include %s 2\u003e\u00261 | FileCheck %s ; llvm-tblgen -gen-dag-isel -I %p/../../include -DIGNORE %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/size.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8e0b924eb31b1f37e6b412f88c578d985e8d895b05e17f1b384aeefd5a3bd911",
+        "out_len": 1706
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/sort.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR_NONLIST %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR_NONLIST %s ; not llvm-tblgen -DERROR_KEYTYPE %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR_KEYTYPE %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "940e5190f9c2da58b8aedb6655fa1ab79998f805c78604a55641cec707bf7621",
+        "out_len": 2015
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/spurious-semi.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "53dbe54bf3f243a6145b6d3c4df8336d179b4d299ee69e44e6f14cb0015b2091",
+        "out_len": 164
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/strconcat.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "6a248135957debd375a2f7af6d48d071551aff95603a7ba87d8e98f15731665b",
+        "out_len": 198
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/string_ops.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "ad99573b32238607e1e3b259726f0676f54a5b372ed2a0e8a0a3196a8a8c7128",
+        "out_len": 885
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/submulticlass-leteq.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "f4d5a1039a410cb1dce0c62f913760ae3f5858f85c71d6e9436cd3bc4c321a33",
+        "out_len": 353
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/submulticlass-typecheck.td",
+      "run": "not llvm-tblgen %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 1,
+        "class": "invalid",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/submulticlass-typecheck.td:10:30: error: Value specified for template argument 'B::op' is of type bits\u003c4\u003e; expected type bits\u003c8\u003e: C::op",
+        "err_line": 10
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/subreg-index-overflow-allowed.td",
+      "run": "llvm-tblgen -gen-register-info -I %p/../../include %s -o - | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/subreg-index-overflow.td",
+      "run": "not llvm-tblgen -gen-register-info -I %p/../../include %s -o /dev/null 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/subst.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "770f7f155baeb9300d764b1440601038e4acf7f351f071b808f1ba2f2a8e6eb5",
+        "out_len": 1532
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/subst2.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "2d935bfbe80c559b54ea541d404ac1756fb406b81da1337bbaa62c3dd3d513c8",
+        "out_len": 515
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/substr.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7aa46f23d91ae3228523c2c2d55445ff9c865747d54702989ec66029e9849849",
+        "out_len": 933
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/switch.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR_NO_DEFAULT %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR_NO_DEFAULT %s ; not llvm-tblgen -DERROR_NO_CASE %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR_NO_CASE %s ; not llvm-tblgen -DERROR_VAL_TYPE %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR_VAL_TYPE %s ; not llvm-tblgen -DERROR_KEY_TYPE %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR_KEY_TYPE %s ; not llvm-tblgen -DERROR_ALL_UNSET %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR_ALL_UNSET %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "7624b21d02bfb07af0b0319db945eb5db80ab987091c25fb4a62153f2fb1f7dd",
+        "out_len": 2037
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/target-mem-intrinsic-attrs.td",
+      "run": "llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/target-specialized-pseudos.td",
+      "run": "llvm-tblgen -gen-instr-info -I %p/../../include %s -DALLCASES -o - | FileCheck -check-prefixes=CHECK,ALLCASES %s ; not llvm-tblgen -gen-instr-info -I %p/../../include %s -DONECASE -o /dev/null 2\u003e\u00261 | FileCheck -check-prefixes=ERROR-MISSING %s ; not llvm-tblgen -gen-instr-info -I %p/../../include %s -DMULTIPLE_OVERRIDE_ERROR -o /dev/null 2\u003e\u00261 | FileCheck -implicit-check-not=error: -check-prefix=MULTIPLE-OVERRIDE-ERROR %s ; not llvm-tblgen -gen-instr-info -I %p/../../include %s -DALLCASES -DERROR_NONPSEUDO -o /dev/null 2\u003e\u00261 | FileCheck -implicit-check-not=error: -check-prefix=ERROR-NONPSEUDO %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-arg-default-scope.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b2404d750aac53bb4ec532bfd484f295a61dbab0f77c371f422a988cea2d3666",
+        "out_len": 992
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-arg-dependency.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "12d6d91ea896373f8b40bf1836c94dbc4cab2a8ecd607098b399400015bd97ab",
+        "out_len": 180
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-arg-duplicate.td",
+      "run": "not llvm-tblgen -DCLASS %s 2\u003e\u00261 | FileCheck %s --check-prefix=CLASS ; not llvm-tblgen -DMULTICLASS %s 2\u003e\u00261 | FileCheck %s --check-prefix=MULTICLASS ; not llvm-tblgen -DTYPE %s 2\u003e\u00261 | FileCheck %s --check-prefix=TYPE --implicit-check-not=error:",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b9c4153c8d54e85ff58b2b26b46a9ce1d989b62bafab7dfe3655769c3143e9f7",
+        "out_len": 46
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/template-args.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s ; not llvm-tblgen -DERROR2 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR2 %s ; not llvm-tblgen -DERROR3 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR3 %s ; not llvm-tblgen -DERROR4 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR4 %s ; not llvm-tblgen -DERROR5 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR5 %s ; not llvm-tblgen -DERROR6 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR6 %s ; not llvm-tblgen -DERROR7 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR7 %s ; not llvm-tblgen -DERROR8 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR8 %s ; not llvm-tblgen -DERROR9 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR9 %s ; not llvm-tblgen -DERROR10 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR10 %s ; not llvm-tblgen -DERROR11 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR11 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "e5afaffefc8001aa9ac44bec5392690f051dd052a4e8acc6d346b366d62e8abd",
+        "out_len": 1859
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/true-false.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR1 %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR1 %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "8a69032053c5c5917f3429f984660a8d9a200b57fa28577bb627affec5cb65f4",
+        "out_len": 1100
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unsetop.td",
+      "run": "llvm-tblgen %s | FileCheck %s ; not llvm-tblgen -DERROR %s 2\u003e\u00261 | FileCheck --check-prefix=ERROR %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "51d0f47384be2e3fd7afc100a168d2cf3c1cba8ded1a55dd54b0af53863c815d",
+        "out_len": 1388
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block.td",
+      "run": "not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/usevalname.td",
+      "run": "llvm-tblgen %s | FileCheck %s",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "b7036ee10532bc0156e229441066096bbe58c5fc19d1dce2cfc27ebc5053e77a",
+        "out_len": 1268
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/warn-unused-template-arg.td",
+      "run": "llvm-tblgen %s 2\u003e\u00261 | FileCheck %s ; llvm-tblgen --no-warn-on-unused-template-args %s 2\u003e\u00261 | FileCheck %s --check-prefix=CHECK-DISABLED",
+      "scope": "in-scope",
+      "oracle": {
+        "exit": 0,
+        "class": "valid",
+        "out_sha256": "aa06a132c4044324b1a96e0fd9c308bd5d6905c7bc1eaba85287468dbdf40c37",
+        "out_len": 251,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/warn-unused-template-arg.td:4:26: warning: unused template argument: UnusedClassArg:foo"
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/x86-fold-tables.td",
+      "run": "llvm-tblgen -gen-x86-fold-tables -asmwriternum=1 %p/../../lib/Target/X86/X86.td -I %p/../../lib/Target/X86 -I %p/../../include -o %t ; diff --strip-trailing-cr %p/x86-fold-tables.inc %t",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    },
+    {
+      "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/x86-instr-mapping.td",
+      "run": "llvm-tblgen -gen-x86-instr-mapping %p/../../lib/Target/X86/X86.td -I %p/../../lib/Target/X86 -I %p/../../include -o %t ; diff --strip-trailing-cr %p/x86-instr-mapping.inc %t",
+      "scope": "needs-include",
+      "oracle": {
+        "exit": 0,
+        "class": ""
+      }
+    }
+  ]
+}

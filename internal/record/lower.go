@@ -1,0 +1,1503 @@
+package record
+
+import (
+	"tblgen/internal/diag"
+	"tblgen/internal/syntax"
+)
+
+// Lower turns a parsed file into a record graph. It is the semantic half of
+// TableGen that the parser deliberately leaves out: inheritance, template
+// argument substitution, let stacking, foreach/if expansion, and defm.
+//
+// Errors are collected, never thrown; a broken object is skipped so later
+// objects still produce diagnostics.
+func Lower(file *syntax.File, filename string) (*Keeper, []diag.Diagnostic) {
+	col := &diag.Collector{}
+	l := &Lowerer{
+		k:            NewKeeper(filename, col),
+		diags:        col,
+		file:         filename,
+		mcs:          map[string]*syntax.MultiClassStmt{},
+		anonName:     map[*syntax.DefStmt]string{},
+		anonDefmName: map[*syntax.DefmStmt]string{},
+		loopSeq:      -1,
+	}
+	l.objects(file.Objects, nil, nil)
+	return l.k, col.Diags
+}
+
+type Lowerer struct {
+	k            *Keeper
+	diags        *diag.Collector
+	file         string
+	mcs          map[string]*syntax.MultiClassStmt
+	anonName     map[*syntax.DefStmt]string
+	anonDefmName map[*syntax.DefmStmt]string
+	loopSeq      int // Seq of the statement-level loop being expanded, or -1
+	// pending, when non-nil, is the entry list of the defm currently being
+	// expanded. TGParser resolves a defm's records into NewEntries and only
+	// afterwards runs addDefOne on each, so buildDef queues its record here
+	// instead of finalising it. nil outside a defm expansion (plain defs are
+	// added immediately).
+	pending *[]*deferredDef
+	// scope is the number of enclosing braced blocks (let/foreach/if/defset).
+	// A defvar only reaches the record-layer global table at top level; in a
+	// block, TGParser's TGVarScope inlines it into later values and drops it
+	// when the block ends (defvar.td). Defining it globally would leak.
+	scope int
+	// eager is set while a defm's multiclass body is expanded. LLVM applies
+	// the multiclass's arguments while parsing the defm, so values that refer
+	// to them are already concrete there; a def/class body parsed at its
+	// definition site instead keeps them as VarInit.
+	eager bool
+	// loopVars is the stack of iterator names of the enclosing foreach loops.
+	// TGParser parses a loop body once with these as VarInit and substitutes
+	// them only into record entries; a defvar value is never re-resolved, so a
+	// class application that mentions one must stay a VarDefInit forever.
+	loopVars []string
+}
+
+func (l *Lowerer) errorAt(err error, fallback diag.Span) {
+	var span diag.Span
+	switch e := err.(type) {
+	case *UnsupportedError:
+		if e.Span.Start.File != "" {
+			span = e.Span
+		} else {
+			span = fallback
+		}
+		l.diags.Error("E_UNSUPPORTED", e.Feature, span)
+		return
+	case *EvalError:
+		span = e.Span
+		if span.Start.File == "" && !e.NoLoc {
+			span = fallback
+		}
+		if e.Note.File != "" {
+			l.diags.Diags = append(l.diags.Diags, diag.Diagnostic{
+				Severity: diag.Error, Code: "E_SEMANTIC", Message: e.Msg, Span: span,
+				Notes: []diag.Note{{Message: "previous definition is here", Pos: e.Note}},
+			})
+			return
+		}
+		l.diags.Error("E_SEMANTIC", e.Msg, span)
+	default:
+		l.diags.Error("E_SEMANTIC", err.Error(), fallback)
+	}
+}
+
+// objects processes a statement list. lets are the top-level `let ... in`
+// bindings currently in scope; they are applied when a def is built.
+func (l *Lowerer) objects(objs []syntax.Object, env *Env, lets []*syntax.LetBind) {
+	for _, o := range objs {
+		if o == nil {
+			continue
+		}
+		l.object(o, env, lets)
+	}
+}
+
+func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
+	switch t := o.(type) {
+	case *syntax.ClassStmt:
+		if err := l.class(t, lets); err != nil {
+			l.errorAt(err, t.Span())
+		}
+	case *syntax.DefStmt:
+		if _, err := l.buildDef(t, env, lets, nil, nil, nil, ""); err != nil {
+			l.errorAt(err, t.Span())
+		}
+	case *syntax.DefmStmt:
+		if err := l.defm(t, env, lets); err != nil {
+			l.errorAt(err, t.Span())
+		}
+	case *syntax.MultiClassStmt:
+		l.mcs[t.Name] = t
+		l.reserveAnonNames(t.Body)
+	case *syntax.DefvarStmt:
+		if l.scope == 0 {
+			l.k.defineGlobal(t.Name, &AstExpr{V: t.Value, Env: env})
+		}
+		l.preFoldDefvar(t.Value, env)
+		// TGParser folds operators while parsing the value
+		// (ParseOperation -> Fold), so a bad operator is diagnosed even when
+		// the defvar is never read. We keep values lazy for record building,
+		// so re-run the evaluator here purely to surface those diagnostics.
+		if b, isBang := t.Value.(*syntax.BangValue); isBang && b.Op != syntax.XCast {
+			if _, err := l.k.evalSyntax(t.Value, env, nil); err != nil {
+				l.errorAt(err, t.Span())
+			}
+		}
+	case *syntax.DeftypeStmt:
+		// Type aliases are resolved while parsing; they emit no records.
+	case *syntax.DefsetStmt:
+		if err := l.defset(t, env, lets); err != nil {
+			l.errorAt(err, t.Span())
+		}
+	case *syntax.ForeachStmt:
+		l.foreach(t, env, lets)
+	case *syntax.IfStmt:
+		l.ifStmt(t, env, lets)
+	case *syntax.LetStmt:
+		nl := append(append([]*syntax.LetBind(nil), lets...), t.Binds...)
+		l.scope++
+		l.objects(t.Body, env, nl)
+		l.scope--
+	case *syntax.AssertStmt:
+		l.assert(t, env, nil)
+	case *syntax.DumpStmt:
+		// dump writes a note to stderr in LLVM; it does not affect --dump-json.
+	case *syntax.IncludeStmt:
+		l.errorAt(unsupported("include (resolved in M5)", t.Span()), t.Span())
+	}
+}
+
+// defset parses a block of objects and publishes every def it created (in
+// creation order, nested defsets included) as a list-typed global. The elements
+// must be instances of the declared element type.
+func (l *Lowerer) defset(st *syntax.DefsetStmt, env *Env, lets []*syntax.LetBind) error {
+	elem := l.k.tyFromSyntax(st.ElemType)
+	before := len(l.k.defOrder)
+	errs := len(l.diags.Diags)
+	l.scope++
+	l.objects(st.Objects, env, lets)
+	l.scope--
+	if len(l.diags.Diags) != errs {
+		// A broken element already reported; do not publish a partial set.
+		return nil
+	}
+	out := &List{Elem: elem}
+	for _, d := range l.k.defOrder[before:] {
+		if d.IsAnonymous {
+			// VarDefInit records (anonymous Class<...> instances) are not
+			// defs and are never members of a defset.
+			continue
+		}
+		dt := d.Type()
+		if !dt.IsA(elem) {
+			return &EvalError{
+				Msg:  "adding record of incompatible type '" + dt.String() + "' to defset",
+				Span: diag.Span{Start: d.Locs[0], End: d.Locs[0]},
+			}
+		}
+		out.Elems = append(out.Elems, &DefVal{Rec: d})
+	}
+	l.k.globals[st.Name] = &Global{Name: st.Name, state: resolved, val: out}
+	return nil
+}
+
+func (l *Lowerer) foreach(st *syntax.ForeachStmt, env *Env, lets []*syntax.LetBind) {
+	var elems []Value
+	if st.Range != nil {
+		for _, n := range st.Range {
+			elems = append(elems, &Int{N: int64(n)})
+		}
+	} else {
+		l.preFold(st.List, env)
+		v, err := l.k.evalSyntax(st.List, env, nil)
+		if err != nil {
+			l.errorAt(err, st.Span())
+			return
+		}
+		ls, ok := v.(*List)
+		if !ok {
+			l.errorAt(&EvalError{Msg: "attempting to loop over a non-list", Span: st.Span()}, st.Span())
+			return
+		}
+		elems = ls.Elems
+	}
+	prev := l.loopSeq
+	if st.Seq >= 0 {
+		l.loopSeq = st.Seq
+	}
+	l.scope++
+	// TGParser parses the loop body exactly once, before any iteration is
+	// resolved: every concrete class application in a parent argument or a
+	// field initializer instantiates there, in source order. Only then does
+	// resolve() add each iteration's records. Lowering element by element would
+	// interleave those two phases and shift the anonymous numbering.
+	l.preFoldParseItems(st.Body)
+	l.loopVars = append(l.loopVars, st.Var)
+	for _, e := range elems {
+		sub := env.With(map[string]Binding{st.Var: {Val: e}})
+		l.objects(st.Body, sub, lets)
+	}
+	l.loopVars = l.loopVars[:len(l.loopVars)-1]
+	l.scope--
+	l.loopSeq = prev
+}
+
+func (l *Lowerer) ifStmt(st *syntax.IfStmt, env *Env, lets []*syntax.LetBind) {
+	l.preFold(st.Cond, env)
+	v, err := l.k.evalSyntax(st.Cond, env, nil)
+	if err != nil {
+		l.errorAt(err, st.Span())
+		return
+	}
+	n, err := l.k.asInt(v)
+	if err != nil {
+		l.errorAt(err, st.Span())
+		return
+	}
+	l.scope++
+	// TGParser turns each arm into its own foreach over a 0-or-1-element list
+	// and parses *both* bodies before either list is resolved. Their literal
+	// class applications therefore instantiate in source order even though only
+	// one arm survives.
+	l.preFoldParseItems(st.Then)
+	l.preFoldParseItems(st.Else)
+	if n != 0 {
+		l.objects(st.Then, env, lets)
+	} else {
+		l.objects(st.Else, env, lets)
+	}
+	l.scope--
+}
+
+func (l *Lowerer) assert(st *syntax.AssertStmt, env *Env, rec *Record) {
+	cond, err := l.k.evalSyntax(st.Cond, env, rec)
+	if err != nil {
+		l.errorAt(err, st.Span())
+		return
+	}
+	n, err := l.k.asInt(cond)
+	if err != nil {
+		l.errorAt(err, st.Span())
+		return
+	}
+	if n != 0 {
+		return
+	}
+	msg := "(assert message is not a string)"
+	if mv, err := l.k.evalSyntax(st.Message, env, rec); err == nil {
+		if s, ok := mv.(*Str); ok {
+			msg = s.S
+		}
+	}
+	l.diags.Error("E_ASSERT", "assertion failed: "+msg, st.Span())
+}
+
+// class builds a class record. Classes keep unresolved field expressions; a
+// class body is instantiated every time a def inherits it with different
+// template arguments.
+func (l *Lowerer) class(st *syntax.ClassStmt, lets []*syntax.LetBind) error {
+	rec := l.k.Class(st.Name)
+	if rec != nil {
+		if len(rec.Vals) > 0 || len(rec.TArgs) > 0 || len(rec.Super) > 0 {
+			if !st.DeclOnly {
+				return &EvalError{Msg: "Class '" + st.Name + "' already defined", Span: st.Span()}
+			}
+			return nil
+		}
+		rec.Locs = []diag.Pos{st.Span().Start}
+	} else {
+		rec = &Record{Name: st.Name, IsClass: true, Locs: []diag.Pos{st.Span().Start}, keeper: l.k}
+		l.k.classes[st.Name] = rec
+	}
+	env := &Env{}
+	frame := map[string]Binding{}
+	for _, d := range st.TemplateArgs {
+		rv := &RecordVal{Name: d.Name, Ty: l.k.tyFromSyntax(d.Type), Loc: d.Span().Start}
+		if d.Value != nil {
+			rv.Expr = &AstExpr{V: d.Value, Env: env}
+			l.preFold(d.Value, env)
+		}
+		rec.TArgs = append(rec.TArgs, rv)
+	}
+	env = env.With(frame)
+	env.owner = rec
+	env.ownerSep = ":"
+	for i, d := range st.TemplateArgs {
+		if d.Value != nil {
+			frame[st.Name+":"+d.Name] = Binding{
+				V: d.Value, Dynamic: true, Ty: rec.TArgs[i].Ty,
+				Owner: rec, Sep: ":", Self: st.Name + ":" + d.Name,
+			}
+		}
+	}
+	rec.Env = env
+	// Rebind defaults now that the frame exists.
+	for _, rv := range rec.TArgs {
+		if rv.Expr != nil {
+			rv.Expr = &AstExpr{V: rv.Expr.(*AstExpr).V, Env: env}
+		}
+	}
+
+	for _, p := range st.Parents {
+		if err := l.applyParent(rec, p, env); err != nil {
+			return err
+		}
+	}
+	// ParseObjectBody runs ApplyLetStack between the parent list and the body,
+	// so `let TargetPrefix = "aarch64" in { class C : Intrinsic<...> }` stores
+	// the let on the class and every def that inherits it sees the value.
+	for _, b := range lets {
+		if err := l.applyLet(rec, b, env); err != nil {
+			return err
+		}
+	}
+	if st.DeclOnly {
+		return nil
+	}
+	for _, item := range st.Body {
+		// llvm-tblgen keeps parsing the rest of a body after a bad member and
+		// reports every offending field (BitsInitErrors.td has eight in one
+		// def), so an error here must not end the body.
+		if err := l.bodyItem(rec, item, env); err != nil {
+			l.errorAt(err, item.Span())
+		}
+	}
+	return nil
+}
+
+func (l *Lowerer) applyParent(target *Record, p *syntax.ParentRef, env *Env) error {
+	// Argument values are folded where they were parsed, never with the
+	// record's frame: `Whatev<Or4<BaseOpc>.V>` stays a VarDefInit until a
+	// field actually reads it (pr8330.td: the unused argument must not
+	// instantiate Or4).
+	for _, a := range p.Args {
+		// The arguments are folded without the record's frame, but the parser
+		// did parse them in its scope, which qualifies template-argument
+		// names for VarDefInit pooling.
+		l.k.noteShapeSites(a.Value, env)
+		l.preFold(a.Value, nil)
+	}
+	cl := l.k.Class(p.Name)
+	if cl == nil {
+		return &EvalError{Msg: "Couldn't find class '" + p.Name + "'", Span: p.Span()}
+	}
+	return l.k.applyClass(target, cl, p.Args, env, target, p.Span().Start)
+}
+
+func (l *Lowerer) bodyItem(rec *Record, item syntax.BodyItem, env *Env) error {
+	switch t := item.(type) {
+	case *syntax.Decl:
+		// A redeclaration sets the value of the existing field; the type and
+		// the field-ness come from the first declaration (AddValue keeps the
+		// existing RecordVal and only calls SetValue on it).
+		ty := l.k.tyFromSyntax(t.Type)
+		nonconcrete := t.IsField
+		if old := rec.Val(t.Name); old != nil {
+			ty = old.Ty
+			nonconcrete = old.Nonconcrete
+		}
+		if t.Value != nil {
+			if err := l.k.checkFieldValue(ty, t.Value, rec, env, t.Name); err != nil {
+				return err
+			}
+			l.preFold(t.Value, env)
+		}
+		rv := &RecordVal{Name: t.Name, Ty: ty, Nonconcrete: nonconcrete, Loc: t.Span().Start}
+		if t.Value != nil {
+			rv.Expr = &AstExpr{V: t.Value, Env: env}
+		}
+		rec.addVal(rv)
+		return nil
+	case *syntax.LetItem:
+		l.preFold(t.Bind.Value, env)
+		return l.applyLet(rec, t.Bind, env)
+	case *syntax.DefvarStmt:
+		// Parsed expressions already inline local defvar values; nothing to do.
+		return nil
+	case *syntax.AssertStmt:
+		l.preFold(t.Cond, env)
+		l.preFold(t.Message, env)
+		if rec.IsClass {
+			// Checked when a def inherits the class, with the class arguments
+			// bound by the caller (Record::checkAssertions).
+			rec.Asserts = append(rec.Asserts, Assertion{Cond: t.Cond, Message: t.Message, Env: env})
+			return nil
+		}
+		l.assert(t, env, rec)
+		return nil
+	case *syntax.DumpStmt:
+		return nil
+	default:
+		return unsupported("body item", item.Span())
+	}
+}
+
+func (l *Lowerer) applyLet(rec *Record, b *syntax.LetBind, env *Env) error {
+	rv := rec.Val(b.Field)
+	if rv == nil {
+		return &EvalError{Msg: "Value '" + b.Field + "' unknown!", Span: b.FieldSpan}
+	}
+	if vv, ok := b.Value.(*syntax.VarValue); ok && vv.Name == b.Field {
+		return &EvalError{Msg: "Recursion / self-assignment forbidden", Span: b.Value.Span()}
+	}
+	add := &AstExpr{V: b.Value, Env: env}
+	if len(b.Bits) > 0 {
+		if b.Mode == syntax.LetAppend || b.Mode == syntax.LetPrepend {
+			return &EvalError{Msg: "Cannot use append/prepend with bit range", Span: b.FieldSpan}
+		}
+		if rv.Ty == nil || rv.Ty.Kind != BitsTy {
+			return &EvalError{Msg: "Value '" + b.Field + "' is not a bits type", Span: b.FieldSpan}
+		}
+		bits := make([]int32, len(b.Bits))
+		for i := range b.Bits {
+			bits[i] = b.Bits[len(b.Bits)-1-i]
+		}
+		rv.Expr = &BitsExpr{Base: rv.Expr, Add: add, Bits: bits, Width: rv.Ty.Bits}
+		rv.state = unresolved
+		return nil
+	}
+	switch b.Mode {
+	case syntax.LetAppend, syntax.LetPrepend:
+		kind := StringTy
+		if rv.Ty != nil {
+			switch rv.Ty.Kind {
+			case ListTy:
+				kind = ListTy
+			case DagTy:
+				kind = DagTy
+			case CodeTy:
+				kind = CodeTy
+			case StringTy:
+				kind = StringTy
+			default:
+				verb := "append to"
+				if b.Mode == syntax.LetPrepend {
+					verb = "prepend to"
+				}
+				return &EvalError{Msg: "Cannot " + verb + " field '" + b.Field + "' of type '" + rv.Ty.String() +
+					"' (expected list, string, code, or dag)", Span: b.FieldSpan}
+			}
+		}
+		rv.Expr = &AppendExpr{Base: rv.Expr, Add: add, Prepend: b.Mode == syntax.LetPrepend, Kind: kind}
+	default:
+		if b.Value != nil {
+			if err := l.k.checkFieldValue(rv.Ty, b.Value, rec, env, rv.Name); err != nil {
+				return err
+			}
+		}
+		rv.Expr = add
+	}
+	rv.state = unresolved
+	return nil
+}
+
+// deferredDef is a defm entry that has been through TGParser's resolve phase
+// but not yet through addDefOne. See expandDefm.
+type deferredDef struct {
+	rec          *Record
+	anonymous    bool
+	env          *Env
+	postLets     []*syntax.LetBind
+	extraParents []*syntax.ParentRef
+	loopSeq      int
+}
+
+// buildDef builds one def. Order is the part that TableGen users trip over:
+// parents, then top-level lets, then the body; for defm-generated records the
+// trailing classes and the defm's own let stack are applied after the body,
+// and every entry of the defm is finalised only once all of them are built.
+func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef, extraLocs []diag.Pos, fixedName string) (*Record, error) {
+	rec, anonymous, err := l.makeDef(st, env, preLets, extraLocs, fixedName)
+	if err != nil {
+		return nil, err
+	}
+	if l.pending != nil && l.loopSeq < 0 {
+		// TGParser::ParseDefm resolves every entry of the multiclass body into
+		// NewEntries first and only then calls addDefOne for each. Both phases
+		// instantiate anonymous class applications - parents while resolving,
+		// field initialisers such as `TypeInfo` while finalising - so finishing
+		// here would interleave the two and shift anonymous_N. Inside a
+		// statement-level foreach the defm's records become entries of that
+		// loop (addEntry pushes to Loops.back()->Entries), and the loop then
+		// resolves and adds each one before touching the next, so there the
+		// per-def order is already correct.
+		*l.pending = append(*l.pending, &deferredDef{
+			rec: rec, anonymous: anonymous, env: env,
+			postLets: postLets, extraParents: extraParents, loopSeq: l.loopSeq,
+		})
+		return rec, nil
+	}
+	if err := l.applyParents(rec, extraParents, env); err != nil {
+		return nil, err
+	}
+	for _, b := range postLets {
+		if err := l.applyLet(rec, b, nil); err != nil {
+			return nil, err
+		}
+	}
+	if err := l.finishDef(rec, anonymous); err != nil {
+		return nil, err
+	}
+	return rec, nil
+}
+
+// applyParents is the AddParentClass loop: TGParser applies a defm's trailing
+// regular classes to every generated entry before any addDefOne runs.
+func (l *Lowerer) applyParents(rec *Record, parents []*syntax.ParentRef, env *Env) error {
+	for _, p := range parents {
+		if err := l.applyParent(rec, p, env); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// finishDef is addDefOne: rename a colliding anonymous record, resolve the
+// remaining field references (RecordResolver), validate, and register.
+func (l *Lowerer) finishDef(rec *Record, anonymous bool) error {
+	if anonymous {
+		if _, exists := l.k.defs[rec.Name]; exists {
+			// addDefOne renames before resolving so that NAME/!cast(NAME)
+			// already see the final name.
+			rec.Name = l.k.newAnonymous(rec.Locs[0]).Name
+		}
+	}
+	if err := rec.resolveAll(); err != nil {
+		return err
+	}
+	// addDefOne runs checkConcrete between resolveReferences and the
+	// assertions: a value that is still a reference is only legal behind
+	// `field`. Anonymous class applications skip this (VarDefInit::instantiate
+	// does not call checkConcrete), so it lives here, not in instantiate.
+	if err := l.k.checkConcrete(rec); err != nil {
+		return err
+	}
+	// Record::checkRecordAssertions runs in addDefOne, after every field and
+	// let of the def has been applied.
+	for _, as := range rec.Asserts {
+		l.k.checkAssertion(as, rec)
+	}
+	if err := l.k.addDef(rec); err != nil {
+		return err
+	}
+	if l.loopSeq >= 0 {
+		kd := LoopDef{Name: rec.Name}
+		for _, sc := range rec.Super {
+			kd.Parents = append(kd.Parents, sc.Name)
+		}
+		l.k.loopDefs[l.loopSeq] = append(l.k.loopDefs[l.loopSeq], kd)
+	}
+	return nil
+}
+
+// makeDef parses one def up to (but excluding) the trailing classes, the defm
+// let stack, and addDefOne.
+func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []*syntax.LetBind, extraLocs []diag.Pos, fixedName string) (*Record, bool, error) {
+	loc := st.Span().Start
+	name := fixedName
+	anonymous := false
+	if name == "" {
+		if st.Name == nil || isUnset(st.Name) {
+			anonymous = true
+		} else {
+			n, err := l.evalName(st.Name, env)
+			if err != nil {
+				return nil, false, err
+			}
+			name = n
+		}
+	} else if st.Name == nil || isUnset(st.Name) {
+		anonymous = true
+	}
+	var rec *Record
+	switch {
+	case name == "" && anonymous:
+		rec = l.k.newAnonymous(loc)
+	case anonymous:
+		rec = &Record{Name: name, IsAnonymous: true, Locs: []diag.Pos{loc}, keeper: l.k}
+	default:
+		rec = &Record{Name: name, Locs: []diag.Pos{loc}, keeper: l.k}
+	}
+	for _, x := range extraLocs {
+		rec.Locs = append(rec.Locs, x)
+	}
+	for _, p := range st.Parents {
+		if err := l.applyParent(rec, p, env); err != nil {
+			return nil, false, err
+		}
+	}
+	for _, b := range preLets {
+		if err := l.applyLet(rec, b, env); err != nil {
+			return nil, false, err
+		}
+	}
+	for _, item := range st.Body {
+		if err := l.bodyItem(rec, item, env); err != nil {
+			l.errorAt(err, item.Span())
+		}
+	}
+	// LLVM's Record location is the object's name token; a multi-line `def`
+	// header therefore reports the name's line, not the `def` keyword's.
+	if !anonymous && st.Name != nil {
+		if p := st.Name.Span().Start; p.File != "" {
+			rec.Locs[0] = p
+		}
+	}
+	return rec, anonymous, nil
+}
+
+func (l *Lowerer) evalName(v syntax.Value, env *Env) (string, error) {
+	val, err := l.k.evalSyntax(v, env, nil)
+	if err != nil {
+		return "", err
+	}
+	s, ok := val.(*Str)
+	if !ok {
+		return "", &EvalError{Msg: "record name must resolve to a string", Span: v.Span()}
+	}
+	return s.S, nil
+}
+
+func spanAt(loc *diag.Pos) diag.Span {
+	if loc == nil {
+		return diag.Span{}
+	}
+	return diag.Span{Start: *loc, End: *loc}
+}
+
+func isUnset(v syntax.Value) bool {
+	_, ok := v.(*syntax.UnsetValue)
+	return ok
+}
+
+// defm expands each multiclass reference into concrete defs.
+// reserveAnonNames allocates parse-time anonymous names for unnamed defs in a
+// multiclass body, mirroring TGParser::ParseDef. LLVM allocates these when the
+// multiclass is parsed; instantiation keeps the name unless it collides.
+func (l *Lowerer) reserveAnonNames(items []syntax.Object) {
+	for _, o := range items {
+		switch t := o.(type) {
+		case *syntax.DefStmt:
+			if t.Name == nil || isUnset(t.Name) {
+				l.anonName[t] = l.k.newAnonymous(t.Span().Start).Name
+			}
+			l.preFoldParents(t.Parents)
+			l.preFoldItems(t.Body)
+		case *syntax.DefmStmt:
+			if t.Name == nil || isUnset(t.Name) {
+				l.anonDefmName[t] = l.k.newAnonymous(t.Span().Start).Name
+			}
+			l.preFoldParents(t.Parents)
+		case *syntax.LetStmt:
+			for _, b := range t.Binds {
+				l.preFold(b.Value, nil)
+			}
+			l.reserveAnonNames(t.Body)
+		case *syntax.IfStmt:
+			l.preFold(t.Cond, nil)
+			l.reserveAnonNames(t.Then)
+			l.reserveAnonNames(t.Else)
+		case *syntax.ForeachStmt:
+			l.preFold(t.List, nil)
+			l.reserveAnonNames(t.Body)
+		case *syntax.DefvarStmt:
+			l.preFoldDefvar(t.Value, nil)
+		case *syntax.AssertStmt:
+			l.preFold(t.Cond, nil)
+			l.preFold(t.Message, nil)
+		case *syntax.ClassStmt:
+			// A class defined inside a multiclass body is parsed here too.
+			for _, d := range t.TemplateArgs {
+				l.preFold(d.Value, nil)
+			}
+			l.preFoldParents(t.Parents)
+			l.preFoldItems(t.Body)
+		}
+	}
+}
+
+func (l *Lowerer) preFoldParents(parents []*syntax.ParentRef) {
+	for _, p := range parents {
+		for _, a := range p.Args {
+			l.preFold(a.Value, nil)
+		}
+	}
+}
+
+func (l *Lowerer) preFoldItems(items []syntax.BodyItem) {
+	for _, it := range items {
+		switch t := it.(type) {
+		case *syntax.Decl:
+			l.preFold(t.Value, nil)
+		case *syntax.LetItem:
+			l.preFold(t.Bind.Value, nil)
+		case *syntax.AssertStmt:
+			l.preFold(t.Cond, nil)
+			l.preFold(t.Message, nil)
+		case *syntax.DumpStmt:
+			l.preFold(t.Value, nil)
+		}
+	}
+}
+
+// preFoldParseItems runs the folds TGParser performs while it parses a block of
+// statements that will be resolved later (the body of a foreach or if). It
+// only sees the parse-time environment: `nil` stands for TGParser's empty
+// resolver, so template arguments, record fields and loop variables are still
+// VarInit and block instantiation. defvar inlines are already substituted in
+// the AST, exactly like TGParser's scope lookup.
+func (l *Lowerer) preFoldParseItems(items []syntax.Object) {
+	for _, o := range items {
+		switch t := o.(type) {
+		case *syntax.DefStmt:
+			l.preFoldParents(t.Parents)
+			l.preFoldItems(t.Body)
+		case *syntax.ClassStmt:
+			for _, d := range t.TemplateArgs {
+				l.preFold(d.Value, nil)
+			}
+			l.preFoldParents(t.Parents)
+			l.preFoldItems(t.Body)
+		case *syntax.MultiClassStmt:
+			l.preFoldParseItems(t.Body)
+		case *syntax.DefmStmt:
+			l.preFoldParents(t.Parents)
+		case *syntax.ForeachStmt:
+			l.preFold(t.List, nil)
+			l.preFoldParseItems(t.Body)
+		case *syntax.IfStmt:
+			l.preFold(t.Cond, nil)
+			l.preFoldParseItems(t.Then)
+			l.preFoldParseItems(t.Else)
+		case *syntax.LetStmt:
+			for _, b := range t.Binds {
+				l.preFold(b.Value, nil)
+			}
+			l.preFoldParseItems(t.Body)
+		case *syntax.DefvarStmt:
+			l.preFoldDefvar(t.Value, nil)
+		case *syntax.AssertStmt:
+			l.preFold(t.Cond, nil)
+			l.preFold(t.Message, nil)
+		case *syntax.DefsetStmt:
+			l.preFoldParseItems(t.Objects)
+		}
+	}
+}
+
+func (l *Lowerer) defm(st *syntax.DefmStmt, env *Env, lets []*syntax.LetBind) error {
+	defmName := ""
+	if st.Name == nil || isUnset(st.Name) {
+		// The anonymous name is only a prefix; it is not itself a def.
+		defmName = l.k.newAnonymous(st.Span().Start).Name
+	} else {
+		n, err := l.evalName(st.Name, env)
+		if err != nil {
+			return err
+		}
+		defmName = n
+	}
+	return l.expandDefm(st, defmName, env, lets, nil, nil)
+}
+
+// expandDefm expands every multiclass in st's parent list. defmName is the
+// final prefix for the generated defs; outerLocs are the defm locations of
+// enclosing multiclass instantiations, innermost first.
+func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, postLets []*syntax.LetBind, outerLocs []diag.Pos, extraParents []*syntax.ParentRef) error {
+	// LLVM expands a defm nested in a multiclass at parse time and applies the
+	// trailing classes right there, so the inner trailing list comes first and
+	// the enclosing defm's trailing classes are appended after it.
+	trailing := append(append([]*syntax.ParentRef(nil), st.Parents[st.ClassStart:]...), extraParents...)
+	// Phase 1: resolve every generated entry (this is where a class
+	// application used as a parent argument instantiates its anonymous def).
+	var pool []*deferredDef
+	prevPending := l.pending
+	l.pending = &pool
+	var err error
+	for _, ref := range st.Parents[:st.ClassStart] {
+		mc := l.mcs[ref.Name]
+		if mc == nil {
+			err = &EvalError{Msg: "Couldn't find multiclass '" + ref.Name + "'", Span: ref.Span()}
+			break
+		}
+		locs := append([]diag.Pos{ref.Span().Start}, outerLocs...)
+		if err = l.expandMC(mc, ref.Args, defmName, locs, env, postLets, trailing); err != nil {
+			break
+		}
+	}
+	l.pending = prevPending
+	if err != nil {
+		return err
+	}
+	// Phase 2: trailing regular classes, applied to every entry up front.
+	for _, d := range pool {
+		if err := l.applyParents(d.rec, d.extraParents, d.env); err != nil {
+			return err
+		}
+		// A nested defm's entries are handed to the enclosing defm, which
+		// would apply the same (already inherited) trailing list again.
+		d.extraParents = nil
+	}
+	// addEntry appends the entries of a defm that sits inside a multiclass body
+	// to that multiclass, so the enclosing defm owns their addDefOne. Only a
+	// top-level defm finalises here; this is also what keeps a sibling
+	// `def NAME#_#vt` visible to `!cast<...>(NAME)` in a nested defm.
+	if prevPending != nil {
+		*prevPending = append(*prevPending, pool...)
+		return nil
+	}
+	// Phase 3: the defm let stack, then addDefOne per entry (this is where a
+	// class application in a field initialiser instantiates its anonymous def).
+	for _, d := range pool {
+		for _, b := range d.postLets {
+			if err := l.applyLet(d.rec, b, nil); err != nil {
+				return err
+			}
+		}
+		loopSeq := l.loopSeq
+		l.loopSeq = d.loopSeq
+		err := l.finishDef(d.rec, d.anonymous)
+		l.loopSeq = loopSeq
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *Lowerer) expandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg, defmName string, locs []diag.Pos, callEnv *Env, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef) error {
+	prevEager := l.eager
+	l.eager = true
+	defer func() { l.eager = prevEager }()
+	mcRec := &Record{Name: mc.Name, IsClass: true}
+	frame := map[string]Binding{
+		mc.Name + "::NAME": {Val: &Str{S: defmName}},
+	}
+	for _, d := range mc.TemplateArgs {
+		if d.Value != nil {
+			frame[mc.Name+"::"+d.Name] = Binding{
+				V: d.Value, Dynamic: true, Ty: l.k.tyFromSyntax(d.Type),
+				Owner: mcRec, Sep: "::", Self: mc.Name + "::" + d.Name,
+			}
+		}
+	}
+	env := callEnv.With(frame)
+	env.owner = mcRec
+	env.ownerSep = "::"
+	// Caller-supplied arguments are lexical in the defm's scope.
+	provided, err := l.bindMCArgs(mc, args, callEnv, firstLoc(locs))
+	if err != nil {
+		return err
+	}
+	if len(provided) > 0 {
+		env = env.With(provided)
+	}
+	// Parent multiclasses contribute their entries first.
+	for _, p := range mc.Parents {
+		pm := l.mcs[p.Name]
+		if pm == nil {
+			return &EvalError{Msg: "Couldn't find multiclass '" + p.Name + "'", Span: p.Span()}
+		}
+		if err := l.expandMC(pm, p.Args, defmName, locs, env, postLets, extraParents); err != nil {
+			return err
+		}
+	}
+	return l.mcObjects(mc.Body, env, nil, defmName, locs, postLets, extraParents)
+}
+
+func firstLoc(locs []diag.Pos) *diag.Pos {
+	if len(locs) == 0 {
+		return nil
+	}
+	return &locs[0]
+}
+
+func (l *Lowerer) bindMCArgs(mc *syntax.MultiClassStmt, args []*syntax.Arg, callEnv *Env, loc *diag.Pos) (map[string]Binding, error) {
+	if len(args) > len(mc.TemplateArgs) {
+		return nil, &EvalError{Msg: "Too many template arguments for multiclass '" + mc.Name + "'", Span: spanAt(loc)}
+	}
+	out := map[string]Binding{}
+	for i, a := range args {
+		name := a.Name
+		if name == "" {
+			if i >= len(mc.TemplateArgs) {
+				return nil, &EvalError{Msg: "Too many template arguments for multiclass '" + mc.Name + "'", Span: a.Span()}
+			}
+			name = mc.TemplateArgs[i].Name
+		}
+		ty := (*Ty)(nil)
+		for _, d := range mc.TemplateArgs {
+			if d.Name == name {
+				ty = l.k.tyFromSyntax(d.Type)
+				break
+			}
+		}
+		if a.Value != nil {
+			if err := l.k.checkValueType(ty, a.Value, nil); err != nil {
+				return nil, err
+			}
+		}
+		out[mc.Name+"::"+name] = Binding{V: a.Value, Env: callEnv, Ty: ty}
+	}
+	for _, d := range mc.TemplateArgs {
+		if _, ok := out[mc.Name+"::"+d.Name]; ok {
+			continue
+		}
+		if d.Value == nil || isUnset(d.Value) {
+			return nil, &EvalError{Msg: "value not specified for template argument '" + d.Name + "'", Span: spanAt(loc)}
+		}
+	}
+	return out, nil
+}
+
+func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []*syntax.LetBind, defmName string, outerLocs []diag.Pos, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef) error {
+	for _, o := range objs {
+		switch t := o.(type) {
+		case *syntax.DefStmt:
+			name := l.anonName[t]
+			if t.Name != nil && !isUnset(t.Name) {
+				n, err := l.evalName(t.Name, env)
+				if err != nil {
+					return err
+				}
+				if usesNAME(t.Name) {
+					name = n
+				} else {
+					name = defmName + n
+				}
+			}
+			if _, err := l.buildDef(t, env, preLets, postLets, extraParents, outerLocs, name); err != nil {
+				return err
+			}
+		case *syntax.LetStmt:
+			nl := append(append([]*syntax.LetBind(nil), preLets...), t.Binds...)
+			if err := l.mcObjects(t.Body, env, nl, defmName, outerLocs, postLets, extraParents); err != nil {
+				return err
+			}
+		case *syntax.IfStmt:
+			v, err := l.k.evalSyntax(t.Cond, env, nil)
+			if err != nil {
+				return err
+			}
+			n, err := l.k.asInt(v)
+			if err != nil {
+				return err
+			}
+			body := t.Else
+			if n != 0 {
+				body = t.Then
+			}
+			// LLVM lowers `if` to a foreach over !if(cond, [0], []). When the
+			// condition is already resolvable while parsing the multiclass,
+			// the loop is unrolled then and its records inherit the defm loc;
+			// otherwise the loop survives into resolution and loses it.
+			locs := outerLocs
+			if !l.parseTimeKnown(t.Cond, env) {
+				locs = nil
+			}
+			if err := l.mcObjects(body, env, preLets, defmName, locs, postLets, extraParents); err != nil {
+				return err
+			}
+		case *syntax.ForeachStmt:
+			// A loop whose list is already a list literal at parse time is
+			// unrolled by LLVM's parser, so its records sit directly in the
+			// multiclass body and inherit the defm's location. Loops whose
+			// list only resolves at instantiation time (template arguments,
+			// !if, ...) are expanded during resolve with no location.
+			locs := outerLocs
+			if t.Range == nil && !l.parseTimeList(t.List, env) {
+				locs = nil
+			}
+			if err := l.mcForeach(t, env, preLets, defmName, locs, postLets, extraParents); err != nil {
+				return err
+			}
+		case *syntax.DefvarStmt:
+			// Inlined by the parser.
+		case *syntax.AssertStmt:
+			l.assert(t, env, nil)
+		case *syntax.DumpStmt:
+		case *syntax.DefmStmt:
+			var inner string
+			switch {
+			case t.Name == nil || isUnset(t.Name):
+				inner = defmName + l.anonDefmName[t]
+			case usesNAME(t.Name):
+				n, err := l.evalName(t.Name, env)
+				if err != nil {
+					return err
+				}
+				inner = n
+			default:
+				n, err := l.evalName(t.Name, env)
+				if err != nil {
+					return err
+				}
+				inner = defmName + n
+			}
+			// A let around a defm is applied after the generated records,
+			// with inner lets winning over outer ones.
+			nl := append(append([]*syntax.LetBind(nil), postLets...), preLets...)
+			if err := l.expandDefm(t, inner, env, nl, outerLocs, extraParents); err != nil {
+				return err
+			}
+		default:
+			return unsupported("multiclass body item", o.Span())
+		}
+	}
+	return nil
+}
+
+func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, env *Env, preLets []*syntax.LetBind, defmName string, outerLocs []diag.Pos, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef) error {
+	var elems []Value
+	if st.Range != nil {
+		for _, n := range st.Range {
+			elems = append(elems, &Int{N: int64(n)})
+		}
+	} else {
+		l.preFold(st.List, env)
+		v, err := l.k.evalSyntax(st.List, env, nil)
+		if err != nil {
+			return err
+		}
+		ls, ok := v.(*List)
+		if !ok {
+			return &EvalError{Msg: "attempting to loop over a non-list", Span: st.Span()}
+		}
+		elems = ls.Elems
+	}
+	l.loopVars = append(l.loopVars, st.Var)
+	defer func() { l.loopVars = l.loopVars[:len(l.loopVars)-1] }()
+	for i, e := range elems {
+		// A loop variable is known at parse time only when the loop was
+		// unrolled then *and* this element was a literal at that point.
+		known := outerLocs != nil && (st.Range != nil || l.parseTimeList(st.List, env))
+		if lit, ok := st.List.(*syntax.ListValue); ok {
+			known = known && i < len(lit.Elems) && l.parseTimeKnown(lit.Elems[i], env)
+		}
+		sub := env.With(map[string]Binding{st.Var: {Val: e, ParseTime: known}})
+		if err := l.mcObjects(st.Body, sub, preLets, defmName, outerLocs, postLets, extraParents); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// parseTimeList reports whether an expression is structurally a list at parse
+// time, i.e. resolves to a ListInit even while template arguments are still
+// unresolved. LLVM only unrolls such foreach loops during parsing; the records
+// then live directly in the multiclass body.
+func (l *Lowerer) parseTimeList(v syntax.Value, env *Env) bool {
+	switch t := v.(type) {
+	case *syntax.ListValue:
+		return true
+	case *syntax.VarValue:
+		// A defvar is substituted textually by the parser.
+		if t.Lit != nil {
+			return l.parseTimeList(t.Lit, env)
+		}
+	case *syntax.FieldValue:
+		// A field of a top-level def is complete while the multiclass is
+		// parsed, so `foreach d = AMDGPUDims.All` unrolls there and its
+		// records inherit the defm location.
+		if b, ok := t.Base.(*syntax.VarValue); ok && b.GlobalRef {
+			if d := l.k.defs[b.Name]; d != nil {
+				if rv := d.Val(t.Field); rv != nil && rv.Expr != nil {
+					if e, ok := rv.Expr.(*AstExpr); ok {
+						return l.parseTimeList(e.V, env)
+					}
+				}
+			}
+		}
+	case *syntax.BangValue:
+		if t.Op == syntax.XListConcat && len(t.Args) == 2 {
+			return l.parseTimeList(t.Args[0], env) && l.parseTimeList(t.Args[1], env)
+		}
+		if t.Op == syntax.XRange && len(t.Args) == 1 {
+			// `!range` only needs the list's size, which is known as soon as
+			// the list is.
+			return l.parseTimeKnown(t.Args[0], env)
+		}
+	}
+	return false
+}
+
+// parseTimeKnown reports whether LLVM's parser could already resolve v while
+// parsing a multiclass definition: its free variables must be literals,
+// defvars, or loop variables substituted by a parse-time-unrolled loop.
+// Multiclass template arguments are not parse-time known.
+func (l *Lowerer) parseTimeKnown(v syntax.Value, env *Env) bool {
+	switch t := v.(type) {
+	case nil:
+		return true
+	case *syntax.UnsetValue, *syntax.IntValue, *syntax.BitsValue, *syntax.StringValue:
+		return true
+	case *syntax.ListValue:
+		for _, e := range t.Elems {
+			if !l.parseTimeKnown(e, env) {
+				return false
+			}
+		}
+		return true
+	case *syntax.DagValue:
+		if t.Op != nil && !l.parseTimeKnown(t.Op, env) {
+			return false
+		}
+		for _, a := range t.Args {
+			if a.Value != nil && !l.parseTimeKnown(a.Value, env) {
+				return false
+			}
+		}
+		return true
+	case *syntax.VarValue:
+		if t.Subst && t.Lit != nil {
+			// A defvar is substituted textually, but its value can still
+			// mention template arguments (VectorMathLibcall's
+			// `defvar VT = !cast<...>(suffix);`), so look inside.
+			return l.parseTimeKnown(t.Lit, env)
+		}
+		if t.GlobalRef {
+			// Defs are complete when the multiclass is parsed.
+			return true
+		}
+		if q, ok := env.Qualify(t.Name); ok {
+			// A multiclass's caller-supplied arguments are bound without an
+			// owner record, so any hit under the qualified key is a template
+			// argument.
+			if b, ok := env.Lookup(q); ok {
+				return b.ParseTime
+			}
+		}
+		if b, ok := env.Lookup(t.Name); ok {
+			return b.ParseTime
+		}
+		if t.Lit != nil {
+			// TGParser sees VarInit(field) here, never the inlined
+			// initializer, so a field reference is not parse-time known.
+			return false
+		}
+		// A name with no binding at all is a global defvar or record.
+		return true
+	case *syntax.FieldValue:
+		return l.parseTimeKnown(t.Base, env)
+	case *syntax.SliceValue:
+		if !l.parseTimeKnown(t.Base, env) {
+			return false
+		}
+		for _, e := range t.Index {
+			if e.Lo != nil && !l.parseTimeKnown(e.Lo, env) {
+				return false
+			}
+			if e.Hi != nil && !l.parseTimeKnown(e.Hi, env) {
+				return false
+			}
+		}
+		return true
+	case *syntax.BitRangeValue:
+		return l.parseTimeKnown(t.Base, env)
+	case *syntax.PasteValue:
+		return l.parseTimeKnown(t.LHS, env) && l.parseTimeKnown(t.RHS, env)
+	case *syntax.ClassApplyValue:
+		for _, a := range t.Args {
+			if a.Value != nil && !l.parseTimeKnown(a.Value, env) {
+				return false
+			}
+		}
+		return true
+	case *syntax.BangValue:
+		if t.Op == syntax.XInstances {
+			return false
+		}
+		for _, a := range t.Args {
+			if a != nil && !l.parseTimeKnown(a, env) {
+				return false
+			}
+		}
+		for _, c := range t.Cases {
+			if c.Key != nil && !l.parseTimeKnown(c.Key, env) {
+				return false
+			}
+			if c.Value != nil && !l.parseTimeKnown(c.Value, env) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func usesNAME(v syntax.Value) bool {
+	switch t := v.(type) {
+	case *syntax.VarValue:
+		return t.Name == "NAME"
+	case *syntax.PasteValue:
+		return usesNAME(t.LHS) || usesNAME(t.RHS)
+	case *syntax.BangValue:
+		for _, a := range t.Args {
+			if usesNAME(a) {
+				return true
+			}
+		}
+		for _, c := range t.Cases {
+			if usesNAME(c.Key) || usesNAME(c.Value) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// preFold evaluates a value at the point where TGParser's ParseValue would
+// have folded it. The value itself is thrown away: what matters is that a
+// `Class<concrete args>` application instantiates its anonymous record right
+// there, because llvm-tblgen allocates anonymous_N names during parsing, not
+// when a record is first used (VarDefInit::Fold). Errors are ignored; the same
+// expression is evaluated for real when its record resolves, and that is where
+// diagnostics come from.
+//
+// Only lexical bindings are visible unless the caller is expanding a defm:
+// at parse time a class template argument or a record field is still a
+// VarInit, so an application over it is not concrete yet.
+func (l *Lowerer) preFold(v syntax.Value, env *Env) {
+	if v == nil || !hasClassApply(v) {
+		return
+	}
+	// VarDefInit::get runs while the value is parsed, with the record's scope
+	// visible, so sites are noted before the parse-time resolver is stripped.
+	l.k.noteShapeSites(v, env)
+	if !l.eager {
+		env = env.LexicalOnly()
+	}
+	prev := l.k.parseFold
+	l.k.parseFold = true
+	l.preFoldValue(v, env, nil)
+	l.k.parseFold = prev
+}
+
+// preFoldDefvar folds a defvar initializer the way ParseDefvar does. TGParser
+// parses the value once, with a foreach iterator still a VarInit, and resolve()
+// never revisits defvar values (they are not RecordsEntry nodes). So an
+// initializer that mentions a loop variable is never concrete and never
+// instantiates; only a purely literal one folds at parse time.
+func (l *Lowerer) preFoldDefvar(v syntax.Value, env *Env) {
+	if l.usesLoopVar(v) {
+		return
+	}
+	l.preFold(v, env)
+}
+
+// usesLoopVar reports whether a value mentions any enclosing foreach iterator,
+// looking through defvar inlines (a defvar's value is substituted textually by
+// the parser, so `defvar b = a` copies a's expression).
+func (l *Lowerer) usesLoopVar(v syntax.Value) bool {
+	switch t := v.(type) {
+	case nil, *syntax.UnsetValue, *syntax.IntValue, *syntax.BitsValue, *syntax.StringValue:
+		return false
+	case *syntax.VarValue:
+		for _, name := range l.loopVars {
+			if t.Name == name {
+				return true
+			}
+		}
+		return t.Lit != nil && l.usesLoopVar(t.Lit)
+	case *syntax.ListValue:
+		for _, e := range t.Elems {
+			if l.usesLoopVar(e) {
+				return true
+			}
+		}
+	case *syntax.DagValue:
+		if l.usesLoopVar(t.Op) {
+			return true
+		}
+		for _, a := range t.Args {
+			if l.usesLoopVar(a.Value) {
+				return true
+			}
+		}
+	case *syntax.FieldValue:
+		return l.usesLoopVar(t.Base)
+	case *syntax.SliceValue:
+		if l.usesLoopVar(t.Base) {
+			return true
+		}
+		for _, e := range t.Index {
+			if l.usesLoopVar(e.Lo) || l.usesLoopVar(e.Hi) {
+				return true
+			}
+		}
+	case *syntax.BitRangeValue:
+		return l.usesLoopVar(t.Base)
+	case *syntax.PasteValue:
+		return l.usesLoopVar(t.LHS) || l.usesLoopVar(t.RHS)
+	case *syntax.ClassApplyValue:
+		for _, a := range t.Args {
+			if l.usesLoopVar(a.Value) {
+				return true
+			}
+		}
+	case *syntax.BangValue:
+		for _, a := range t.Args {
+			if l.usesLoopVar(a) {
+				return true
+			}
+		}
+		for _, c := range t.Cases {
+			if l.usesLoopVar(c.Key) || l.usesLoopVar(c.Value) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// preFoldValue walks a value in parse order and instantiates each class
+// application whose arguments are concrete at that point. The walk is
+// structural, not one eval of the whole expression: a sibling that references
+// a template argument must not hide a fully concrete `ImmArgPrinter<"...">`
+// next to it, which is exactly what TGParser::ParseValue does (each argument
+// is folded on its own while the value list is parsed).
+func (l *Lowerer) preFoldValue(v syntax.Value, env *Env, rec *Record) {
+	switch t := v.(type) {
+	case nil:
+	case *syntax.ClassApplyValue:
+		for _, a := range t.Args {
+			l.preFoldValue(a.Value, env, rec)
+		}
+		l.tryInstantiate(t, env, rec)
+	case *syntax.BitsValue:
+		for _, e := range t.Elems {
+			l.preFoldValue(e, env, rec)
+		}
+	case *syntax.ListValue:
+		for _, e := range t.Elems {
+			l.preFoldValue(e, env, rec)
+		}
+	case *syntax.DagValue:
+		l.preFoldValue(t.Op, env, rec)
+		for _, a := range t.Args {
+			l.preFoldValue(a.Value, env, rec)
+		}
+	case *syntax.VarValue:
+		l.preFoldValue(t.Lit, env, rec)
+	case *syntax.FieldValue:
+		l.preFoldValue(t.Base, env, rec)
+	case *syntax.SliceValue:
+		l.preFoldValue(t.Base, env, rec)
+		for _, e := range t.Index {
+			l.preFoldValue(e.Lo, env, rec)
+			l.preFoldValue(e.Hi, env, rec)
+		}
+	case *syntax.BitRangeValue:
+		l.preFoldValue(t.Base, env, rec)
+	case *syntax.PasteValue:
+		l.preFoldValue(t.LHS, env, rec)
+		l.preFoldValue(t.RHS, env, rec)
+	case *syntax.BangValue:
+		for _, a := range t.Args {
+			l.preFoldValue(a, env, rec)
+		}
+		for _, c := range t.Cases {
+			l.preFoldValue(c.Key, env, rec)
+			l.preFoldValue(c.Value, env, rec)
+		}
+		// A comprehension over a concrete list folds at parse time
+		// (`!foreach(v, [1, 2], X<v>)`), instantiating with each element.
+		_, _ = l.k.evalSyntax(t, env, rec)
+	}
+}
+
+// tryInstantiate is VarDefInit::Fold: instantiate only when every argument is
+// already concrete. A VarInit/VarBitInit argument leaves the application as a
+// value that resolves later, with no anonymous name yet.
+func (l *Lowerer) tryInstantiate(ca *syntax.ClassApplyValue, env *Env, rec *Record) {
+	if l.k.Class(ca.Class) == nil {
+		return
+	}
+	for _, a := range ca.Args {
+		if a.Value == nil {
+			return
+		}
+		val, err := l.k.evalSyntax(a.Value, env, rec)
+		if err != nil || hasReference(val) {
+			return
+		}
+	}
+	_, _ = l.k.evalSyntax(ca, env, rec)
+}
+
+// hasReference reports whether an evaluated value still contains a VarInit or
+// VarBitInit, i.e. !Init::isConcrete is false for VarDefInit::Fold purposes.
+func hasReference(v Value) bool {
+	switch x := v.(type) {
+	case *Unresolved, *BitRef:
+		return true
+	case *Bits:
+		for _, b := range x.B {
+			if hasReference(b) {
+				return true
+			}
+		}
+	case *List:
+		for _, e := range x.Elems {
+			if hasReference(e) {
+				return true
+			}
+		}
+	case *Dag:
+		if hasReference(x.Op) {
+			return true
+		}
+		for _, a := range x.Args {
+			if hasReference(a.Value) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// hasClassApply reports whether the tree contains a `Class<...>` value node.
+// Walking is cheap and lets preFold skip the evaluator for the common case.
+func hasClassApply(v syntax.Value) bool {
+	switch t := v.(type) {
+	case nil:
+		return false
+	case *syntax.ClassApplyValue:
+		return true
+	case *syntax.BitsValue:
+		for _, e := range t.Elems {
+			if hasClassApply(e) {
+				return true
+			}
+		}
+	case *syntax.ListValue:
+		for _, e := range t.Elems {
+			if hasClassApply(e) {
+				return true
+			}
+		}
+	case *syntax.DagValue:
+		if hasClassApply(t.Op) {
+			return true
+		}
+		for _, a := range t.Args {
+			if hasClassApply(a.Value) {
+				return true
+			}
+		}
+	case *syntax.VarValue:
+		return hasClassApply(t.Lit)
+	case *syntax.FieldValue:
+		return hasClassApply(t.Base) || hasClassApply(t.Lit)
+	case *syntax.SliceValue:
+		if hasClassApply(t.Base) {
+			return true
+		}
+		for _, e := range t.Index {
+			if hasClassApply(e.Lo) || hasClassApply(e.Hi) {
+				return true
+			}
+		}
+	case *syntax.BitRangeValue:
+		return hasClassApply(t.Base)
+	case *syntax.PasteValue:
+		return hasClassApply(t.LHS) || hasClassApply(t.RHS)
+	case *syntax.BangValue:
+		for _, a := range t.Args {
+			if hasClassApply(a) {
+				return true
+			}
+		}
+		for _, c := range t.Cases {
+			if hasClassApply(c.Key) || hasClassApply(c.Value) {
+				return true
+			}
+		}
+	}
+	return false
+}
