@@ -78,6 +78,8 @@ type Lowerer struct {
 	// to them are already concrete there; a def/class body parsed at its
 	// definition site instead keeps them as VarInit.
 	eager bool
+	// preDepth guards preExpandMC against a multiclass that reaches itself.
+	preDepth int
 	// loopVars is the stack of iterator names of the enclosing foreach loops.
 	// TGParser parses a loop body once with these as VarInit and substitutes
 	// them only into record entries; a defvar value is never re-resolved, so a
@@ -148,6 +150,7 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 		l.mcs[t.Name] = t
 		l.mcLets[t.Name] = lets
 		l.reserveAnonNames(t.Body)
+		l.preExpandBody(t.Body, nil)
 	case *syntax.DefvarStmt:
 		if l.scope == 0 {
 			l.k.defineGlobal(t.Name, &AstExpr{V: t.Value, Env: env})
@@ -773,6 +776,7 @@ func (l *Lowerer) reserveAnonNames(items []syntax.Object) {
 				l.anonDefmName[t] = l.k.newAnonymous(t.Span().Start).Name
 			}
 			l.preFoldParents(t.Parents)
+			l.preExpandInnerDefm(t)
 		case *syntax.LetStmt:
 			for _, b := range t.Binds {
 				l.preFold(b.Value, nil)
@@ -797,6 +801,160 @@ func (l *Lowerer) reserveAnonNames(items []syntax.Object) {
 			}
 			l.preFoldParents(t.Parents)
 			l.preFoldItems(t.Body)
+		}
+	}
+}
+
+// preExpandInnerDefm mirrors what TGParser does with a `defm` written inside a
+// multiclass body: ParseObject calls ParseDefm there, so the referenced
+// multiclass is expanded while the body is parsed and its entries become
+// entries of the enclosing multiclass (TGParser.cpp:4565, addEntry at :411).
+// The records themselves stay unresolved, but every class application that is
+// already concrete - notably the elements of a foreach list such as
+// `VTPair<AccumType, v4f32>` - is instantiated then and keeps the anonymous
+// number it was given (VarDefInit::resolveReferences, Record.cpp:2423-2452).
+func (l *Lowerer) preExpandInnerDefm(st *syntax.DefmStmt) {
+	if l.preDepth > 16 {
+		return
+	}
+	l.preDepth++
+	defer func() { l.preDepth-- }()
+	prevEager := l.eager
+	l.eager = true
+	defer func() { l.eager = prevEager }()
+	prevPre := l.k.preInstantiate
+	l.k.preInstantiate = true
+	defer func() { l.k.preInstantiate = prevPre }()
+	for _, ref := range st.Parents[:st.ClassStart] {
+		if mc := l.mcs[ref.Name]; mc != nil {
+			l.preExpandMC(mc, ref.Args)
+		}
+	}
+}
+
+// preExpandMC walks one multiclass the parser would instantiate at this point,
+// binding its template arguments to the call site's values.
+func (l *Lowerer) preExpandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg) {
+	if l.preDepth > 16 {
+		return
+	}
+	l.preDepth++
+	defer func() { l.preDepth-- }()
+	binds := map[string]Binding{}
+	for i, a := range args {
+		if a == nil || a.Value == nil {
+			continue
+		}
+		name := a.Name
+		if name == "" {
+			if i >= len(mc.TemplateArgs) {
+				continue
+			}
+			name = mc.TemplateArgs[i].Name
+		}
+		binds[mc.Name+"::"+name] = Binding{V: a.Value, ParseTime: l.parseTimeKnown(a.Value, nil)}
+	}
+	for _, d := range mc.TemplateArgs {
+		key := mc.Name + "::" + d.Name
+		if _, ok := binds[key]; ok || d.Value == nil {
+			continue
+		}
+		binds[key] = Binding{V: d.Value, ParseTime: l.parseTimeKnown(d.Value, nil)}
+	}
+	env := (&Env{}).With(binds)
+	for _, p := range mc.Parents {
+		if pm := l.mcs[p.Name]; pm != nil {
+			l.preExpandMC(pm, p.Args)
+		}
+	}
+	l.preExpandBody(mc.Body, env)
+}
+
+// preExpandBody walks a multiclass body the way it is parsed, unrolling every
+// loop whose list is already a list of concrete values and descending into
+// nested defms. It only creates what the parser would create; a body that
+// still needs template arguments is left alone, so the instantiation that
+// follows sees the same VarDefInits LLVM would.
+func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
+	prevPre := l.k.preInstantiate
+	l.k.preInstantiate = true
+	defer func() { l.k.preInstantiate = prevPre }()
+	prevEager := l.eager
+	l.eager = true
+	defer func() { l.eager = prevEager }()
+	for _, o := range objs {
+		switch t := o.(type) {
+		case *syntax.ForeachStmt:
+			if t.Range != nil {
+				// `foreach i = 1...4` has no list value; TGParser unrolls it
+				// while parsing, so the body sees a concrete iterator.
+				for _, n := range t.Range {
+					l.preExpandBody(t.Body, env.WithBinding(t.Var, Binding{Val: &Int{N: int64(n)}, ParseTime: true}))
+				}
+				continue
+			}
+			if t.List == nil {
+				continue
+			}
+			l.preFold(t.List, env)
+			v, err := l.k.evalSyntax(t.List, env, nil)
+			if err != nil {
+				continue
+			}
+			ls, ok := v.(*List)
+			if !ok {
+				continue
+			}
+			known := l.parseTimeList(t.List, env)
+			for i, e := range ls.Elems {
+				kt := known
+				if lit, ok := t.List.(*syntax.ListValue); ok {
+					kt = kt && i < len(lit.Elems) && l.parseTimeKnown(lit.Elems[i], env)
+				}
+				l.preExpandBody(t.Body, env.WithBinding(t.Var, Binding{Val: e, ParseTime: kt}))
+			}
+		case *syntax.IfStmt:
+			l.preFold(t.Cond, env)
+			v, err := l.k.evalSyntax(t.Cond, env, nil)
+			if err != nil {
+				continue
+			}
+			n, ok := v.(*Int)
+			if !ok {
+				continue
+			}
+			if n.N != 0 {
+				l.preExpandBody(t.Then, env)
+			} else {
+				l.preExpandBody(t.Else, env)
+			}
+		case *syntax.LetStmt:
+			l.preExpandBody(t.Body, env)
+		case *syntax.DefmStmt:
+			l.preExpandInnerDefm(t)
+		case *syntax.DefStmt:
+			l.preFold(t.Name, env)
+			l.preFoldParents(t.Parents)
+			l.preFoldBodyItems(t.Body, env)
+		}
+	}
+}
+
+// preFoldBodyItems is preFoldItems with the environment the enclosing entry is
+// resolved in, so a class application that mentions a parse-time-unrolled loop
+// variable instantiates the way VarDefInit::resolveReferences does.
+func (l *Lowerer) preFoldBodyItems(items []syntax.BodyItem, env *Env) {
+	for _, it := range items {
+		switch t := it.(type) {
+		case *syntax.Decl:
+			l.preFold(t.Value, env)
+		case *syntax.LetItem:
+			l.preFold(t.Bind.Value, env)
+		case *syntax.AssertStmt:
+			l.preFold(t.Cond, env)
+			l.preFold(t.Message, env)
+		case *syntax.DumpStmt:
+			l.preFold(t.Value, env)
 		}
 	}
 }

@@ -129,6 +129,37 @@ if 0 then { def x : B<P<"then">>; } else { def y : B<P<"else">>; }
 			want: `{"!instanceof":{"B":["y"],"P":["anonymous_0","anonymous_1"]},"!tablegen_json_version":1,"anonymous_0":{"!anonymous":true,"!fields":[],"!locs":["t.td:3"],"!name":"anonymous_0","!superclasses":["P"],"a":"then"},"anonymous_1":{"!anonymous":true,"!fields":[],"!locs":["t.td:3"],"!name":"anonymous_1","!superclasses":["P"],"a":"else"},"y":{"!anonymous":false,"!fields":[],"!locs":["t.td:3"],"!name":"y","!superclasses":["B"]}}`,
 		},
 		{
+			// A defm written inside a multiclass body is expanded while that
+			// body is parsed (TGParser::ParseObject calls ParseDefm, and
+			// addEntry pushes the entries into MultiClass::Entries), so the
+			// concrete class applications of its foreach list take their
+			// anonymous numbers there - before the following def, and long
+			// before the enclosing defm is instantiated. The instances
+			// themselves stay pending until then (VarDefInit::resolveReferences
+			// instantiates, TGParser::resolve copies the entry and addDefOne
+			// registers it under the name it already has).
+			name: "defm in multiclass body expands at parse time",
+			src: `class Pair<string a, string b> { string VT0 = a; string VT1 = b; }
+class Anon<string x> { string X = x; }
+
+multiclass Inner<string A> {
+  foreach D = [Pair<A, "x">] in {
+    def : Anon<D.VT0>;
+  }
+}
+
+multiclass Outer<string U> {
+  defm I : Inner<"lit">;
+  def : Anon<U>;
+}
+
+def : Anon<"toplevel1">;
+
+defm O : Outer<"u">;
+`,
+			want: `{"!instanceof":{"Anon":["anonymous_0","anonymous_2","anonymous_3"],"Pair":["anonymous_1"]},"!tablegen_json_version":1,"anonymous_0":{"!anonymous":true,"!fields":[],"!locs":["t.td:6","t.td:11","t.td:17"],"!name":"anonymous_0","!superclasses":["Anon"],"X":"lit"},"anonymous_1":{"!anonymous":true,"!fields":[],"!locs":["t.td:5"],"!name":"anonymous_1","!superclasses":["Pair"],"VT0":"lit","VT1":"x"},"anonymous_2":{"!anonymous":true,"!fields":[],"!locs":["t.td:12","t.td:17"],"!name":"anonymous_2","!superclasses":["Anon"],"X":"u"},"anonymous_3":{"!anonymous":true,"!fields":[],"!locs":["t.td:15"],"!name":"anonymous_3","!superclasses":["Anon"],"X":"toplevel1"}}`,
+		},
+		{
 			// A defvar value is never re-resolved: TGParser parses the loop
 			// body with the iterator still a VarInit, and resolve() only walks
 			// record entries, not defvars. So defvar m = B<k> instantiates

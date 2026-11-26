@@ -767,8 +767,13 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		if err != nil {
 			return nil, err
 		}
-		if k.parseFold {
-			if containsUnresolved(v) {
+		if k.parseFold || k.preInstantiate {
+			// An argument that does not evaluate to anything is a template
+			// argument the parser has not substituted yet; VarDefInit stays
+			// unresolved in that case too. The parse-time pre-expansion of a
+			// multiclass body must only create instances whose arguments are
+			// already concrete (VarDefInit::instantiate, Record.cpp:2374).
+			if v == nil || containsUnresolved(v) {
 				// A parse-time fold reaches a class application whose
 				// arguments are still references. LLVM leaves the VarDefInit
 				// unresolved and only instantiates it (assigning the anonymous
@@ -779,6 +784,16 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		key += "\x00" + pos + ":" + name + "=" + valueKey(v)
 	}
 	if cached := k.anonCache[key]; cached != nil {
+		// The instance was created while a multiclass body was parsed; the
+		// defm expansion that finally refers to it registers it now, keeping
+		// the name it was given there (TGParser::resolve copies the entry and
+		// addDefOne adds it under its existing name).
+		if cached.PendingAdd && !k.readOnly {
+			cached.PendingAdd = false
+			if err := k.addDef(cached); err != nil {
+				return nil, err
+			}
+		}
 		return cached, nil
 	}
 	if k.readOnly {
@@ -803,6 +818,12 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		// half-built instance behind for the real evaluation to reuse.
 		delete(k.anonCache, key)
 		return nil, err
+	}
+	if k.preInstantiate {
+		// Parsing a multiclass body only consumes the name; the def itself is
+		// added when the enclosing defm expands (see Record.PendingAdd).
+		rec.PendingAdd = true
+		return rec, nil
 	}
 	if err := k.addDef(rec); err != nil {
 		delete(k.anonCache, key)

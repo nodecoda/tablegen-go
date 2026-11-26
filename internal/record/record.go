@@ -331,6 +331,15 @@ type Record struct {
 
 	keeper *Keeper
 
+	// PendingAdd marks an anonymous instance that was created while a
+	// multiclass body was parsed (TGParser::ParseDefm runs there, and the
+	// VarDefInit it resolves allocates the name) but has not been added to the
+	// keeper yet. LLVM keeps such a record in MultiClass::Entries and adds it
+	// only when the enclosing defm is instantiated (resolve() copies it and
+	// addDefOne registers the copy under the name it already has), so the name
+	// is consumed at parse time and the def appears later.
+	PendingAdd bool
+
 	// tyCache memoizes Type(). Super is only ever appended to while a record
 	// is being built, so a length check is enough to notice an invalidation.
 	tyCache *Ty
@@ -645,6 +654,11 @@ type Keeper struct {
 	// VarDefInit::instantiate assigns the next anonymous number.
 	readOnly bool
 	anonLoc  diag.Pos
+	// preInstantiate is set while a multiclass body is parsed the way
+	// TGParser::ParseObject does it: class applications that are already
+	// concrete get their anonymous name there, but the records stay pending
+	// until the enclosing defm is expanded. See Record.PendingAdd.
+	preInstantiate bool
 
 	// loopDefs records the defs created while expanding a statement-level
 	// foreach, keyed by syntax.ForeachStmt.Seq. The parser uses them to make
