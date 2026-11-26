@@ -2,3 +2,4 @@
 *.test
 *.prof
 conformance/*.local.json
+coverage.out

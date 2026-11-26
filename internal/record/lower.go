@@ -648,9 +648,11 @@ func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []sco
 	if err := l.applyParents(rec, extraParents, env); err != nil {
 		return nil, err
 	}
-	for _, lb := range postLets {
-		if err := l.applyLet(rec, lb.b, lb.env); err != nil {
-			return nil, err
+	if !l.namesOnly {
+		for _, lb := range postLets {
+			if err := l.applyLet(rec, lb.b, lb.env); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if err := l.finishDef(rec, anonymous); err != nil {
@@ -792,9 +794,14 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, ext
 			return nil, false, err
 		}
 	}
-	for _, lb := range preLets {
-		if err := l.applyLet(rec, lb.b, lb.env); err != nil {
-			return nil, false, err
+	if !l.namesOnly {
+		// LowerNames never instantiates the parents, so their fields are
+		// missing and a `let Field` would report "Value unknown". Names and
+		// the direct parent list are all it needs, so skip the let stack.
+		for _, lb := range preLets {
+			if err := l.applyLet(rec, lb.b, lb.env); err != nil {
+				return nil, false, err
+			}
 		}
 	}
 	if !l.namesOnly {
@@ -1351,26 +1358,23 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 			if n != 0 {
 				body = t.Then
 			}
-			// LLVM lowers `if` to a foreach over !if(cond, [0], []). When the
-			// condition is already resolvable while parsing the multiclass,
-			// the loop is unrolled then and its records inherit the defm loc;
-			// otherwise the loop survives into resolution and loses it.
-			locs := outerLocs
-			if !l.parseTimeKnown(t.Cond, env) {
-				locs = nil
-			}
+			// LLVM lowers `if` to a foreach over !if(cond, [0], []), so it
+			// expands a statement loop exactly like the foreach case.
+			locs := loopLocs(l, t.Cond, env, outerLocs, false)
 			if err := l.mcObjects(body, env, preLets, defmName, locs, postLets, extraParents); err != nil {
 				return err
 			}
 		case *syntax.ForeachStmt:
 			// A loop whose list is already a list literal at parse time is
 			// unrolled by LLVM's parser, so its records sit directly in the
-			// multiclass body and inherit the defm's location. Loops whose
-			// list only resolves at instantiation time (template arguments,
-			// !if, ...) are expanded during resolve with no location.
+			// multiclass body and inherit the defm's location. A loop whose
+			// list only resolves at instantiation time becomes a ForeachLoop
+			// entry that resolve() expands without the current defm's Loc
+			// (TGParser.cpp:511); the records then join the enclosing level
+			// as entries, which appends that level's location there.
 			locs := outerLocs
-			if t.Range == nil && !l.parseTimeList(t.List, env) {
-				locs = nil
+			if t.Range == nil {
+				locs = loopLocs(l, t.List, env, outerLocs, true)
 			}
 			if err := l.mcForeach(t, env, preLets, defmName, locs, postLets, extraParents); err != nil {
 				return err
@@ -1416,6 +1420,146 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 		}
 	}
 	return nil
+}
+
+// outerLocsAbove drops the innermost defm location. A loop that resolve()
+// unrolls creates its records without the current site; enclosing multiclass
+// levels still append theirs once the records become their entries
+// (TGParser.cpp:561).
+func outerLocsAbove(locs []diag.Pos) []diag.Pos {
+	if len(locs) <= 1 {
+		return nil
+	}
+	return locs[1:]
+}
+
+// loopLocs mirrors the three ways TGParser expands a foreach/if body:
+//
+//   - the list or condition is already a literal while the multiclass is
+//     parsed (addEntry -> resolve, TGParser.cpp:426-430): the records are
+//     plain body entries and keep the whole location chain;
+//   - it becomes a literal only after substituting this defm's arguments
+//     (TGParser.cpp:511): resolve() expands the loop without the current
+//     site, and each enclosing level appends its own loc later;
+//   - it is still unresolved here (a name that only the enclosing multiclass
+//     will bind): the loop survives into an outer resolve(), which drops
+//     every remaining site, so the records carry none of them.
+func loopLocs(l *Lowerer, v syntax.Value, env *Env, outerLocs []diag.Pos, list bool) []diag.Pos {
+	known := l.parseTimeKnown
+	if list {
+		// A foreach unrolls for any ListInit, even when the elements are
+		// still unresolved class applications.
+		known = l.parseTimeList
+	}
+	switch {
+	case known(v, env):
+		return outerLocs
+	case l.levelKnown(v, env):
+		return outerLocsAbove(outerLocs)
+	}
+	return nil
+}
+
+// levelKnown reports whether v is foldable once this defm call's arguments are
+// substituted: literals, and bindings whose argument expression is itself a
+// literal. A binding that still names another template argument stays a
+// VarInit and does not count.
+func (l *Lowerer) levelKnown(v syntax.Value, env *Env) bool {
+	switch t := v.(type) {
+	case nil, *syntax.UnsetValue, *syntax.IntValue, *syntax.BitsValue,
+		*syntax.StringValue, *syntax.ListValue:
+		return true
+	case *syntax.VarValue:
+		if t.Subst && t.Lit != nil {
+			return l.levelKnown(t.Lit, env)
+		}
+		if t.GlobalRef {
+			return true
+		}
+		if q, ok := env.Qualify(t.Name); ok {
+			if b, ok := env.Lookup(q); ok {
+				return bindingLevelKnown(b)
+			}
+		}
+		if b, ok := env.Lookup(t.Name); ok {
+			return bindingLevelKnown(b)
+		}
+		if t.Lit != nil {
+			return false
+		}
+		// No binding at all: a global def or defvar, known while parsing.
+		return true
+	case *syntax.FieldValue:
+		return l.levelKnown(t.Base, env)
+	case *syntax.SliceValue:
+		if !l.levelKnown(t.Base, env) {
+			return false
+		}
+		for _, e := range t.Index {
+			if e.Lo != nil && !l.levelKnown(e.Lo, env) {
+				return false
+			}
+			if e.Hi != nil && !l.levelKnown(e.Hi, env) {
+				return false
+			}
+		}
+		return true
+	case *syntax.BitRangeValue:
+		return l.levelKnown(t.Base, env)
+	case *syntax.PasteValue:
+		return l.levelKnown(t.LHS, env) && l.levelKnown(t.RHS, env)
+	case *syntax.ClassApplyValue:
+		for _, a := range t.Args {
+			if a.Value != nil && !l.levelKnown(a.Value, env) {
+				return false
+			}
+		}
+		return true
+	case *syntax.BangValue:
+		if t.Op == syntax.XInstances {
+			return false
+		}
+		for _, a := range t.Args {
+			if a != nil && !l.levelKnown(a, env) {
+				return false
+			}
+		}
+		for _, c := range t.Cases {
+			if c.Key != nil && !l.levelKnown(c.Key, env) {
+				return false
+			}
+			if c.Value != nil && !l.levelKnown(c.Value, env) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// bindingLevelKnown is levelKnown for an env binding: an evaluated value or a
+// parse-time binding is known; otherwise only a literal expression counts. A
+// bound VarInit is deliberately opaque - resolve() does not chase it through
+// the enclosing multiclass's substitutions (TGParser.cpp:511).
+func bindingLevelKnown(b Binding) bool {
+	if b.ParseTime || b.Val != nil {
+		return true
+	}
+	if b.V != nil {
+		return levelValueKnown(b.V)
+	}
+	return false
+}
+
+func levelValueKnown(v syntax.Value) bool {
+	switch t := v.(type) {
+	case nil, *syntax.UnsetValue, *syntax.IntValue, *syntax.BitsValue,
+		*syntax.StringValue, *syntax.ListValue:
+		return true
+	case *syntax.VarValue:
+		return t.Lit != nil && levelValueKnown(t.Lit)
+	}
+	return false
 }
 
 func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
