@@ -4,8 +4,8 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:msg-match": 3,
-    "status:same": 382,
+    "status:msg-match": 1,
+    "status:same": 384,
     "status:skipped": 7
   },
   "cases": [
@@ -3030,9 +3030,11 @@
       },
       "ours": {
         "exit": 0,
-        "full_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        "full_sha256": "f56d2a0dfe650cd6dfb93e3189b15a8bdfcef02568337cf5ab016eeb650bb6ef",
+        "full_len": 228,
+        "full": "\u003cfile\u003e:11:3: note: one\n  dump \"one\";\n  ^\n\u003cfile\u003e:19:3: note: two\n  dump \"two\";\n  ^\n\u003cfile\u003e:28:5: note: i = 1\n    dump \"i = \" # i;\n    ^\n\u003cfile\u003e:28:5: note: i = 2\n    dump \"i = \" # i;\n    ^\n\u003cfile\u003e:37:3: note: four\n  dump \"four\";\n  ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defmclass.td",
@@ -3205,9 +3207,11 @@
       },
       "ours": {
         "exit": 0,
-        "full_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        "full_sha256": "40af1da431eeb8132d2b7fda3e23bdbe87af58c2a2d8641c208a537ca27fd0b4",
+        "full_len": 2076,
+        "full": "\u003cfile\u003e:4:1: note: Debug message\ndump \"Debug message\";\n^\n\u003cfile\u003e:17:1: note: The Value of A is:\na {\t// A\n  string A = \"some text\";\n  dag X = (op op);\n}\n\ndump \"The Value of A is: \\n\" # !repr(a);\n^\n\u003cfile\u003e:24:1: note: b {\t// A\n  string A = \"some text\";\n  dag X = (op op);\n}\n\ndump b;\n^\n\u003cfile\u003e:28:1: note: some other text\ndump value_A;\n^\n\u003cfile\u003e:35:1: note: got a pair of values [\"some other text\" : 12], and an empty record:\nX {\n}\n\ndump \"got a pair of values [\" # !repr(value_A) # \" : \" # !repr(value_B) # \"], \" # \"and an empty record:\\n\" # !repr(X);\n^\n\u003cfile\u003e:39:3: note: s = (op a)\n  dump \"s = \" # !repr(s);\n  ^\n\u003cfile\u003e:44:3: note: args[0] = a {\t// A\n  string A = \"some text\";\n  dag X = (op op);\n}\n\n  dump \"args[0] = \" # !repr(!getdagarg\u003cA\u003e(s,0));\n  ^\n\u003cfile\u003e:51:3: note: the operand of s is op\n  dump \"the operand of s is \" # !getdagop(s);\n  ^\n\u003cfile\u003e:39:3: note: s = (op a, a)\n  dump \"s = \" # !repr(s);\n  ^\n\u003cfile\u003e:44:3: note: args[0] = a {\t// A\n  string A = \"some text\";\n  dag X = (op op);\n}\n\n  dump \"args[0] = \" # !repr(!getdagarg\u003cA\u003e(s,0));\n  ^\n\u003cfile\u003e:68:3: note: i = -1 (negative)\n  dump \"i = \" # !repr(i) # !if(!ge(i,0), \" (positive)\", \" (negative)\");\n  ^\n\u003cfile\u003e:73:5: note: i + 1 \u003c= 0\n    dump \"i + 1 \u003c= 0\" ;\n    ^\n\u003cfile\u003e:68:3: note: i = 2 (positive)\n  dump \"i = \" # !repr(i) # !if(!ge(i,0), \" (positive)\", \" (negative)\");\n  ^\n\u003cfile\u003e:71:5: note: i + 1 \u003e 0 (i + 1 = 3)\n    dump \"i + 1 \u003e 0 (i + 1 = \" # !repr(ip1) # \")\";\n    ^\n\u003cfile\u003e:78:3: note: val = [{a = a +1;}]\n  dump \"val = \" # !repr(val);\n  ^\n\u003cfile\u003e:78:3: note: val = [{f(x);}]\n  dump \"val = \" # !repr(val);\n  ^\n\u003cfile\u003e:86:3: note: number = 33\n  dump \"number = \" # !repr(number);\n  ^\n\u003cfile\u003e:103:1: note: TheSet = [Subset_One, Subset_Two, Three]\ndump \"TheSet = \" # !repr(TheSet);\n^\n\u003cfile\u003e:106:1: note: 0\ndump !repr(!exists\u003cBaseClassForSet\u003e(\"non-existent-record\"));\n^\n\u003cfile\u003e:111:3: note: Dumper n = 1\n  dump \"Dumper n = \" # !repr(n);\n  ^\n\u003cfile\u003e:116:5: note: m = 1\n    dump \"m = \" # !repr(m);\n    ^\n\u003cfile\u003e:111:3: note: Dumper n = 3\n  dump \"Dumper n = \" # !repr(n);\n  ^\n\u003cfile\u003e:116:5: note: m = 3\n    dump \"m = \" # !repr(m);\n    ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/duplicate-include.td",
@@ -5209,18 +5213,18 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "26ae26cad64d9e5180f2df4fa052a2e345938bfe7c59874583bbb9fccf9eeb72",
+        "full_sha256": "40937f2b1a7184ec9ef6acb46972ae9f658724324ddf5164b02dc0c7a43333d8",
         "full_len": 266,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-556382129/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-556382129/a.td:2:\n/tmp/tblgen-split-556382129/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-504940144/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-504940144/a.td:2:\n/tmp/tblgen-split-504940144/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "edaf63669c81bf4ee7bc31b150f82050855af444dfce9cea2a6f37e5f797c05d",
+        "full_sha256": "4a2cc3ed05e5b0a7972e086c701e3bbf45f2fe1cda2856056e25f382a851091f",
         "full_len": 316,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-556382129/a.td:2:\n/tmp/tblgen-split-556382129/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-556382129/a.td:2:\n/tmp/tblgen-split-556382129/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-504940144/a.td:2:\n/tmp/tblgen-split-504940144/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-504940144/a.td:2:\n/tmp/tblgen-split-504940144/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "status": "msg-match"
     },

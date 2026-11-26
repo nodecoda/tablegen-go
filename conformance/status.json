@@ -4658,7 +4658,8 @@
         "exit": 0,
         "class": "valid",
         "out_sha256": "bc87d6d627544595ba56566bc2d2d9262abf6ec8d3819f96acb3df7ba6fed2e0",
-        "out_len": 549
+        "out_len": 549,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defm-dump-parent-class.td:11:3: note: one"
       },
       "status": "match"
     },
@@ -4886,7 +4887,8 @@
         "exit": 0,
         "class": "valid",
         "out_sha256": "9bcd2d5bff2fa603118068aba1b4881e53dfa2754032106263d2e2ad765b7b51",
-        "out_len": 2423
+        "out_len": 2423,
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dump.td:4:1: note: Debug message"
       },
       "status": "match"
     },
@@ -7399,22 +7401,22 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t/inc %t/main.td -o %t/out.td -d %t/out.d ; FileCheck %s --input-file=%t/out.d --match-full-lines -DDIR=%t ; llvm-tblgen -I %t/inc %t/main.td -o %t/out.td -d %t/out2.d ; cmp %t/out.d %t/out2.d ; not llvm-tblgen -E -I %t/inc %t/main.td -d %t/out.d 2\u003e\u00261 | FileCheck %s --check-prefix=NO-OUTPUT",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-1485794754/out.td",
+      "input": "/tmp/tblgen-split-1266866196/out.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-1485794754/inc"
+        "/tmp/tblgen-split-1266866196/inc"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-1485794754/out.td': No such file or directory"
+        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-1266866196/out.td': No such file or directory"
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "./tblgen: Could not open input file '/tmp/tblgen-split-1485794754/out.td': No such file or directory"
+        "err_head": "./tblgen: Could not open input file '/tmp/tblgen-split-1266866196/out.td': No such file or directory"
       },
       "status": "reject-match"
     },
@@ -7460,23 +7462,23 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-include.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t %t/main.td | FileCheck %s --match-full-lines --strict-whitespace ; llvm-tblgen -E -I %t %t/multi.td | FileCheck %s --check-prefix=MULTI --match-full-lines --strict-whitespace",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-413433950/main.td",
+      "input": "/tmp/tblgen-split-2731769600/main.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-413433950"
+        "/tmp/tblgen-split-2731769600"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "Included from /tmp/tblgen-split-413433950/main.td:3:",
+        "err_head": "Included from /tmp/tblgen-split-2731769600/main.td:3:",
         "err_line": 5
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "Included from /tmp/tblgen-split-413433950/main.td:7:",
+        "err_head": "Included from /tmp/tblgen-split-2731769600/main.td:7:",
         "err_line": 5
       },
       "status": "reject-match"
