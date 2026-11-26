@@ -19,7 +19,12 @@ import (
 	"tblgen/internal/syntax"
 )
 
-const version = "0.5.0-dev"
+// version is the release line. The oracle pin is the llvm-tblgen build every
+// conformance scoreboard in README.md was measured against; bump both together.
+const (
+	version       = "1.0.0"
+	oracleVersion = "llvm-tblgen 24.0.0git"
+)
 
 type stringList []string
 
@@ -62,9 +67,9 @@ func main() {
 	}
 
 	if *showVersion {
-		fmt.Printf("tblgen %s\n", version)
-		fmt.Println("scope:    TableGen language core + record-level backends (--dump-json, --print-records)")
-		fmt.Println("oracle:   llvm-tblgen 24.0.0git (--dump-json)")
+		fmt.Printf("tblgen v%s\n", version)
+		fmt.Println("scope:   TableGen language core + record-level backends (--dump-json, --print-records)")
+		fmt.Printf("oracle:  %s (--dump-json)\n", oracleVersion)
 		return
 	}
 
