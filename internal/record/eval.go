@@ -800,6 +800,9 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 			if err := k.addDef(cached); err != nil {
 				return nil, err
 			}
+			// The defm expansion that finally refers to the instance is its
+			// VarDefInit::instantiate, so its dumps run exactly here.
+			k.emitDumps(cached)
 		}
 		// A parse-time fold (preFold) creates the record only to reproduce
 		// llvm-tblgen's anonymous numbering: its arguments may still be
@@ -828,6 +831,10 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 	for _, as := range class.Asserts {
 		rec.Asserts = append(rec.Asserts, rebindAssertFrames(as, defaults, provided))
 	}
+	// VarDefInit::instantiate copies the class's dumps before resolving.
+	for _, d := range class.Dumps {
+		rec.Dumps = append(rec.Dumps, rebindDumpFrames(d, defaults, provided))
+	}
 	if err := rec.resolveAll(); err != nil {
 		// A pre-parse fold may have swallowed this error; do not leave a
 		// half-built instance behind for the real evaluation to reuse.
@@ -850,6 +857,9 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 	// to check yet. LLVM instantiates lazily and would not reach this point.
 	if !k.parseFold && !k.readOnly {
 		k.checkRecordAsserts(rec)
+		// VarDefInit::instantiate emits the dumps after the assertions
+		// (Record.cpp:2408-2419).
+		k.emitDumps(rec)
 	}
 	return rec, nil
 }
@@ -911,6 +921,11 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	// reads SubRegIndices, which targets usually set with `let`).
 	for _, as := range class.Asserts {
 		target.Asserts = append(target.Asserts, rebindAssert(as, provided))
+	}
+	// Record::appendDumps: the parent's dumps become the child's and run for
+	// every concrete def that inherits the class (TGParser.cpp:363-364).
+	for _, d := range class.Dumps {
+		target.Dumps = append(target.Dumps, rebindDump(d, provided))
 	}
 	// AddParentClass resolves the values it just copied with the class
 	// arguments bound, right here and before the body is parsed. That is when

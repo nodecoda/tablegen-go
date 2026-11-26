@@ -29,11 +29,18 @@ type Severity int
 const (
 	Error Severity = iota
 	Warning
+	// NoteSev is a standalone note (LLVM's PrintNote), used by `dump`. It
+	// never fails the run and reads like the note half of a diagnostic. (The
+	// type Note above is a secondary location attached to an error.)
+	NoteSev
 )
 
 func (s Severity) String() string {
-	if s == Warning {
+	switch s {
+	case Warning:
 		return "warning"
+	case NoteSev:
+		return "note"
 	}
 	return "error"
 }
@@ -161,6 +168,12 @@ func (c *Collector) Error(code, msg string, span Span) {
 // SoftError records an error that llvm-tblgen prints without failing.
 func (c *Collector) SoftError(code, msg string, span Span) {
 	c.Diags = append(c.Diags, Diagnostic{Severity: Error, Code: code, Message: msg, Span: span, Soft: true})
+}
+
+// Note records a standalone note (llvm::PrintNote with a location). It is
+// rendered like a diagnostic but never affects the exit code.
+func (c *Collector) Note(code, msg string, span Span) {
+	c.Diags = append(c.Diags, Diagnostic{Severity: NoteSev, Code: code, Message: msg, Span: span})
 }
 
 func (c *Collector) Warn(code, msg string, span Span) {

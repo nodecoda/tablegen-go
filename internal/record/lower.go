@@ -209,7 +209,9 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 	case *syntax.AssertStmt:
 		l.assert(t, env, nil)
 	case *syntax.DumpStmt:
-		// dump writes a note to stderr in LLVM; it does not affect --dump-json.
+		// With no current record ParseDump resolves the message against an
+		// empty final resolver and prints it right away (TGParser.cpp:4838-4843).
+		l.emitDump(t.Span().Start, t.Value, env, nil)
 	case *syntax.IncludeStmt:
 		l.errorAt(unsupported("include (resolved in M5)", t.Span()), t.Span())
 	}
@@ -511,6 +513,10 @@ func (l *Lowerer) bodyItem(rec *Record, item syntax.BodyItem, env *Env) error {
 		rec.Asserts = append(rec.Asserts, Assertion{Cond: t.Cond, Message: t.Message, Env: env})
 		return nil
 	case *syntax.DumpStmt:
+		// ParseDump with a current record stores the message on it
+		// (CurRec->addDump, TGParser.cpp:4835); addDefOne emits it once the
+		// def is complete.
+		rec.Dumps = append(rec.Dumps, Dump{Loc: t.Span().Start, Msg: t.Value, Env: env})
 		return nil
 	default:
 		return unsupported("body item", item.Span())
@@ -521,6 +527,12 @@ func (l *Lowerer) applyLet(rec *Record, b *syntax.LetBind, env *Env) error {
 	rv := rec.Val(b.Field)
 	if rv == nil {
 		return &EvalError{Msg: "Value '" + b.Field + "' unknown!", Span: b.FieldSpan}
+	}
+	// SetValue(..., OverrideDefLoc=true) stamps the let's identifier location
+	// on the field (TGParser.cpp:326, 3851): the detailed records report then
+	// points at the `let` line, not at the declaration.
+	if b.FieldSpan.Start.File != "" {
+		rv.Loc = b.FieldSpan.Start
 	}
 	// `let X = X` is a self-assignment only when X is the field. A template
 	// argument or loop variable of the same name is a different binding
@@ -691,6 +703,9 @@ func (l *Lowerer) finishDef(rec *Record, anonymous bool) error {
 	// Record::checkRecordAssertions runs in addDefOne, after every field and
 	// let of the def has been applied.
 	l.k.checkAssertions(rec)
+	// Record::emitRecordDumps runs next, before the record joins the keeper
+	// (TGParser.cpp:603-606).
+	l.emitRecordDumps(rec)
 	if err := l.k.addDef(rec); err != nil {
 		return err
 	}
@@ -1117,6 +1132,8 @@ func (l *Lowerer) preFoldParseItems(items []syntax.Object) {
 		case *syntax.AssertStmt:
 			l.preFold(t.Cond, nil)
 			l.preFold(t.Message, nil)
+		case *syntax.DumpStmt:
+			l.preFold(t.Value, nil)
 		case *syntax.DefsetStmt:
 			l.preFoldParseItems(t.Objects)
 		}
@@ -1363,6 +1380,10 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 		case *syntax.AssertStmt:
 			l.assert(t, env, nil)
 		case *syntax.DumpStmt:
+			// resolve() applies the defm substitutions and calls dumpMessage
+			// immediately for a dump that is not inside a def
+			// (TGParser.cpp:544-556).
+			l.emitDump(t.Span().Start, t.Value, env, nil)
 		case *syntax.DefmStmt:
 			var inner string
 			switch {

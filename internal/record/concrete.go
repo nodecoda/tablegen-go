@@ -9,8 +9,10 @@ import "tblgen/internal/diag"
 // reference or an unfolded operator. `field` opts out because targets
 // legitimately keep non-concrete values in helper defs.
 //
-// LLVM prints one error per offending value; we stop at the first, which is
-// enough to classify the input and keeps the driver's one-error contract.
+// checkConcrete reports every offending value, like the loop in TGParser.cpp:
+// 99-116, and does not stop the def: addDefOne continues with the assertions
+// and the dumps. PrintError still fails the run, so the diagnostics are soft
+// (printed, no abort) and the caller's exit code is 1.
 func (k *Keeper) checkConcrete(rec *Record) error {
 	for _, v := range rec.Vals {
 		if v.Nonconcrete {
@@ -21,10 +23,9 @@ func (k *Keeper) checkConcrete(rec *Record) error {
 			return err
 		}
 		if initIncomplete(val) {
-			return &EvalError{
-				Msg:  "Initializer of '" + v.Name + "' in '" + rec.Name + "' could not be fully resolved: " + printableOf(val),
-				Span: rec.locSpan(),
-			}
+			k.diags.SoftError("E_SEMANTIC",
+				"Initializer of '"+v.Name+"' in '"+rec.Name+"' could not be fully resolved: "+printableOf(val),
+				rec.locSpan())
 		}
 	}
 	return nil

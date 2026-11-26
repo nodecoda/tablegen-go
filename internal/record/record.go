@@ -247,6 +247,18 @@ func rebindAssertFrames(a Assertion, defaults, vars map[string]Binding) Assertio
 	return Assertion{Cond: a.Cond, Message: a.Message, Env: env.With(vars)}
 }
 
+func rebindDump(d Dump, vars map[string]Binding) Dump {
+	return rebindDumpFrames(d, nil, vars)
+}
+
+func rebindDumpFrames(d Dump, defaults, vars map[string]Binding) Dump {
+	env := d.Env
+	if len(defaults) > 0 {
+		env = env.With(defaults)
+	}
+	return Dump{Loc: d.Loc, Msg: d.Msg, Env: env.With(vars)}
+}
+
 // rebind prepends a template-argument frame to every expression in e. It is
 // how a class body is instantiated for a concrete def: the class's own
 // defaults stay in the chain, the caller's arguments win.
@@ -329,6 +341,13 @@ type Record struct {
 	// stored with the environment that binds the class arguments.
 	Asserts []Assertion
 
+	// Dumps are class- or def-body `dump` statements. Record::emitRecordDumps
+	// resolves the message with a final RecordResolver in addDefOne, so they
+	// are stored with the environment they were written in and emitted when
+	// the def is complete. AddParentClass appends the parent's dumps
+	// (TGParser.cpp:363), so inherited dumps run once per concrete def.
+	Dumps []Dump
+
 	// AssertsChecked records that Record::checkRecordAssertions already ran
 	// for this record. An anonymous instance is often created during a
 	// parse-time fold, where there is nothing to check yet, and is then
@@ -359,6 +378,13 @@ type Assertion struct {
 	Cond    syntax.Value
 	Message syntax.Value
 	Env     *Env
+}
+
+// Dump is a deferred `dump msg;` from a class or def body.
+type Dump struct {
+	Loc diag.Pos
+	Msg syntax.Value
+	Env *Env
 }
 
 func (r *Record) Val(name string) *RecordVal {
