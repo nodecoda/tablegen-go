@@ -34,6 +34,11 @@ type Lowerer struct {
 	anonName     map[*syntax.DefStmt]string
 	anonDefmName map[*syntax.DefmStmt]string
 	loopSeq      int // Seq of the statement-level loop being expanded, or -1
+	// skipLoopFold makes preFold ignore values that mention a foreach
+	// iterator. TGParser parses an `if` body with the iterator still a
+	// VarInit, so such values are not concrete at parse time and fold only
+	// when the surviving branch executes.
+	skipLoopFold bool
 	// pending, when non-nil, is the entry list of the defm currently being
 	// expanded. TGParser resolves a defm's records into NewEntries and only
 	// afterwards runs addDefOne on each, so buildDef queues its record here
@@ -123,7 +128,12 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 		// (ParseOperation -> Fold), so a bad operator is diagnosed even when
 		// the defvar is never read. We keep values lazy for record building,
 		// so re-run the evaluator here purely to surface those diagnostics.
-		if b, isBang := t.Value.(*syntax.BangValue); isBang && b.Op != syntax.XCast {
+		//
+		// A value that mentions a foreach iterator must not be evaluated
+		// here: TGParser keeps it unresolved until the loop body executes,
+		// and folding it now would instantiate anonymous class applications
+		// (and report errors) for iterations whose use site never runs.
+		if b, isBang := t.Value.(*syntax.BangValue); isBang && b.Op != syntax.XCast && !l.usesLoopVar(t.Value) {
 			if _, err := l.k.evalSyntax(t.Value, env, nil); err != nil {
 				l.errorAt(err, t.Span())
 			}
@@ -243,9 +253,14 @@ func (l *Lowerer) ifStmt(st *syntax.IfStmt, env *Env, lets []*syntax.LetBind) {
 	// TGParser turns each arm into its own foreach over a 0-or-1-element list
 	// and parses *both* bodies before either list is resolved. Their literal
 	// class applications therefore instantiate in source order even though only
-	// one arm survives.
+	// one arm survives. Values that mention a foreach iterator are not
+	// concrete at parse time (resolve() runs the surviving arm later), so
+	// folding them here would create anonymous records LLVM never makes.
+	prevSkip := l.skipLoopFold
+	l.skipLoopFold = true
 	l.preFoldParseItems(st.Then)
 	l.preFoldParseItems(st.Else)
+	l.skipLoopFold = prevSkip
 	if n != 0 {
 		l.objects(st.Then, env, lets)
 	} else {
@@ -1244,6 +1259,9 @@ func usesNAME(v syntax.Value) bool {
 // VarInit, so an application over it is not concrete yet.
 func (l *Lowerer) preFold(v syntax.Value, env *Env) {
 	if v == nil || !hasClassApply(v) {
+		return
+	}
+	if l.skipLoopFold && l.usesLoopVar(v) {
 		return
 	}
 	// VarDefInit::get runs while the value is parsed, with the record's scope
