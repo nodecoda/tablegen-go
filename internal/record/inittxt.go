@@ -135,6 +135,14 @@ func resolveVar(x *syntax.VarValue, env *Env) (string, syntax.Value, *Env) {
 		if x.Lit != nil {
 			return "", x.Lit, env
 		}
+		if x.GlobalVar && env != nil && env.keeper != nil {
+			// TGParser::ParseIDValue returns the global's Init, and for a
+			// defset that Init is built while lowering the block, not at the
+			// reference; the keeper is the only place that has it.
+			if lit, ok := globalLit(env, x.Name); ok {
+				return "", lit, env
+			}
+		}
 		return x.Name, nil, nil
 	}
 	if x.Lexical {
@@ -479,21 +487,50 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 				}
 				return int64(uint64(a) >> uint(b)), true
 			}
+		case syntax.XIsA:
+			// IsAOpInit::Fold (Record.cpp:2040-2064): a DefInit is an
+			// instance of the named class when its record inherits it.
+			if env != nil && env.keeper != nil && len(x.Args) == 1 {
+				if name, ok := defRefName(x.Args[0], env); ok {
+					if d := env.keeper.Def(name); d != nil {
+						if d.Type().IsA(env.keeper.tyFromSyntax(x.TypeArg)) {
+							return 1, true
+						}
+						return 0, true
+					}
+				}
+			}
+			return 0, false
 		case syntax.XNot:
+			// UnOpInit::Fold's NOT is logical for every int: a nonzero operand
+			// folds to 0 and a zero one to 1 (Record.cpp:867-871).
 			a, ok := arg(0)
 			if !ok {
 				return 0, false
 			}
-			if len(x.Args) == 1 && x.Args[0] != nil && x.Args[0].Type().Kind == syntax.BitType {
-				return 1 - a, true
+			if a != 0 {
+				return 0, true
 			}
-			return ^a, true
+			return 1, true
 		case syntax.XEq, syntax.XNe, syntax.XLt, syntax.XLe, syntax.XGt, syntax.XGe:
 			// CompareInit compares two strings lexicographically as well as
 			// two ints (Record.cpp:1400-1408).
 			if ls, _, lok := constStrCode(x.Args[0], env, depth+1); lok {
 				if rs, _, rok := constStrCode(x.Args[1], env, depth+1); rok {
 					return compareResult(x.Op, strings.Compare(ls, rs)), true
+				}
+			}
+			if x.Op == syntax.XEq || x.Op == syntax.XNe {
+				// CompareInit's record case (Record.cpp:1173-1181): two
+				// DefInits compare by identity, and a template argument that
+				// names a def is one after AddParentClass substituted it.
+				if ln, lok := defRefName(x.Args[0], env); lok {
+					if rn, rok := defRefName(x.Args[1], env); rok {
+						if (ln == rn) == (x.Op == syntax.XEq) {
+							return 1, true
+						}
+						return 0, true
+					}
 				}
 			}
 			a, ok1 := arg(0)
@@ -855,6 +892,35 @@ func globalLit(env *Env, name string) (syntax.Value, bool) {
 	return valueToSyntax(v)
 }
 
+// defRefName is the def a value stands for: a direct reference, or a binding
+// whose value is already a DefVal. CompareInit compares those by identity, and
+// printing only has names.
+func defRefName(v syntax.Value, env *Env) (string, bool) {
+	for depth := 0; depth < 32; depth++ {
+		x, ok := v.(*syntax.VarValue)
+		if !ok {
+			return "", false
+		}
+		if x.GlobalRef && !x.GlobalVar {
+			return x.Name, true
+		}
+		if x.Lit != nil && (x.Subst || x.Lexical || x.GlobalRef) {
+			v = x.Lit
+			continue
+		}
+		text, sub, _ := resolveVar(x, env)
+		if sub != nil && sub != v {
+			v = sub
+			continue
+		}
+		if text != "" && x.GlobalRef {
+			return text, true
+		}
+		return "", false
+	}
+	return "", false
+}
+
 // keeperFieldLit resolves `Def.Field` through the record graph. A reference
 // whose base is a def is folded while parsing once the def's field is concrete
 // (FieldInit::Fold, Record.cpp:2498); a printer that still holds the reference
@@ -1164,9 +1230,25 @@ func substValue(v syntax.Value, name string, repl syntax.Value, depth int) synta
 		return v
 	case *syntax.BangValue:
 		cp := *x
+		shadowed := false
+		switch x.Op {
+		case syntax.XForEach, syntax.XFilter, syntax.XSort:
+			// TernOpInit::resolveReferences resolves a comprehension body with a
+			// ShadowResolver that hides its own variable (Record.cpp:1964-1967),
+			// so a nested `!filter(v, ...)` keeps its `v` even when an outer
+			// comprehension binds the same name. The list argument is still
+			// resolved by the outer resolver.
+			if len(x.VarNames) > 0 && x.VarNames[0] == name {
+				shadowed = true
+			}
+		}
 		if x.Args != nil {
 			cp.Args = make([]syntax.Value, len(x.Args))
 			for i, a := range x.Args {
+				if shadowed && i == 1 {
+					cp.Args[i] = a
+					continue
+				}
 				cp.Args[i] = substValue(a, name, repl, depth+1)
 			}
 		}
