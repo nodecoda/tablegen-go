@@ -265,7 +265,10 @@ const (
 
 // RecordVal is one field (or class template argument) of a record.
 type RecordVal struct {
-	Name        string
+	Name string
+	// Qual is the qualified name class template arguments are stored under,
+	// "Class:Arg". bindArgs rebuilds it for every instantiation otherwise.
+	Qual        string
 	Ty          *Ty
 	Nonconcrete bool
 	Expr        Expr
@@ -298,6 +301,12 @@ type Record struct {
 	Asserts []Assertion
 
 	keeper *Keeper
+
+	// tyCache memoizes Type(). Super is only ever appended to while a record
+	// is being built, so a length check is enough to notice an invalidation.
+	tyCache *Ty
+	tyLen   int
+	tyValid bool
 }
 
 // Assertion is a deferred `assert cond, msg;` from a class body.
@@ -383,11 +392,20 @@ func (v *RecordVal) locSpan() diag.Span { return diag.Span{Start: v.Loc, End: v.
 // by name (RecordRecTy::get sorts). A def without superclasses has the "any
 // record" type. Classes themselves are referenced by name, not by this set.
 func (r *Record) Type() *Ty {
+	if r.tyValid && r.tyLen == len(r.Super) {
+		return r.tyCache
+	}
+	t := r.computeType()
+	r.tyCache, r.tyLen, r.tyValid = t, len(r.Super), true
+	return t
+}
+
+func (r *Record) computeType() *Ty {
 	if r.IsClass {
 		return &Ty{Kind: RecordTy, Recs: []*Record{r}, Names: []string{r.Name}}
 	}
 	if len(r.Super) == 0 {
-		return &Ty{Kind: RecordTy}
+		return anyRecTy
 	}
 	recs := append([]*Record(nil), r.Super...)
 	sort.Slice(recs, func(i, j int) bool { return recs[i].Name < recs[j].Name })

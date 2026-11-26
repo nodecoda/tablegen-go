@@ -85,15 +85,27 @@ func (*DefVal) isValue()     {}
 func (*Unresolved) isValue() {}
 func (*BitRef) isValue()     {}
 
-func (*Unset) Type() *Ty  { return &Ty{Kind: AnyTy} }
-func (*Int) Type() *Ty    { return &Ty{Kind: IntTy} }
-func (*Bit) Type() *Ty    { return &Ty{Kind: BitTy} }
+// Scalar values have a fixed type, so they hand out shared immutable Ty
+// values: Type() is on the hot path of every conversion check.
+var (
+	anyTy    = &Ty{Kind: AnyTy}
+	anyRecTy = &Ty{Kind: RecordTy}
+	bitTy    = &Ty{Kind: BitTy}
+	intTy    = &Ty{Kind: IntTy}
+	stringTy = &Ty{Kind: StringTy}
+	codeTy   = &Ty{Kind: CodeTy}
+	dagTy    = &Ty{Kind: DagTy}
+)
+
+func (*Unset) Type() *Ty  { return anyTy }
+func (*Int) Type() *Ty    { return intTy }
+func (*Bit) Type() *Ty    { return bitTy }
 func (v *Bits) Type() *Ty { return &Ty{Kind: BitsTy, Bits: len(v.B)} }
 func (v *Str) Type() *Ty {
 	if v.Code {
-		return &Ty{Kind: CodeTy}
+		return codeTy
 	}
-	return &Ty{Kind: StringTy}
+	return stringTy
 }
 func (v *List) Type() *Ty {
 	elem := v.Elem
@@ -102,7 +114,7 @@ func (v *List) Type() *Ty {
 	}
 	return &Ty{Kind: ListTy, Elem: elem}
 }
-func (*Dag) Type() *Ty      { return &Ty{Kind: DagTy} }
+func (*Dag) Type() *Ty      { return dagTy }
 func (v *DefVal) Type() *Ty { return v.Rec.Type() }
 
 // Type is what the Init's static type would be; unknown when the reference was

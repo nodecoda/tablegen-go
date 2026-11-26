@@ -996,7 +996,7 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 	if len(args) > len(class.TArgs) {
 		return nil, &EvalError{Msg: "Too many template arguments for class '" + class.Name + "'", Span: diag.Span{Start: loc, End: loc}}
 	}
-	provided := map[string]Binding{}
+	provided := make(map[string]Binding, len(class.TArgs))
 	for i, a := range args {
 		name := a.Name
 		if name == "" {
@@ -1005,7 +1005,10 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 			}
 			name = class.TArgs[i].Name
 		}
-		key := class.Name + ":" + name
+		key := class.TArgs[i].Qual
+		if name != class.TArgs[i].Name {
+			key = class.Name + ":" + name
+		}
 		if _, dup := provided[key]; dup {
 			return nil, &EvalError{Msg: "We can only specify the template argument '" + name + "' once", Span: a.Span()}
 		}
@@ -1039,7 +1042,7 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		provided[key] = b
 	}
 	for _, ta := range class.TArgs {
-		if _, ok := provided[class.Name+":"+ta.Name]; ok {
+		if _, ok := provided[ta.Qual]; ok {
 			continue
 		}
 		// Defaults are resolved when the class is inherited, so an anonymous
@@ -1050,7 +1053,7 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 				if err != nil {
 					return nil, err
 				}
-				provided[class.Name+":"+ta.Name] = Binding{Val: val, Ty: ta.Ty}
+				provided[ta.Qual] = Binding{Val: val, Ty: ta.Ty}
 				continue
 			}
 		}
@@ -1069,9 +1072,9 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		// incomplete). A field inherited through this class therefore sees the
 		// default value -- `class Leaf : Mid<r>` prints Mid's `p = []`, not
 		// `Mid:p`.
-		provided[class.Name+":"+ta.Name] = Binding{
+		provided[ta.Qual] = Binding{
 			V: ax.V, Env: ax.Env, Dynamic: true, Ty: ta.Ty,
-			Owner: class, Sep: ":", Self: class.Name + ":" + ta.Name,
+			Owner: class, Sep: ":", Self: ta.Qual,
 			Mapped: true,
 		}
 	}

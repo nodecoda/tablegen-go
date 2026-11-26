@@ -200,17 +200,17 @@ func (t *Ty) ConvertibleTo(u *Ty) bool {
 func (k *Keeper) tyFromSyntax(st syntax.Type) *Ty {
 	switch st.Kind {
 	case syntax.IntType:
-		return &Ty{Kind: IntTy}
+		return intTy
 	case syntax.BitType:
-		return &Ty{Kind: BitTy}
+		return bitTy
 	case syntax.BitsType:
 		return &Ty{Kind: BitsTy, Bits: st.Bits}
 	case syntax.StringType:
-		return &Ty{Kind: StringTy}
+		return stringTy
 	case syntax.CodeType:
-		return &Ty{Kind: CodeTy}
+		return codeTy
 	case syntax.DagType:
-		return &Ty{Kind: DagTy}
+		return dagTy
 	case syntax.ListType:
 		var elem *Ty
 		if st.Elem != nil {
@@ -227,7 +227,7 @@ func (k *Keeper) tyFromSyntax(st syntax.Type) *Ty {
 		}
 		return t
 	default:
-		return &Ty{Kind: AnyTy}
+		return anyTy
 	}
 }
 

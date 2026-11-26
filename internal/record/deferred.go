@@ -1,6 +1,7 @@
 package record
 
 import (
+	"sort"
 	"strings"
 
 	"tblgen/internal/syntax"
@@ -46,69 +47,87 @@ func printableOf(v Value) string {
 
 // deferBang handles the operators whose value cannot be folded because an
 // operand is unresolved. handled=false means the caller must run the normal
-// evaluator (the value folded normally).
-func (k *Keeper) deferBang(b *syntax.BangValue, env *Env, rec *Record) (Value, bool, error) {
+// evaluator (the value folded normally). vals holds operands this call already
+// evaluated so the caller does not evaluate them again; it is nil when they
+// are unavailable or not reusable.
+func (k *Keeper) deferBang(b *syntax.BangValue, env *Env, rec *Record) (Value, []Value, bool, error) {
 	eval := func(i int) (Value, error) { return k.evalSyntax(b.Args[i], env, rec) }
 
 	switch b.Op {
 	case syntax.XIf:
 		cond, err := eval(0)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		if !isUnresolved(cond) {
-			return nil, false, nil
+			return nil, nil, false, nil
 		}
 		mhs, err := eval(1)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		rhs, err := eval(2)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
-		return deferredCall(b, []Value{cond, mhs, rhs}, nil), true, nil
+		return deferredCall(b, []Value{cond, mhs, rhs}, nil), nil, true, nil
 
 	case syntax.XCond:
-		return k.deferCond(b, env, rec)
+		v, handled, err := k.deferCond(b, env, rec)
+		return v, nil, handled, err
 
 	case syntax.XSwitch:
-		return k.deferSwitch(b, env, rec)
+		v, handled, err := k.deferSwitch(b, env, rec)
+		return v, nil, handled, err
 
 	case syntax.XForEach, syntax.XFilter, syntax.XSort:
 		list, err := eval(0)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		deferred := isUnresolved(list)
 		if !deferred && b.Op != syntax.XForEach {
 			// !filter/!sort need every body result to be an int or string;
 			// otherwise TernOpInit::Fold bails out and the operator survives.
-			deferred = k.bodyUndecidable(b, list, env, rec)
+			// The body has to be evaluated per element either way, so compute
+			// the folded value here instead of leaving it to the normal path:
+			// that would evaluate every body twice.
+			ls, ok := list.(*List)
+			if !ok {
+				return nil, nil, false, nil // the normal path reports the type error
+			}
+			out, undecidable, err := k.foldFilterSort(b, ls, env, rec)
+			if err != nil {
+				return nil, nil, true, err
+			}
+			if !undecidable {
+				return out, nil, true, nil
+			}
+			deferred = true
 		}
 		if !deferred {
-			return nil, false, nil
+			return nil, nil, false, nil
 		}
 		// Only evaluate the body with an unknown loop variable once we know
 		// the operator survives; doing it speculatively would surface errors
 		// from expressions that the folded path never needs.
 		shadow, err := k.shadowBody(b, env, rec)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
-		return &Unresolved{Text: comprehensionText(b, list, shadow)}, true, nil
+		return &Unresolved{Text: comprehensionText(b, list, shadow)}, nil, true, nil
 
 	case syntax.XFoldl:
 		acc, err := eval(0)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		list, err := eval(1)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		if !isUnresolved(list) && !isUnresolved(acc) {
-			return nil, false, nil
+			return nil, nil, false, nil
 		}
 		aName, bName := foldNames(b)
 		sub := env.With(map[string]Binding{
@@ -117,34 +136,34 @@ func (k *Keeper) deferBang(b *syntax.BangValue, env *Env, rec *Record) (Value, b
 		})
 		body, err := k.evalSyntax(b.Args[2], sub, rec)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		text := "!foldl(" + printableOf(acc) + ", " + printableOf(list) + ", " +
 			aName + ", " + bName + ", " + printableOf(body) + ")"
-		return &Unresolved{Text: text}, true, nil
+		return &Unresolved{Text: text}, nil, true, nil
 
 	case syntax.XCast:
 		v, err := eval(0)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		u, ok := v.(*Unresolved)
 		if !ok {
-			return nil, false, nil
+			return nil, nil, false, nil
 		}
 		target := k.tyFromSyntax(b.TypeArg)
 		if target != nil && u.Ty != nil && u.Ty.IsA(target) {
 			// UnOpInit::Fold(CAST): convertInitializerTo the value's own type
 			// returns the value, so `!cast<int>(x)` on an int var is just x.
-			return u, true, nil
+			return u, nil, true, nil
 		}
 		text := "!cast<" + b.TypeArg.String() + ">(" + u.Text + ")"
-		return &Unresolved{Text: text, Ty: target}, true, nil
+		return &Unresolved{Text: text, Ty: target}, nil, true, nil
 
 	case syntax.XDag, syntax.XIsA, syntax.XExists, syntax.XInstances:
 		// These either build structured values from unresolved parts (a dag
 		// keeps a var operator/argument) or take names/types, not values.
-		return nil, false, nil
+		return nil, nil, false, nil
 	}
 
 	// Generic case: evaluate the arguments in order, then keep the operator as
@@ -153,21 +172,23 @@ func (k *Keeper) deferBang(b *syntax.BangValue, env *Env, rec *Record) (Value, b
 	for i := range b.Args {
 		v, err := eval(i)
 		if err != nil {
-			return nil, true, err
+			return nil, nil, true, err
 		}
 		vals[i] = v
 		// !and/!or fold on a zero / all-ones left operand before touching the
 		// right side (BinOpInit::resolveReferences).
 		if b.Op == syntax.XAnd || b.Op == syntax.XOr {
 			if n, ok := intValueOf(v); ok && i == 0 && ((b.Op == syntax.XAnd && n == 0) || (b.Op == syntax.XOr && n == -1)) {
-				return nil, false, nil
+				return nil, nil, false, nil
 			}
 		}
 	}
 	if !anyUnresolved(vals) {
-		return nil, false, nil
+		// The operands resolved after all; hand them to the caller so the
+		// normal evaluator does not evaluate every argument a second time.
+		return nil, vals, false, nil
 	}
-	return deferredCall(b, vals, k.bangResultTy(b)), true, nil
+	return deferredCall(b, vals, k.bangResultTy(b)), nil, true, nil
 }
 
 // deferredCall renders `!op(a, b, ...)` with the already-evaluated operands.
@@ -240,51 +261,85 @@ func comprehensionText(b *syntax.BangValue, list, body Value) string {
 	return bangOpName(b) + "(" + name + ", " + printableOf(list) + ", " + printableOf(body) + ")"
 }
 
-// bodyUndecidable reports whether !filter/!sort would fail to fold because a
-// body value is not an int (filter) or comparable key (sort).
-func (k *Keeper) bodyUndecidable(b *syntax.BangValue, list Value, env *Env, rec *Record) bool {
-	ls, ok := list.(*List)
-	if !ok {
-		return true
-	}
+// foldFilterSort evaluates !filter/!sort in one pass. undecidable reports that
+// a body value is not an int (filter) or a key the operator can compare (sort),
+// which is when TernOpInit::Fold returns nullptr and the operator stays an
+// Init; the caller then keeps the deferred form.
+func (k *Keeper) foldFilterSort(b *syntax.BangValue, ls *List, env *Env, rec *Record) (out *List, undecidable bool, err error) {
 	name := "x"
 	if len(b.VarNames) > 0 && b.VarNames[0] != "" {
 		name = b.VarNames[0]
 	}
+	body := func(e Value) (Value, error) {
+		return k.evalSyntax(b.Args[1], env.With(map[string]Binding{name: {Val: e}}), rec)
+	}
+
+	if b.Op == syntax.XFilter {
+		// FilterHelper requires an IntInit; intValueOf is the same test the
+		// deferral analysis used, so the folded/unfolded split is unchanged.
+		out = &List{Elem: ls.Elem, Elems: make([]Value, 0, len(ls.Elems))}
+		for _, e := range ls.Elems {
+			v, err := body(e)
+			if err != nil {
+				return nil, false, err
+			}
+			n, ok := intValueOf(v)
+			if !ok {
+				return nil, true, nil
+			}
+			if n != 0 {
+				out.Elems = append(out.Elems, e)
+			}
+		}
+		return out, false, nil
+	}
+
+	// SortHelper takes the key type from the first element and then requires
+	// every key to agree: int when the first converts to an int, StringInit
+	// otherwise.
+	type kv struct {
+		key Value
+		val Value
+	}
+	items := make([]kv, 0, len(ls.Elems))
 	useInt := false
 	for i, e := range ls.Elems {
-		// Evaluate the body per element: FilterHelper requires an IntInit;
-		// SortHelper takes the key type from the first element and then
-		// requires every key to agree (int when the first converts to int,
-		// StringInit otherwise). Anything else makes Fold return nullptr,
-		// leaving the operator unfolded.
-		v, err := k.evalSyntax(b.Args[1], env.With(map[string]Binding{name: {Val: e}}), rec)
+		v, err := body(e)
 		if err != nil {
-			continue // the normal path reports this error
+			return nil, false, err
 		}
 		if isUnresolved(v) {
-			return true
+			return nil, true, nil
 		}
-		if b.Op == syntax.XSort {
-			_, isInt := intValueOf(v)
-			if i == 0 {
-				useInt = isInt
-			}
-			if useInt && !isInt {
-				return true
-			}
-			if !useInt {
-				if _, isStr := v.(*Str); !isStr {
-					return true
-				}
-			}
-			continue
+		_, isInt := intValueOf(v)
+		if i == 0 {
+			useInt = isInt
 		}
-		if _, ok := intValueOf(v); !ok {
-			return true
+		if useInt && !isInt {
+			return nil, true, nil
 		}
+		if !useInt {
+			if _, isStr := v.(*Str); !isStr {
+				return nil, true, nil
+			}
+		}
+		items = append(items, kv{key: v, val: e})
 	}
-	return false
+	sort.SliceStable(items, func(i, j int) bool {
+		if useInt {
+			a, _ := valueInt(items[i].key)
+			b, _ := valueInt(items[j].key)
+			return a < b
+		}
+		as, _ := items[i].key.(*Str)
+		bs, _ := items[j].key.(*Str)
+		return as.S < bs.S
+	})
+	out = &List{Elem: ls.Elem}
+	for _, it := range items {
+		out.Elems = append(out.Elems, it.val)
+	}
+	return out, false, nil
 }
 
 func foldNames(b *syntax.BangValue) (string, string) {

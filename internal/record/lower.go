@@ -317,7 +317,7 @@ func (l *Lowerer) class(st *syntax.ClassStmt, lets []*syntax.LetBind) error {
 	env := &Env{}
 	frame := map[string]Binding{}
 	for _, d := range st.TemplateArgs {
-		rv := &RecordVal{Name: d.Name, Ty: l.k.tyFromSyntax(d.Type), Loc: d.Span().Start}
+		rv := &RecordVal{Name: d.Name, Qual: st.Name + ":" + d.Name, Ty: l.k.tyFromSyntax(d.Type), Loc: d.Span().Start}
 		if d.Value != nil {
 			rv.Expr = &AstExpr{V: d.Value, Env: env}
 			l.preFold(d.Value, env)

@@ -17,11 +17,19 @@ import (
 // and !if/!cond/!switch only evaluate the arm they select.
 func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, error) {
 	// An operator whose operands cannot be folded survives as an Init tree in
-	// llvm-tblgen; deferred.go decides whether that is the case here.
-	if v, handled, err := k.deferBang(b, env, rec); handled {
-		return v, err
+	// llvm-tblgen; deferred.go decides whether that is the case here. When it
+	// is not deferred it still hands back the operands it evaluated, so they
+	// are not evaluated twice.
+	v, vals, handled, derr := k.deferBang(b, env, rec)
+	if handled {
+		return v, derr
 	}
-	eval := func(i int) (Value, error) { return k.evalSyntax(b.Args[i], env, rec) }
+	eval := func(i int) (Value, error) {
+		if vals != nil && i < len(vals) {
+			return vals[i], nil
+		}
+		return k.evalSyntax(b.Args[i], env, rec)
+	}
 	switch b.Op {
 	case syntax.XIf:
 		cond, err := eval(0)
@@ -1034,7 +1042,7 @@ func (k *Keeper) evalListComprehension(b *syntax.BangValue, env *Env, rec *Recor
 	if !ok {
 		return nil, &EvalError{Msg: "expected a list", Span: b.Span()}
 	}
-	out := &List{}
+	out := &List{Elem: ls.Elem, Elems: make([]Value, 0, len(ls.Elems))}
 	for _, e := range ls.Elems {
 		sub := env.With(map[string]Binding{varName: {Val: e}})
 		v, err := k.evalSyntax(expr, sub, rec)
