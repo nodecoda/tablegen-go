@@ -164,6 +164,12 @@ func resolveVar(x *syntax.VarValue, env *Env) (string, syntax.Value, *Env) {
 				return "", b.V, env.StackOn(b.Env)
 			}
 			if b.Val != nil {
+				// A binding whose value is already known stands for the Init
+				// that value prints as; give the caller the literal so a
+				// Def.Field on it can still be folded.
+				if sv, ok := valueToSyntax(b.Val); ok {
+					return "", sv, env.StackOn(b.Env)
+				}
 				return printableOf(b.Val), nil, nil
 			}
 		}
@@ -404,6 +410,12 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 		return 0, false
 	case *syntax.FieldValue:
 		// `Foo.Bar` is a VarInit named "Foo.Bar", not the field's literal.
+		// When the base is a parsed def whose field already holds a value,
+		// FieldInit::Fold replaced the reference at parse time; do the same
+		// through the record graph.
+		if lit, ok := keeperFieldLit(env, x.Base, x.Field); ok {
+			return foldIntV(lit, env, depth+1)
+		}
 		return 0, false
 	case *syntax.BitsValue:
 		// A complete literal BitsInit converts to int.
@@ -618,14 +630,21 @@ func (r *Record) exprText(v *RecordVal) string {
 	return r.renderExpr(v.Expr, v.Ty)
 }
 
+// astEnv ties an AstExpr's name bindings to this record: a class body
+// qualifies its own template arguments, and the printer may resolve
+// field references through the record graph.
+func (r *Record) astEnv(x *AstExpr) *Env {
+	env := x.Env
+	if r.IsClass {
+		env = env.WithImplicitName(r.Name)
+	}
+	return env.WithKeeper(r.keeper)
+}
+
 func (r *Record) renderExpr(e Expr, want *Ty) string {
 	switch x := e.(type) {
 	case *AstExpr:
-		env := x.Env
-		if r.IsClass {
-			env = env.WithImplicitName(r.Name)
-		}
-		return initText(x.V, env, want)
+		return initText(x.V, r.astEnv(x), want)
 	case *BindExpr:
 		if x.Rec != nil {
 			return x.Rec.Name
@@ -662,10 +681,11 @@ func (r *Record) bitTextsOf(e Expr, w int) []string {
 	case nil:
 		return unsetBits(w)
 	case *AstExpr:
-		if bits, ok := bitTexts(x.V, x.Env, w, 0); ok {
+		env := r.astEnv(x)
+		if bits, ok := bitTexts(x.V, env, w, 0); ok {
 			return bits
 		}
-		return fillBits(rawText(x.V, x.Env), w)
+		return fillBits(rawText(x.V, env), w)
 	case *BindExpr:
 		if x.Rec != nil {
 			return fillBits(x.Rec.Name, w)
@@ -679,7 +699,7 @@ func (r *Record) bitTextsOf(e Expr, w int) []string {
 		var addV syntax.Value
 		var addEnv *Env
 		if a, ok := x.Add.(*AstExpr); ok {
-			addV, addEnv = a.V, a.Env
+			addV, addEnv = a.V, r.astEnv(a)
 		}
 		src, ok := bitTexts(addV, addEnv, len(x.Bits), 0)
 		if !ok {
@@ -763,6 +783,133 @@ func dagPartsText(l, r dagParts) string {
 	return b.String()
 }
 
+// valueToSyntax turns an evaluated Value back into the literal the parser
+// would have stored, so print-time folding reuses the same code as parse-time
+// folding.
+func valueToSyntax(v Value) (syntax.Value, bool) {
+	at := syntax.Base{}
+	switch x := v.(type) {
+	case *Int:
+		return &syntax.IntValue{ValueBase: syntax.ValueBase{Base: at, Ty: syntax.IntTy}, Num: uint64(x.N)}, true
+	case *Bit:
+		var n uint64
+		if x.B {
+			n = 1
+		}
+		return &syntax.IntValue{ValueBase: syntax.ValueBase{Base: at, Ty: syntax.BitTy}, Num: n}, true
+	case *Bits:
+		bv := &syntax.BitsValue{ValueBase: syntax.ValueBase{Base: at, Ty: syntax.Type{Kind: syntax.BitsType, Bits: len(x.B)}}}
+		for i := len(x.B) - 1; i >= 0; i-- {
+			el, ok := valueToSyntax(x.B[i])
+			if !ok {
+				return nil, false
+			}
+			bv.Elems = append(bv.Elems, el)
+		}
+		return bv, true
+	case *Str:
+		return &syntax.StringValue{ValueBase: syntax.ValueBase{Base: at, Ty: syntax.StringTy}, Text: x.S, Code: x.Code}, true
+	case *List:
+		lv := &syntax.ListValue{ValueBase: syntax.ValueBase{Base: at, Ty: syntax.Type{Kind: syntax.ListType}}}
+		for _, e := range x.Elems {
+			el, ok := valueToSyntax(e)
+			if !ok {
+				return nil, false
+			}
+			lv.Elems = append(lv.Elems, el)
+		}
+		return lv, true
+	case *Dag:
+		op, ok := valueToSyntax(x.Op)
+		if !ok {
+			return nil, false
+		}
+		dv := &syntax.DagValue{ValueBase: syntax.ValueBase{Base: at, Ty: syntax.DagTy}, Op: op, OpName: x.OpName}
+		for _, a := range x.Args {
+			av, ok := valueToSyntax(a.Value)
+			if !ok {
+				return nil, false
+			}
+			dv.Args = append(dv.Args, &syntax.DagArg{Name: a.Name, Value: av})
+		}
+		return dv, true
+	case *DefVal:
+		return &syntax.VarValue{
+			ValueBase: syntax.ValueBase{Base: at, Ty: syntax.Type{Kind: syntax.RecordType}},
+			Name:      x.Rec.Name,
+			GlobalRef: true,
+		}, true
+	}
+	return nil, false
+}
+
+// globalLit is the Init a top-level defvar/defset name denotes.
+func globalLit(env *Env, name string) (syntax.Value, bool) {
+	if env == nil || env.keeper == nil {
+		return nil, false
+	}
+	v, ok, err := env.keeper.Global(name)
+	if !ok || err != nil {
+		return nil, false
+	}
+	return valueToSyntax(v)
+}
+
+// keeperFieldLit resolves `Def.Field` through the record graph. A reference
+// whose base is a def is folded while parsing once the def's field is concrete
+// (FieldInit::Fold, Record.cpp:2498); a printer that still holds the reference
+// can ask the evaluated record for the same value.
+func keeperFieldLit(env *Env, base syntax.Value, field string) (syntax.Value, bool) {
+	if env == nil || env.keeper == nil || base == nil {
+		return nil, false
+	}
+	name := ""
+	switch b := base.(type) {
+	case *syntax.VarValue:
+		if b.GlobalRef && !b.GlobalVar {
+			name = b.Name
+		} else if _, sub, subEnv := resolveVar(b, env); sub != nil && sub != base {
+			return keeperFieldLit(subEnv, sub, field)
+		}
+	case *syntax.FieldValue:
+		if lit, ok := keeperFieldLit(env, b.Base, b.Field); ok {
+			return keeperFieldLit(env, lit, field)
+		}
+	case *syntax.ClassApplyValue:
+		// `Class<args>.field`: VarDefInit::resolveReferences instantiates the
+		// application once every argument is concrete (Record.cpp:2423-2452)
+		// and FieldInit::Fold (Record.cpp:2498) then reads the fresh def's
+		// field, so an anonymous instance is a legal fold base too. Only an
+		// instance the parser already created may be used: printing must not
+		// assign a new anonymous number.
+		prev := env.keeper.readOnly
+		env.keeper.readOnly = true
+		v, err := env.keeper.evalSyntax(b, env, nil)
+		env.keeper.readOnly = prev
+		if err == nil {
+			if dv, ok := v.(*DefVal); ok {
+				name = dv.Rec.Name
+			}
+		}
+	}
+	if name == "" {
+		return nil, false
+	}
+	def := env.keeper.Def(name)
+	if def == nil {
+		return nil, false
+	}
+	rv := def.Val(field)
+	if rv == nil {
+		return nil, false
+	}
+	v, err := def.evalVal(rv)
+	if err != nil {
+		return nil, false
+	}
+	return valueToSyntax(v)
+}
+
 func rawText(v syntax.Value, env *Env) string {
 	switch x := v.(type) {
 	case nil:
@@ -819,6 +966,15 @@ func rawText(v syntax.Value, env *Env) string {
 		if sub != nil {
 			return rawText(sub, subEnv)
 		}
+		if x.GlobalRef && x.GlobalVar {
+			// A defset/defvar reference stands for the Init its name denotes
+			// (TGParser::ParseIDValue yields the value, not a VarInit), so a
+			// class body that is never evaluated still prints the literal list
+			// rather than the name.
+			if lit, ok := globalLit(env, x.Name); ok {
+				return rawText(lit, env)
+			}
+		}
 		return text
 	case *syntax.FieldValue:
 		// FieldInit::Fold (Record.cpp:2498): at parse time a reference to a
@@ -827,12 +983,30 @@ func rawText(v syntax.Value, env *Env) string {
 		// DefInit base; `vt.isVector` on a template argument stays a
 		// FieldInit even when the class default is known.
 		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
+			// AddParentClass substituted the base with the caller's Init; when
+			// that Init names a def, FieldInit::resolveReferences resolves the
+			// base and Fold (Record.cpp:2489-2511) replaces the reference with
+			// the field's value, so the record graph wins over the annotation.
+			if lit, ok := keeperFieldLit(env, x.Base, x.Field); ok {
+				return rawText(lit, env)
+			}
 			// SetValue stored the field's value converted to its declared
 			// type, so a `bits<4> = 11` field yields the BitsInit literal.
 			if text, ok := literalAs(x.Lit, x.Type(), env); ok {
 				return text
 			}
 			return rawText(x.Lit, env)
+		}
+		if x.Lit != nil && fieldBaseIsDef(x.Lit) {
+			// The substitution lands on the def itself when the base is a
+			// template argument (`PtrValueType:scalar.LLVMName` with a
+			// `ValueType<...>` argument); same Fold as above.
+			if lit, ok := keeperFieldLit(env, x.Lit, x.Field); ok {
+				return rawText(lit, env)
+			}
+		}
+		if lit, ok := keeperFieldLit(env, x.Base, x.Field); ok {
+			return rawText(lit, env)
 		}
 		return rawText(x.Base, env) + "." + x.Field
 	case *syntax.SliceValue:
@@ -1087,6 +1261,9 @@ func constAny(v syntax.Value, env *Env, depth int) (syntax.Value, bool) {
 	case *syntax.FieldValue:
 		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
 			return constAny(x.Lit, env, depth+1)
+		}
+		if lit, ok := keeperFieldLit(env, x.Base, x.Field); ok {
+			return constAny(lit, env, depth+1)
 		}
 		return nil, false
 	case *syntax.BangValue:
@@ -1515,6 +1692,9 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 		// its value while parsing (Record.cpp:2498).
 		if x.Lit != nil && concreteInit(x.Lit) && fieldBaseIsDef(x.Base) {
 			return constList(x.Lit, env, depth+1)
+		}
+		if lit, ok := keeperFieldLit(env, x.Base, x.Field); ok {
+			return constList(lit, env, depth+1)
 		}
 		return nil, false
 	case *syntax.BangValue:

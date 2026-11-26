@@ -781,6 +781,11 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 	if cached := k.anonCache[key]; cached != nil {
 		return cached, nil
 	}
+	if k.readOnly {
+		// The instance is not there, and creating one now would consume an
+		// anonymous number that llvm-tblgen assigned at parse time.
+		return nil, &EvalError{Msg: "class application is not instantiated yet", Span: ca.Span()}
+	}
 	rec := k.newAnonymous(k.siteFor(ca, env, key))
 	k.anonCache[key] = rec
 	rec.Super = append(rec.Super, class)
@@ -1015,6 +1020,43 @@ func (k *Keeper) checkAssertion(as Assertion, rec *Record) {
 // bindArgs turns an argument list into a frame of lexical bindings. Missing
 // arguments fall back to the class's own dynamic defaults, which live in the
 // class expression's Env.
+// castTemplateArg mirrors CheckTemplateArgValues (TGParser.cpp:4749-4781):
+// every template argument is cast to the declared parameter type, and a cast
+// that cannot fold survives in the Init tree, so `InstAlias<Emit>` keeps
+// printing `!cast<int>(Emit)` when `Emit` is declared `bit`. Only the numeric
+// kinds are wrapped; a record argument is convertible by inheritance and
+// getCastTo returns it unchanged.
+func castTemplateArg(v syntax.Value, want *Ty) syntax.Value {
+	if v == nil || want == nil || v.Type().Kind == syntax.InvalidType {
+		return v
+	}
+	got := v.Type()
+	w := syntaxTypeOf(want)
+	numeric := func(t syntax.Type) bool {
+		return t.Kind == syntax.BitType || t.Kind == syntax.IntType || t.Kind == syntax.BitsType
+	}
+	if !numeric(got) || !numeric(w) {
+		return v
+	}
+	switch v.(type) {
+	case *syntax.IntValue, *syntax.BitsValue, *syntax.StringValue:
+		// Init::getCastTo returns the folded literal for a concrete operand
+		// (Record.cpp:571-600), so no cast node survives in the Init tree.
+		return v
+	}
+	if got.Kind == w.Kind && (got.Kind != syntax.BitsType || got.Bits == w.Bits) {
+		return v
+	}
+	at := syntax.Base{At: v.Span()}
+	return &syntax.BangValue{
+		ValueBase: syntax.ValueBase{Base: at, Ty: w},
+		Op:        syntax.XCast,
+		OpSpan:    v.Span(),
+		TypeArg:   w,
+		Args:      []syntax.Value{v},
+	}
+}
+
 func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *Record, loc diag.Pos, dynamic bool) (map[string]Binding, error) {
 	if len(args) > len(class.TArgs) {
 		return nil, &EvalError{Msg: "Too many template arguments for class '" + class.Name + "'", Span: diag.Span{Start: loc, End: loc}}
@@ -1048,6 +1090,7 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		if err := k.checkValueType(b.Ty, a.Value, caller); err != nil {
 			return nil, err
 		}
+		b.V = castTemplateArg(b.V, b.Ty)
 		// A class application passed as a template argument is a VarDefInit:
 		// CheckTemplateArgValues casts it to the declared type, which
 		// instantiates the anonymous record right here (and gives it its

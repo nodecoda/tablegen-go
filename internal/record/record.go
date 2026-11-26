@@ -85,6 +85,11 @@ type Env struct {
 	owner    *Record // class or multiclass whose template arguments live here
 	ownerSep string  // ":" for classes, "::" for multiclasses
 	hidden   map[string]bool
+	// keeper lets a printer resolve `Def.Field` against the records the
+	// parser already built. TGParser folds such a reference while parsing
+	// because the def's field is already concrete then (FieldInit::Fold,
+	// Record.cpp:2498); a Go printer needs the record graph to do the same.
+	keeper *Keeper
 	// implicitTo overrides the record name used for the implicit NAME when a
 	// class body is printed. TGParser::AddParentClass rewrites a parent's
 	// VarInit("Parent:NAME") to the inheriting record via MapResolver
@@ -121,6 +126,10 @@ func (e *Env) With(vars map[string]Binding) *Env {
 		out.owner = e.owner
 		out.ownerSep = e.ownerSep
 		out.implicitTo = e.implicitTo
+		// Sub-environments must keep the printer's record graph: a helper that
+		// narrows the bindings (bindNames, WithBinding) still prints the same
+		// Init tree, and folding a Def.Field needs the keeper.
+		out.keeper = e.keeper
 		if len(e.hidden) > 0 {
 			out.hidden = make(map[string]bool, len(e.hidden))
 			for k, v := range e.hidden {
@@ -157,6 +166,13 @@ func (e *Env) StackOn(base *Env) *Env {
 	out.owner = base.owner
 	out.ownerSep = base.ownerSep
 	out.implicitTo = base.implicitTo
+	// The record graph travels with the bindings: a printer that stacks a
+	// resolved binding on top of the current environment must keep it.
+	if e.keeper != nil {
+		out.keeper = e.keeper
+	} else {
+		out.keeper = base.keeper
+	}
 	switch {
 	case len(base.hidden) > 0 && len(e.hidden) > 0:
 		out.hidden = make(map[string]bool, len(base.hidden)+len(e.hidden))
@@ -624,7 +640,11 @@ type Keeper struct {
 	// TGParser would have folded it. A record field is still VarInit there,
 	// even though the parser inlines its initializer for type checking.
 	parseFold bool
-	anonLoc   diag.Pos
+	// readOnly forbids instantiating an anonymous class instance while a
+	// printer probes the record graph: output must be reproducible, and
+	// VarDefInit::instantiate assigns the next anonymous number.
+	readOnly bool
+	anonLoc  diag.Pos
 
 	// loopDefs records the defs created while expanding a statement-level
 	// foreach, keyed by syntax.ForeachStmt.Seq. The parser uses them to make
@@ -767,6 +787,15 @@ type EvalError struct {
 func (e *EvalError) Error() string { return e.Msg }
 
 // WithImplicitName returns e with the printable implicit NAME owner replaced.
+func (e *Env) WithKeeper(k *Keeper) *Env {
+	if e == nil {
+		return &Env{keeper: k}
+	}
+	out := *e
+	out.keeper = k
+	return &out
+}
+
 func (e *Env) WithImplicitName(name string) *Env {
 	if e == nil {
 		return &Env{implicitTo: name}
