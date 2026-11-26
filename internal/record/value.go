@@ -51,6 +51,10 @@ type Dag struct {
 type DagArg struct {
 	Value Value
 	Name  string
+	// HasName distinguishes an empty StringInit from a missing name:
+	// DagInit::getAsString prints `:$` for every non-null ArgNames entry,
+	// including one whose value is the empty string (Record.cpp:2719-2724).
+	HasName bool
 }
 
 // BitRef is VarBitInit: one bit of another field, kept as data. LLVM never
@@ -209,7 +213,7 @@ func (v *Dag) render(op string) string {
 			b.WriteString(", ")
 		}
 		b.WriteString(a.Value.String())
-		if a.Name != "" {
+		if a.HasName {
 			b.WriteString(":$")
 			b.WriteString(a.Name)
 		}

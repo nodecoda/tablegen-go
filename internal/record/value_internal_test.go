@@ -84,10 +84,17 @@ func TestValueStringForms(t *testing.T) {
 		t.Errorf("list prints %q", got)
 	}
 	dag := &Dag{Op: &DefVal{Rec: &Record{Name: "op"}}, OpName: "n",
-		Args: []DagArg{{Value: &Int{N: 1}, Name: "a"}, {Value: &Str{S: "s"}}}}
+		Args: []DagArg{{Value: &Int{N: 1}, Name: "a", HasName: true}, {Value: &Str{S: "s"}}}}
 	if got := dag.String(); got != `(op:$n 1:$a, "s")` {
 		t.Errorf("dag prints %q", got)
 	}
+	// DagInit::getAsString prints `:$` for any non-null ArgName, so an empty
+	// StringInit name renders as a bare colon-dollar (Record.cpp:2719-2724).
+	dag.Args[1].HasName = true
+	if got := dag.String(); got != `(op:$n 1:$a, "s":$)` {
+		t.Errorf("dag with empty name prints %q", got)
+	}
+	dag.Args[1].HasName = false
 	// SourceString keeps the operator as written, which is what a fatal
 	// diagnostic shows for an Init tree that has not been folded.
 	dag.OpSrc = &syntax.VarValue{Name: "OPNAME"}

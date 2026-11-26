@@ -108,7 +108,7 @@ func translateRef(v record.Value) any {
 		args := make([]any, len(x.Args))
 		for i, a := range x.Args {
 			pair := []any{translateRef(a.Value), nil}
-			if a.Name != "" {
+			if a.HasName {
 				pair[1] = a.Name
 			}
 			args[i] = pair

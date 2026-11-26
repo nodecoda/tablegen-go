@@ -245,7 +245,7 @@ func (k *Keeper) evalDagLiteral(t *syntax.DagValue, env *Env, rec *Record) (Valu
 		if err != nil {
 			return nil, err
 		}
-		d.Args = append(d.Args, DagArg{Value: av, Name: a.Name})
+		d.Args = append(d.Args, DagArg{Value: av, Name: a.Name, HasName: a.HasName})
 	}
 	return d, nil
 }

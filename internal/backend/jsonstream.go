@@ -125,7 +125,7 @@ func writeJSONValue(w *jsonBuf, v record.Value) {
 			w.ch('[')
 			writeJSONValue(w, a.Value)
 			w.ch(',')
-			if a.Name == "" {
+			if !a.HasName {
 				w.null()
 			} else {
 				w.str(a.Name)

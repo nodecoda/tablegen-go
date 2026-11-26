@@ -494,8 +494,11 @@ type DagValue struct {
 
 type DagArg struct {
 	Base
-	Name  string // empty when anonymous
-	Value Value  // UnsetValue for the `$x` shorthand
+	Name string // empty when anonymous
+	// HasName reports that a name Init is present even when it is the empty
+	// string: DagInit::getAsString prints `:$` for a non-null ArgName.
+	HasName bool
+	Value   Value // UnsetValue for the `$x` shorthand
 }
 
 // VarValue is a reference to a variable, template arg, class or def. Name is

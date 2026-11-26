@@ -1105,7 +1105,7 @@ func (k *Keeper) foreachDag(d *Dag, varName string, expr syntax.Value, env *Env,
 		if err != nil {
 			return nil, err
 		}
-		out.Args = append(out.Args, DagArg{Value: av, Name: a.Name})
+		out.Args = append(out.Args, DagArg{Value: av, Name: a.Name, HasName: a.HasName})
 	}
 	return out, nil
 }
@@ -1184,7 +1184,7 @@ func (k *Keeper) evalDagCtor(b *syntax.BangValue, env *Env, rec *Record) (Value,
 		}
 		if namesList {
 			if s, ok := nl.Elems[i].(*Str); ok {
-				arg.Name = s.S
+				arg.Name, arg.HasName = s.S, true
 			} else if _, unset := nl.Elems[i].(*Unset); !unset {
 				return nil, &EvalError{Msg: "!dag names must be strings", Span: b.Span()}
 			}
@@ -1300,13 +1300,13 @@ func (k *Keeper) evalSetDagArgName(b *syntax.BangValue, env *Env, rec *Record) (
 		out.Args[idx].Value = val
 	} else if _, unset := val.(*Unset); unset {
 		// LLVM stores dyn_cast<StringInit>(RHS), so `?` clears the name.
-		out.Args[idx].Name = ""
+		out.Args[idx].Name, out.Args[idx].HasName = "", false
 	} else {
 		s, ok := val.(*Str)
 		if !ok {
 			return nil, &EvalError{Msg: "!setdagname expects a string", Span: b.Span()}
 		}
-		out.Args[idx].Name = s.S
+		out.Args[idx].Name, out.Args[idx].HasName = s.S, true
 	}
 	return out, nil
 }

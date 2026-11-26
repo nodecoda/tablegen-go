@@ -490,7 +490,7 @@ func (p *Parser) parseDagLiteral(rec *recordInfo, start int) Value {
 			arg := &DagArg{}
 			if p.at(VarName) {
 				nt := p.advance()
-				arg.Name = nt.Text
+				arg.Name, arg.HasName = nt.Text, true
 				arg.Value = &UnsetValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: UnsetTy}}
 			} else {
 				v := p.parseValue(rec, nil, parseValueMode)
@@ -503,7 +503,7 @@ func (p *Parser) parseDagLiteral(rec *recordInfo, start int) Value {
 						p.errTok("E_PARSE_DAG_ARGNAME", "expected variable name in dag literal")
 						return nil
 					}
-					arg.Name = p.advance().Text
+					arg.Name, arg.HasName = p.advance().Text, true
 				}
 			}
 			arg.Base.At = p.span(argStart)

@@ -948,7 +948,7 @@ func constDagParts(v syntax.Value, env *Env) (dagParts, bool) {
 	p := dagParts{op: rawText(d.Op, env), name: d.OpName}
 	for _, a := range d.Args {
 		t := rawText(a.Value, env)
-		if a.Name != "" {
+		if a.HasName {
 			t += ":$" + a.Name
 		}
 		p.args = append(p.args, t)
@@ -1028,7 +1028,7 @@ func valueToSyntax(v Value) (syntax.Value, bool) {
 			if !ok {
 				return nil, false
 			}
-			dv.Args = append(dv.Args, &syntax.DagArg{Name: a.Name, Value: av})
+			dv.Args = append(dv.Args, &syntax.DagArg{Name: a.Name, HasName: a.HasName, Value: av})
 		}
 		return dv, true
 	case *DefVal:
@@ -1229,7 +1229,7 @@ func rawText(v syntax.Value, env *Env) string {
 					b.WriteString(", ")
 				}
 				b.WriteString(rawText(a.Value, env))
-				if a.Name != "" {
+				if a.HasName {
 					b.WriteString(":$")
 					b.WriteString(a.Name)
 				}

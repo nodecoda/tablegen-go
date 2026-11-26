@@ -180,6 +180,46 @@ def anonymous_0 {	// Leaf
 	}
 }
 
+// DagInit keeps a nullable ArgNames entry beside a non-null StringInit, and
+// getAsString prints `:$` for either (Record.cpp:2719-2724). A names list of
+// empty strings therefore prints as `V8:$`, and the evaluated dag keeps that
+// even though the name string is empty. Expected text is llvm-tblgen
+// 24.0.0git's.
+func TestPrintRecordsEmptyDagArgName(t *testing.T) {
+	src := `def add;
+def V8;
+def V9;
+class C { dag D = !dag(add, [V8], !listsplat("", 1)); }
+class Tup<list<dag> regs> { list<dag> SubRegs = regs; }
+def T : Tup<[!dag(add, [V8, V9], !listsplat("", 2))]>;
+def U { dag L = !dag(add, [V8, V9], !listsplat("", 2)); }
+`
+	want := `------------- Classes -----------------
+class C {
+  dag D = (add V8:$);
+}
+class Tup<list<dag> Tup:regs = ?> {
+  list<dag> SubRegs = Tup:regs;
+}
+------------- Defs -----------------
+def T {	// Tup
+  list<dag> SubRegs = [(add V8:$, V9:$)];
+}
+def U {
+  dag L = (add V8:$, V9:$);
+}
+def V8 {
+}
+def V9 {
+}
+def add {
+}
+`
+	if got := printRecords(t, src); got != want {
+		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 // printRecords parses and lowers src and renders --print-records.
 func printRecords(t *testing.T, src string) string {
 	t.Helper()
