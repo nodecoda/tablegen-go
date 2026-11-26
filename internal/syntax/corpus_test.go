@@ -139,7 +139,15 @@ var matchedErrorLines = map[string]struct {
 	"letUnknownValue.td":             {5, "Value 'abc' unknown!"},
 	"listflatten-error.td":           {5, "expected list type argument in unary operator"},
 	"prep-ifndef-diag-1.td":          {4, "expected macro name after #ifndef"},
-	"prep-ifndef-diag-2.td":          {4, "only comments are supported after a preprocessing directive"},
+	"prep-ifndef-diag-2.td":          {4, "only comments are supported after #ifndef NAME"},
+	"prep-diag1.td":                  {24, "only comments are supported after #ifdef NAME"},
+	"prep-diag2.td":                  {11, "only comments are supported after #else"},
+	"prep-diag3.td":                  {12, "only comments are supported after #endif"},
+	"prep-diag4.td":                  {7, "double #else"},
+	"prep-diag5.td":                  {4, "#else without #ifdef or #ifndef"},
+	"prep-diag6.td":                  {4, "expected macro name after #ifdef"},
+	"prep-diag7.td":                  {4, "#endif without #ifdef"},
+	"prep-diag8.td":                  {4, "expected macro name after #define"},
 }
 
 func TestCorpusErrorLinesMatchOracle(t *testing.T) {

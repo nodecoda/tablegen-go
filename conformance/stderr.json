@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 20,
-    "status:msg-match": 10,
-    "status:same": 355,
+    "status:diff": 10,
+    "status:msg-match": 8,
+    "status:same": 367,
     "status:skipped": 7
   },
   "cases": [
@@ -4762,15 +4762,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: only comments are supported after a preprocessing directive",
-          "error: #endif without #ifdef or #ifndef",
-          "error: #endif without #ifdef or #ifndef"
+          "error: only comments are supported after #ifdef NAME"
         ],
-        "full_sha256": "64f510f5ac12f1829ba4bf04576ff76ea6d58eaba00be0edb094e885871f7ad9",
-        "full_len": 227,
-        "full": "\u003cfile\u003e:24:3: error: only comments are supported after a preprocessing directive\n*/class C;\n  ^\n\u003cfile\u003e:25:1: error: #endif without #ifdef or #ifndef\n#endif\n^\n\u003cfile\u003e:26:1: error: #endif without #ifdef or #ifndef\n#endif // DIAG2\n^"
+        "full_sha256": "186f78c4f6eaf36c718e987a16b548e26e2ac91bba87bbfdb4368173d2da21ad",
+        "full_len": 80,
+        "full": "\u003cfile\u003e:24:3: error: only comments are supported after #ifdef NAME\n*/class C;\n  ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag10.td",
@@ -4791,11 +4789,11 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "37278958b9b217e1e002fdb17244a5cb12ccfb217863f48011eb1ce39a773432",
-        "full_len": 141,
-        "full": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:5:8: error: the latest preprocessor control is here\n#ifdef DISABLED\n       ^"
+        "full_sha256": "3e02b1668081c64add7b126ebf7aff81446a35ed44aa4ceba95454eac3fd4026",
+        "full_len": 125,
+        "full": "\u003cfile\u003e:7:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:6:2: error: the latest preprocessor control is here\n#else\n ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11.td",
@@ -4841,11 +4839,11 @@
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
-        "full_sha256": "9f931ccc3ff2621aaff9041173b34e8d44f3c9fc758b9f7cbf3d8a2c3649df86",
-        "full_len": 322,
-        "full": "Included from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\nIncluded from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:8: error: the latest preprocessor control is here\n#ifdef ENABLED\n       ^"
+        "full_sha256": "23c7a16ac2bbd03a3e50804969d4b22f4dc3973294d937fd8ef223cabc15c73a",
+        "full_len": 307,
+        "full": "Included from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\nIncluded from \u003cfile\u003e:8:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:2:2: error: the latest preprocessor control is here\n#else\n ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag13.td",
@@ -4912,15 +4910,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: only comments are supported after a preprocessing directive",
-          "error: #endif without #ifdef or #ifndef",
-          "error: #endif without #ifdef or #ifndef"
+          "error: only comments are supported after #else"
         ],
-        "full_sha256": "6431c18590a6d3078e491fc91cdc7765254324f0bc16c80bb9109431b91a026c",
-        "full_len": 227,
-        "full": "\u003cfile\u003e:11:3: error: only comments are supported after a preprocessing directive\n*/class C;\n  ^\n\u003cfile\u003e:12:1: error: #endif without #ifdef or #ifndef\n#endif\n^\n\u003cfile\u003e:13:1: error: #endif without #ifdef or #ifndef\n#endif // DIAG1\n^"
+        "full_sha256": "297a3fc3dad8a7d30b1b16d70037dffb645c100e151804a82f56f19fa5edc2d5",
+        "full_len": 74,
+        "full": "\u003cfile\u003e:11:3: error: only comments are supported after #else\n*/class C;\n  ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag3.td",
@@ -4937,14 +4933,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: only comments are supported after a preprocessing directive",
-          "error: #endif without #ifdef or #ifndef"
+          "error: only comments are supported after #endif"
         ],
-        "full_sha256": "a918fdacdcf884c1a3d95506e8f01f4fcc9129476b72713f8adef1401e73f330",
-        "full_len": 165,
-        "full": "\u003cfile\u003e:12:3: error: only comments are supported after a preprocessing directive\n*/class C;\n  ^\n\u003cfile\u003e:13:1: error: #endif without #ifdef or #ifndef\n#endif // DIAG1\n^"
+        "full_sha256": "186a5926476cfdf3fce7a53be5536e19100477ecb73755fe8aa154a7b0734ed8",
+        "full_len": 75,
+        "full": "\u003cfile\u003e:12:3: error: only comments are supported after #endif\n*/class C;\n  ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag4.td",
@@ -4962,13 +4957,14 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: double #else"
+          "error: double #else",
+          "error: previous #else is here"
         ],
-        "full_sha256": "d8a2946227b95cba84e66c33debae82d33dfc0b64be287973f6d46ca25f4d654",
-        "full_len": 39,
-        "full": "\u003cfile\u003e:7:1: error: double #else\n#else\n^"
+        "full_sha256": "07f72169d695bda9fa296e7fb252e5b42500f8f379a975e1d69c11ab5ad34970",
+        "full_len": 91,
+        "full": "\u003cfile\u003e:7:2: error: double #else\n#else\n ^\n\u003cfile\u003e:6:2: error: previous #else is here\n#else\n ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag5.td",
@@ -4985,15 +4981,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: #else without #ifdef or #ifndef",
-          "error: #else without #ifdef or #ifndef",
-          "error: #endif without #ifdef or #ifndef"
+          "error: #else without #ifdef or #ifndef"
         ],
-        "full_sha256": "ba9b9c6c2c2c5392cfa747b4d91b89fb1a4d13b86c69fcd428a847f0fca1bbef",
-        "full_len": 178,
-        "full": "\u003cfile\u003e:4:1: error: #else without #ifdef or #ifndef\n#else\n^\n\u003cfile\u003e:5:1: error: #else without #ifdef or #ifndef\n#else\n^\n\u003cfile\u003e:6:1: error: #endif without #ifdef or #ifndef\n#endif\n^"
+        "full_sha256": "b54e149f43579431527eb4dc19f160d9d199e34f16f061a0b86d4fd2e239c3cf",
+        "full_len": 59,
+        "full": "\u003cfile\u003e:4:2: error: #else without #ifdef or #ifndef\n#else\n ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag6.td",
@@ -5010,16 +5004,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: expected macro name after #ifdef",
-          "error: #else without #ifdef or #ifndef",
-          "error: #else without #ifdef or #ifndef",
-          "error: #endif without #ifdef or #ifndef"
+          "error: expected macro name after #ifdef"
         ],
-        "full_sha256": "bd1536856b1f43c0a7948aa48dd985d7079d3828bf32fbb294a2a7d13c25c2b2",
-        "full_len": 245,
-        "full": "\u003cfile\u003e:4:7: error: expected macro name after #ifdef\n#ifdef\n      ^\n\u003cfile\u003e:5:1: error: #else without #ifdef or #ifndef\n#else\n^\n\u003cfile\u003e:6:1: error: #else without #ifdef or #ifndef\n#else\n^\n\u003cfile\u003e:7:1: error: #endif without #ifdef or #ifndef\n#endif\n^"
+        "full_sha256": "6a90d4db65b107a29631a4d1e07b626ac324cb54efb5519528d052c3211ed6c3",
+        "full_len": 66,
+        "full": "\u003cfile\u003e:4:7: error: expected macro name after #ifdef\n#ifdef\n      ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag7.td",
@@ -5036,13 +5027,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: #endif without #ifdef or #ifndef"
+          "error: #endif without #ifdef"
         ],
-        "full_sha256": "0e1f39d6c704acf8404d6de0122e9572b8d4f137a8caac54fc020e8437122a6a",
-        "full_len": 60,
-        "full": "\u003cfile\u003e:4:1: error: #endif without #ifdef or #ifndef\n#endif\n^"
+        "full_sha256": "db5820adb4d659c89334d889a871541c2bd2d0a8d15c5dea44b2bfc7a73ad1a9",
+        "full_len": 50,
+        "full": "\u003cfile\u003e:4:2: error: #endif without #ifdef\n#endif\n ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag8.td",
@@ -5059,14 +5050,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: expected macro name after #define",
-          "error: #endif without #ifdef or #ifndef"
+          "error: expected macro name after #define"
         ],
-        "full_sha256": "ad134b153057e0c031867a1db3b705ea6512d1a21e180ba01bb965fd89eb272c",
-        "full_len": 130,
-        "full": "\u003cfile\u003e:4:8: error: expected macro name after #define\n#define\n       ^\n\u003cfile\u003e:5:1: error: #endif without #ifdef or #ifndef\n#endif\n^"
+        "full_sha256": "6b1688997a1e872ce6d3e68ba8388c2945591c61793aa7a159fe01a77b96129a",
+        "full_len": 69,
+        "full": "\u003cfile\u003e:4:8: error: expected macro name after #define\n#define\n       ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag9.td",
@@ -5131,15 +5121,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: only comments are supported after a preprocessing directive",
-          "error: reached EOF without matching #endif",
-          "error: the latest preprocessor control is here"
+          "error: only comments are supported after #ifndef NAME"
         ],
-        "full_sha256": "8a6d831a23848c82c08e0a247f446c76b9de3efd6ed282093864c6a206bc9f3e",
-        "full_len": 256,
-        "full": "\u003cfile\u003e:4:15: error: only comments are supported after a preprocessing directive\n#ifndef MACRO 42\n              ^\n\u003cfile\u003e:5:1: error: reached EOF without matching #endif\n\n^\n\u003cfile\u003e:4:9: error: the latest preprocessor control is here\n#ifndef MACRO 42\n        ^"
+        "full_sha256": "92bcaefd139237d934bbbf2f387aa3a50de7057fa9a096a8dcdede75b82ea6f6",
+        "full_len": 99,
+        "full": "\u003cfile\u003e:4:15: error: only comments are supported after #ifndef NAME\n#ifndef MACRO 42\n              ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-ifndef.td",
@@ -5218,9 +5206,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "472f2935cd18254ada57cf69edd82377d3572995c351194d9cee126c4dedc8d6",
+        "full_sha256": "7482397aad448493e3fd338228f77e907e863e361b5727484f8cb63a9d56bccd",
         "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-1142339746/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-1142339746/a.td:2:\n/tmp/tblgen-split-1142339746/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-2332637426/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5230,9 +5218,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "cb17f70cd95df3b1f765d9a7a3e048f3a03d2e6370ffeb25a634de373a87be6c",
+        "full_sha256": "6ba125bdd9c8870b77654cad9e132ed14bf6e62e2435c4053c3ecaa1561dbda3",
         "full_len": 1120,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1142339746/a.td:2:\n/tmp/tblgen-split-1142339746/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1142339746/a.td:2:\n/tmp/tblgen-split-1142339746/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1142339746/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1142339746/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1142339746/a.td:2:\n/tmp/tblgen-split-1142339746/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1142339746/a.td:2:\n/tmp/tblgen-split-1142339746/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1142339746/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1142339746/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-2332637426/a.td:2:\n/tmp/tblgen-split-2332637426/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-2332637426/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },
@@ -5775,15 +5763,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: unterminated comment",
-          "error: unexpected character",
-          "error: unexpected character"
+          "error: unterminated comment"
         ],
-        "full_sha256": "d085efce6c6f636ed0fb3dc1c331e6f4a7aa313f482036893cf0ddc3afdaa7d1",
-        "full_len": 472,
-        "full": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
+        "full_sha256": "0ff7aad36c04c9083182274787148599fcd53537fc4f892c866e4b1de9f9039c",
+        "full_len": 199,
+        "full": "Included from \u003cfile\u003e:5:\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block.td",

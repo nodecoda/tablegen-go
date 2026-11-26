@@ -44,6 +44,9 @@ type Lexer struct {
 	// deps are the resolved include paths in encounter order, for the
 	// make-style dependency file (-d). SourceMgr keeps the same list.
 	deps []string
+	// failed records a ReturnError path: the token stream ends there and the
+	// parser stops, so no further diagnostics may be produced.
+	failed bool
 	// includes maps an included file to where it was included from. LLVM
 	// stores this as BufferInfo::IncludeLoc and prints it as the
 	// "Included from <file>:<line>:" chain in front of every diagnostic
@@ -150,8 +153,19 @@ func (l *Lexer) emit(k Kind, text string, from diag.Pos, num uint64) {
 	l.lineStart = false
 }
 
+// errorf reports a lexer error. Every one of these is a TGLexer::ReturnError
+// path: lexing cannot resume, because the token stream ends with tgtok::Error
+// and the parser stops there. Continuing would print diagnostics llvm-tblgen
+// never reaches (a stray `#endif` after a bad directive, for example).
 func (l *Lexer) errorf(code, msg string, from diag.Pos) {
-	l.diags.Error(code, msg, l.spanFrom(from))
+	l.errorSpan(code, msg, l.spanFrom(from))
+}
+
+// errorSpan is errorf with an explicit span, for the paths that already built
+// one (an include name, a string literal's start).
+func (l *Lexer) errorSpan(code, msg string, span diag.Span) {
+	l.diags.Error(code, msg, span)
+	l.failed = true
 }
 
 // recoverLine makes progress after a malformed construct: drop everything to
@@ -169,11 +183,15 @@ func (l *Lexer) recoverLine() {
 
 // Lex returns the token stream (always ending in Eof) and every diagnostic.
 func (l *Lexer) Lex() ([]Token, []diag.Diagnostic) {
-	for !l.done {
+	for !l.done && !l.failed {
 		l.next()
 	}
 	l.toks = append(l.toks, Token{Kind: Eof, Span: diag.Span{Start: l.pos(), End: l.pos()}})
-	l.reportUnclosed()
+	if !l.failed {
+		// A failed lex stops at the error token, so the preprocessor stack is
+		// never reported (TGLexer::LexToken -> ReturnError).
+		l.reportUnclosed()
+	}
 	return l.toks, l.diags.Diags
 }
 
@@ -207,7 +225,7 @@ func (l *Lexer) processing() bool {
 
 func (l *Lexer) next() {
 	for {
-		if l.done {
+		if l.done || l.failed {
 			return
 		}
 		if !l.processing() {
@@ -474,13 +492,13 @@ func (l *Lexer) lexInclude(from diag.Pos) {
 	}
 	path, src, ok := l.resolveInclude(name)
 	if !ok {
-		l.diags.Error("E_LEX_INCLUDE_NOT_FOUND",
+		l.errorSpan("E_LEX_INCLUDE_NOT_FOUND",
 			"could not find include file '"+name+"'",
 			diag.Span{Start: nameStart, End: l.pos()})
 		return
 	}
 	if len(l.included) >= maxIncludeDepth {
-		l.diags.Error("E_LEX_INCLUDE_DEPTH",
+		l.errorSpan("E_LEX_INCLUDE_DEPTH",
 			"include nesting exceeds "+strconv.Itoa(maxIncludeDepth)+" levels",
 			diag.Span{Start: nameStart, End: l.pos()})
 		return
@@ -592,7 +610,7 @@ func (l *Lexer) readString(from diag.Pos) (string, bool) {
 	var buf []byte
 	for {
 		if l.atEnd() {
-			l.diags.Error("E_LEX_STRING_EOF", "end of file in string literal", l.spanFrom(from))
+			l.errorSpan("E_LEX_STRING_EOF", "end of file in string literal", l.spanFrom(from))
 			return "", false
 		}
 		c := l.peek(0)
@@ -601,7 +619,7 @@ func (l *Lexer) readString(from diag.Pos) (string, bool) {
 			return string(buf), true
 		}
 		if c == '\n' || c == '\r' {
-			l.diags.Error("E_LEX_STRING_EOL", "end of line in string literal", l.spanFrom(from))
+			l.errorSpan("E_LEX_STRING_EOL", "end of line in string literal", l.spanFrom(from))
 			return "", false
 		}
 		l.advance()
@@ -610,7 +628,7 @@ func (l *Lexer) readString(from diag.Pos) (string, bool) {
 			continue
 		}
 		if l.atEnd() {
-			l.diags.Error("E_LEX_STRING_EOF", "end of file in string literal", l.spanFrom(from))
+			l.errorSpan("E_LEX_STRING_EOF", "end of file in string literal", l.spanFrom(from))
 			return "", false
 		}
 		e := l.peek(0)
@@ -625,7 +643,7 @@ func (l *Lexer) readString(from diag.Pos) (string, bool) {
 			buf = append(buf, '\n')
 			l.advance()
 		case '\n', '\r':
-			l.diags.Error("E_LEX_ESCAPED_NEWLINE", "escaped newlines not supported in tblgen", l.spanFrom(from))
+			l.errorSpan("E_LEX_ESCAPED_NEWLINE", "escaped newlines not supported in tblgen", l.spanFrom(from))
 			l.skipStringRest()
 			return "", false
 		default:
@@ -673,7 +691,7 @@ func (l *Lexer) lexBracket(from diag.Pos) {
 	contentStart := l.i
 	for {
 		if l.atEnd() {
-			l.diags.Error("E_LEX_CODE_EOF", "unterminated code block", l.spanFrom(from))
+			l.errorSpan("E_LEX_CODE_EOF", "unterminated code block", l.spanFrom(from))
 			return
 		}
 		c, _ := l.advance()
@@ -722,7 +740,7 @@ func (l *Lexer) skipCComment(from diag.Pos) bool {
 	depth := 1
 	for {
 		if l.atEnd() {
-			l.diags.Error("E_LEX_COMMENT_EOF", "unterminated comment", l.spanFrom(from))
+			l.errorSpan("E_LEX_COMMENT_EOF", "unterminated comment", l.spanFrom(from))
 			return false
 		}
 		c, _ := l.advance()
@@ -797,7 +815,10 @@ func (l *Lexer) prepLexMacroName() string {
 
 // prepSkipDirectiveEnd allows only whitespace and comments after a directive.
 // A newline is not consumed: callers rely on that to stay line-aligned.
-func (l *Lexer) prepSkipDirectiveEnd() bool {
+// prepSkipDirectiveEnd is TGLexer::prepSkipDirectiveEnd: only a comment may
+// follow the directive on its line. what names the directive in the
+// diagnostic the way llvm-tblgen spells it ("#ifdef NAME", "#else", ...).
+func (l *Lexer) prepSkipDirectiveEnd(what string) bool {
 	for !l.atEnd() {
 		switch l.peek(0) {
 		case ' ', '\t':
@@ -821,7 +842,7 @@ func (l *Lexer) prepSkipDirectiveEnd() bool {
 				return false
 			}
 		default:
-			l.errorf("E_LEX_PREP_TRAILING", "only comments are supported after a preprocessing directive", l.pos())
+			l.errorf("E_LEX_PREP_TRAILING", "only comments are supported after "+what, l.pos())
 			return false
 		}
 	}
@@ -866,6 +887,12 @@ func (l *Lexer) handleDirective(kind Kind, live bool) bool {
 	for n := 0; n < len(word(kind)); n++ {
 		l.advance()
 	}
+	// TokStart points at the directive word once prepEatPreprocessorDirective
+	// has run, so TGLexer reports #else/#endif problems on the word rather than
+	// on the '#' (:834, :866). l.start is the '#', so the word begins one
+	// column later.
+	dirAt := l.start
+	dirAt.Col++
 	ctrlAt := l.pos()
 	switch kind {
 	case Ifdef, Ifndef:
@@ -888,7 +915,7 @@ func (l *Lexer) handleDirective(kind Kind, live bool) bool {
 			defined = !defined
 		}
 		l.prep = append(l.prep, prepEntry{kind: Ifdef, defined: defined, at: ctrlAt})
-		if !l.prepSkipDirectiveEnd() {
+		if !l.prepSkipDirectiveEnd("#" + word(kind) + " NAME") {
 			return false
 		}
 		if live && !l.processing() {
@@ -898,17 +925,23 @@ func (l *Lexer) handleDirective(kind Kind, live bool) bool {
 
 	case Else:
 		if len(l.prep) == 0 {
-			l.errorf("E_LEX_PREP_ELSE", "#else without #ifdef or #ifndef", l.start)
+			l.errorf("E_LEX_PREP_ELSE", "#else without #ifdef or #ifndef", dirAt)
 			return false
 		}
 		top := &l.prep[len(l.prep)-1]
 		if top.kind != Ifdef {
-			l.errorf("E_LEX_PREP_ELSE", "double #else", l.start)
+			// PrintError(TokStart, "double #else") followed by
+			// ReturnError(IfdefEntry.SrcPos, "previous #else is here")
+			// (TGLexer.cpp:837-841): the second location is the #else this one
+			// repeats, recorded when that directive was consumed (:845).
+			l.errorf("E_LEX_PREP_ELSE", "double #else", dirAt)
+			l.errorf("E_LEX_PREP_ELSE", "previous #else is here", top.at)
 			return false
 		}
 		top.kind = Else
 		top.defined = !top.defined
-		if !l.prepSkipDirectiveEnd() {
+		top.at = dirAt
+		if !l.prepSkipDirectiveEnd("#else") {
 			return false
 		}
 		if live {
@@ -918,10 +951,10 @@ func (l *Lexer) handleDirective(kind Kind, live bool) bool {
 
 	case Endif:
 		if len(l.prep) == 0 {
-			l.errorf("E_LEX_PREP_ENDIF", "#endif without #ifdef or #ifndef", l.start)
+			l.errorf("E_LEX_PREP_ENDIF", "#endif without #ifdef", dirAt)
 			return false
 		}
-		if !l.prepSkipDirectiveEnd() {
+		if !l.prepSkipDirectiveEnd("#endif") {
 			return false
 		}
 		l.prep = l.prep[:len(l.prep)-1]
@@ -937,7 +970,7 @@ func (l *Lexer) handleDirective(kind Kind, live bool) bool {
 			l.diags.Warn("W_LEX_MACRO_DUP", "duplicate definition of macro: "+name, l.spanFrom(l.start))
 		}
 		l.macros[name] = true
-		return l.prepSkipDirectiveEnd()
+		return l.prepSkipDirectiveEnd("#define NAME")
 	}
 	l.errorf("E_LEX_PREP_MACRO", "unknown preprocessing directive", l.start)
 	return false
