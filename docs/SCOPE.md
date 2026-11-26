@@ -88,9 +88,9 @@ per-file.
 | `--dump-json` | done | M3 |
 | `--null-backend` | done | M3 |
 | `-I` include dirs, `-D` macros | done | M5 |
-| `--print-records` | todo | M6 |
-| `--print-detailed-records` | todo | M6 |
-| `-o` / dependency file | todo | M6 |
+| `--print-records` | done (byte-identical on AArch64.td) | M6 |
+| `--print-detailed-records` | done | M6 |
+| `-o` / `-d` dependency file | done | M6 |
 | `--version`, `--dump-tokens`, `--dump-ast` | done | M0/M2 |
 | diagnostic format `file:line:col: error: msg` + caret + note | done | M5 |
 | `--gen-*` target emitters | out | — |
@@ -99,17 +99,24 @@ per-file.
 
 ## Known deviations (measured, not guessed)
 
-1. **Anonymous instantiation.** LLVM instantiates a class application with
-   concrete arguments at *parse* time (`VarDefInit::Fold`), even inside a class
-   that is never used; this implementation instantiates on evaluation. A def
-   whose class body contains such a value is therefore dumped with different
-   `anonymous_N` indices, and an unused class contributes no anonymous def at
-   all. This is the only remaining source of `diff` (145/392) and only names
-   differ, never types or values. Unresolved values themselves are reproduced:
-   `field` values print the same `{"kind":"var"/"varbit"/"complex"}` Init shapes
-   as `JSONBackend.cpp` (`JSON.td` and `UnsetBitInit.td` are byte-identical).
-2. **Diagnostic wording/columns** are close but not byte-identical; conformance
-   compares the exit class and the line of the first error.
+Measured with the oracle above; `make score` reproduces the corpus numbers.
+
+1. **Real targets outside the corpus.** AArch64 is byte-identical in both
+   backends (`--print-records` and `--dump-json`, 106 MB / 88073 records).
+   Two shapes are not covered yet:
+   * RISCV / ARM: a record whose name comes from a resolved multiclass
+     expression (`def Ext.Suffix : ...` under `let ... in { defm ... }`, or
+     `MVE_VMLADAVu32`) is not in the parser's name table when a *later*
+     statement references it, so these targets stop with
+     `Variable not defined`; llvm-tblgen accepts them.
+   * X86 parses fully, but 135 of 88538 records carry a different inherited
+     `ExeDomain` (and the `TSFlags` bits derived from it).
+   The 385-case test corpus does not exercise either shape.
+2. **One diagnostic rendering.** `preprocess-include.td` has the same message
+   and the same exit class but a different caret line; every other diagnostic
+   in the corpus is byte-identical (61/62 full, 62/62 message).
+3. **Secondary notes.** `make matrix` reports 19 runs where an error message
+   matches but a following note's wording differs.
 
 ## Non-negotiables
 

@@ -18,46 +18,50 @@ enforced by **differential testing against the real `llvm-tblgen`**.
 
 ## Status
 
-M5: **language core complete for the whole LLVM TableGen test corpus.** Lexing
-(including `include` expansion and the preprocessor), parsing, `defm`/multiclass
-expansion, the record graph, static type checking, and `--dump-json` all run.
-`--print-records`, `--print-detailed-records` and `-o` are still `E_UNSUPPORTED`.
+v1.0.0: the **language core and the record-level backends** are complete.
+Lexing (including `include` expansion and the preprocessor), parsing, `defm`/
+multiclass expansion, `dump`, the record graph, static type checking,
+`--dump-json`, `--print-records`, `--print-detailed-records`, `-o` and `-d` all
+run. Target instruction-selection emitters are out of scope and exit 2 with
+`E_UNSUPPORTED`.
 
-Differential state (`make compare`, 392 in-scope files):
+Differential state against llvm-tblgen 24.0.0git (392 top-level tests, 385
+in-scope, 7 skipped because they need `split-file`):
 
-| | oracle valid | oracle invalid |
+| | count |
+|---|---|
+| `--dump-json` outputs byte-identical | 330 (match) |
+| byte differences | 0 |
+| rejected like the oracle | 55 (`reject-match`: same first-error line) |
+| diagnostics with the same message | 62/62 |
+| diagnostics rendered identically (message + caret) | 61/62 |
+
+`make matrix` replays every `RUN:` line (including `-D` variants). It reports
+295 identical runs, 2 identical diagnostic reports, 0 output / error / exit
+differences, and 19 cases where the message matches but the wording of a
+secondary note differs. `make score` prints all four numbers and a delta
+against the previous run; `make check` is the ratchet.
+
+Real-target evidence, beyond the corpus:
+
+| input | `--print-records` | `--dump-json` |
 |---|---|---|
-| ours valid | 330 (187 byte-identical) | 0 |
-| ours invalid | 0 | 62 (60 same first-error line) |
+| `lib/Target/AArch64/AArch64.td` | byte-identical (`d973796c…`) | byte-identical, 106 MB / 88073 records |
 
-```
-$ make compare
-mode=compare  files=392  in-scope=392  needs-include=0
-  diff           145
-  match          187
-  reject-match   60
+The JSON run exercises `dump`, deferred `foreach`/`if` inside multiclasses,
+anonymous instantiation order and the `!locs` chain; the site rules are pinned
+by `internal/record/names_test.go`.
 
-$ make check                    # ratchet: no previously-matching case regressed
-$ go test ./...                 # lexer/parser/include units + corpus ratchet
-```
+Known gaps outside the corpus (measured, not guessed):
 
-All 145 `diff` cases are byte differences on inputs both sides *accept*; there
-is no accept/reject disagreement left. The cause is anonymous record
-instantiation. llvm-tblgen instantiates a class application with concrete
-arguments **while parsing the value** (`VarDefInit::Fold`), even inside a class
-that is never used:
-
-```tablegen
-class X<int n> { int v = n; }
-class C { X x = X<1>; }   // C never instantiated
-def D { int v = 1; }
-```
-
-`llvm-tblgen --dump-json` still emits `anonymous_0` for `X<1>`; this
-implementation only instantiates when a record is evaluated, so the anonymous
-record (and its `anonymous_N` index) is missing. The rest of the output — types,
-values, `!instanceof`, field order, unresolved `var`/`varbit`/`complex` JSON
-shapes — matches.
+1. **RISCV / ARM**: a record name that only exists after a multiclass
+   expression is resolved (`def Ext.Suffix` inside a `let ... in { defm ... }`,
+   `MVE_VMLADAVu32`) is not known to the parser for a later reference, so those
+   targets are rejected with `Variable not defined` where llvm-tblgen accepts
+   them. The corpus does not hit this shape.
+2. **X86** parses fully but 135 of 88538 records differ in one inherited field
+   (`ExeDomain`, `TSFlags`) — an inheritance/`let` ordering bug to isolate.
+3. `preprocess-include.td` renders one diagnostic with a different caret line.
 
 ## Commands
 
@@ -67,17 +71,23 @@ make test        # go test ./...
 make baseline    # record what llvm-tblgen does on llvm/test/TableGen (deterministic)
 make compare     # replay the corpus through our binary; writes conformance/status.json
 make check       # ratchet: a case that matched before must still match
+make stderr      # diagnostic text + caret rendering
+make matrix      # every RUN: line of every test
+make score       # all four numbers, with a delta against the previous run
+make cover       # coverage; make cover-check is the floor (60% for internal/record)
+make bench       # AArch64 parse / lower / records / JSON benchmarks
+make fuzz        # FuzzParse (FUZZ=FuzzLex, FUZZTIME=2m to vary)
 make show F=path/to.td   # both outputs side by side
 ```
 
 ## Corpus
 
-`/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/*.td` — 392 top-level tests,
-all run in-scope: `RUN:` lines are scanned for `-I` and the same search path is
-given to both binaries. 330 are accepted by the oracle under `--dump-json`, 62
-are deliberate error tests — those are compared by the **line of the first
-error**, so `reject-match` means "rejected the same construct", not merely
-"rejected something".
+`/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/*.td` — 392 top-level tests
+(385 in scope): `RUN:` lines are scanned for `-I` and the same search path is
+given to both binaries. 330 are accepted by the oracle under `--dump-json` and
+produce byte-identical output; 55 are deliberate error tests, compared by the
+**line of the first error**, so `reject-match` means "rejected the same
+construct", not merely "rejected something".
 
 Oracle: `/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen` (24.0.0git).
 LLVM 24's JSON includes `!locs`; LLVM 15's does not. The version is recorded in
