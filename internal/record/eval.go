@@ -700,7 +700,11 @@ func concatDag(a, b *Dag) (Value, error) {
 	ad, aok := a.Op.(*DefVal)
 	bd, bok := b.Op.(*DefVal)
 	if aok && bok && ad.Rec != bd.Rec {
-		return nil, &EvalError{Msg: "Concatenated Dag operators do not match"}
+		// Record.cpp:1231-1234: PrintFatalError(Twine), no location.
+		return nil, &EvalError{
+			Msg:   "Concatenated Dag operators do not match: '" + a.String() + "' vs. '" + b.String() + "'",
+			NoLoc: true,
+		}
 	}
 	op := a.Op
 	if !aok && bok {

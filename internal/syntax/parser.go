@@ -608,12 +608,15 @@ func (p *Parser) parseClass() Object {
 	p.classDepth++
 	items, ok := p.parseBody(rec)
 	p.classDepth--
-	p.warnUnusedArgs(rec, name, ":", p.classArgs[name])
-	p.popScope()
+	// ParseClass returns on a body error before checkUnusedTemplateArgs
+	// (TGParser.cpp:4352-4356), so a broken class produces no warnings.
 	if !ok {
+		p.popScope()
 		p.recoverBlock()
 		return nil
 	}
+	p.warnUnusedArgs(rec, name, ":", p.classArgs[name])
+	p.popScope()
 	return &ClassStmt{
 		Base:         Base{At: p.span(start)},
 		Name:         name,
@@ -1783,11 +1786,13 @@ func (p *Parser) parseTemplateArgList(rec *recordInfo, s *scope) ([]*Decl, bool)
 		if !ok {
 			return nil, false
 		}
-		// TGParser::ParseTemplateArgList rejects a repeated name at the start
-		// of the second declaration, which is where the diagnostic points.
+		// TGParser::ParseDeclaration reports a repeated name at the start of
+		// the second declaration and fails, which aborts the whole argument
+		// list (TGParser.cpp:3634-3639, :3740-3745).
 		if seen[d.Name] {
 			p.errAt(Span{Start: d.Base.At.Start, End: d.Base.At.Start}, "E_PARSE_TARG_DUP",
 				"template argument with the same name has already been defined")
+			return nil, false
 		}
 		seen[d.Name] = true
 		args = append(args, d)
@@ -1976,6 +1981,10 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 	named := map[string]bool{}
 	positional := 0
 	sawNamed := false
+	// A repeated argument is diagnosed by resolveArguments after the whole
+	// value list has been parsed and the '>' consumed (TGParser.cpp:644-654),
+	// so hold the first one until then.
+	dupName := ""
 	for {
 		start := p.i
 		if p.at(Id) && p.peekKind(1) == Equal {
@@ -1999,16 +2008,20 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 			// TGParser::ParseTemplateArgValue: the name must exist, may not
 			// repeat (neither itself nor the slot a positional already took),
 			// and must carry a value. All three report at the class name.
-			switch {
-			case slot < 0:
+			// ParseTemplateArgValueList returns true at these errors without
+			// consuming more tokens (TGParser.cpp:3537-3556), so the
+			// declaration continues from just after the bad value.
+			if slot < 0 {
 				p.errAt(nameTok.Span, "E_PARSE_ARG_UNKNOWN", "Argument \""+nameTok.Text+"\" doesn't exist")
-			case named[nameTok.Text] || slot < positional:
-				p.errAt(nameSpan, "E_PARSE_ARG_DUP",
-					"We can only specify the template argument '"+owner+sep+nameTok.Text+"' once")
+				return nil, false
+			}
+			if (named[nameTok.Text] || slot < positional) && dupName == "" {
+				dupName = nameTok.Text
 			}
 			if _, unset := v.(*UnsetValue); unset {
 				p.errAt(v.Span(), "E_PARSE_ARG_UNSET",
 					"The value of named argument should be initialized, but we got '?'")
+				return nil, false
 			}
 			named[nameTok.Text] = true
 			badValue = p.checkTemplateArgValue(v, hint, owner, nameTok.Text, sep) || badValue
@@ -2029,11 +2042,14 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 			}
 			if sawNamed {
 				p.errAt(v.Span(), "E_PARSE_ARG_POS", "Positional argument should be put before named argument")
+				return nil, false
 			}
 			// `3=0`: the value parsed, and the '=' shows the author meant a
-			// named argument with an unusable name.
+			// named argument with an unusable name. ParseTemplateArgValueList
+			// returns here without eating the '=' (TGParser.cpp:3540-3543).
 			if p.at(Equal) {
 				p.errAt(v.Span(), "E_PARSE_ARG_NAME", "The name of named argument should be a valid identifier")
+				return nil, false
 			}
 			positional++
 			badValue = p.checkTemplateArgValue(v, hint, owner, argName, sep) || badValue
@@ -2050,6 +2066,13 @@ func (p *Parser) parseTemplateArgValues(rec *recordInfo, formals []*Decl, owner 
 		}
 	}
 	if badValue {
+		return nil, false
+	}
+	// resolveArguments reports a repeated argument before it fills defaults
+	// (TGParser.cpp:644-654).
+	if dupName != "" {
+		p.errAt(nameSpan, "E_PARSE_ARG_DUP",
+			"We can only specify the template argument '"+owner+sep+dupName+"' once")
 		return nil, false
 	}
 	// resolveArguments fills the defaults and rejects a required argument that

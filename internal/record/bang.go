@@ -294,7 +294,8 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			return nil, err
 		}
 		if n < 0 {
-			return nil, &EvalError{Msg: "!listsplat count " + strconv.FormatInt(n, 10) + " is negative", Span: b.Span()}
+			// Record.cpp:1283-1285 is PrintFatalError(Twine), no location.
+			return nil, &EvalError{Msg: "!listsplat count " + strconv.FormatInt(n, 10) + " is negative", NoLoc: true}
 		}
 		out := &List{Elem: v.Type()}
 		for i := int64(0); i < n; i++ {
@@ -729,7 +730,8 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			}
 			re, err = regexp.Compile(rs.S)
 			if err != nil {
-				return nil, &EvalError{Msg: "invalid regex '" + rs.S + "'", Span: b.Span()}
+				// Record.cpp:2201 is PrintFatalError(Twine), no location.
+				return nil, &EvalError{Msg: "invalid regex '" + rs.S + "'", NoLoc: true}
 			}
 		}
 		names := make([]string, 0, len(k.defs))

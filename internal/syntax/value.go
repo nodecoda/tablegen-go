@@ -505,6 +505,12 @@ func foldBitRangeLiteral(b *BitsValue, bits []int32) (Value, bool) {
 func (p *Parser) parseSlice(base Value, start int) (Value, bool) {
 	lhsLoc := base.Span()
 	bt := base.Type()
+	// TGParser.cpp:3276-3286: a value with no type (an unset `?`) is not a
+	// TypedInit, while a typed non-list names its type.
+	if bt.Kind == UnsetType {
+		p.errAt(lhsLoc, "E_PARSE_SLICE_VALUE", "Invalid value, list expected")
+		return nil, false
+	}
 	if bt.Kind != InvalidType && bt.Kind != ListType {
 		p.errAt(lhsLoc, "E_PARSE_SLICE_TYPE", "Type '"+bt.String()+"' is invalid, list expected")
 		return nil, false
@@ -671,6 +677,9 @@ func (p *Parser) parseOperatorType() (Type, bool) {
 	}
 	ty, ok := p.parseType()
 	if !ok {
+		// TGParser.cpp:2383-2386 reports "expected type name for operator"
+		// after ParseType has already reported the unknown token.
+		p.errTok("E_PARSE_OPTYPE_GT", "expected type name for operator")
 		return InvalidTy, false
 	}
 	if !p.eat(Greater) {
@@ -1063,6 +1072,17 @@ func (p *Parser) finishBinary(v *BangValue, rec *recordInfo, item *Type) Value {
 				"expected value to be a typed value, got '"+valueString(arg)+"'")
 			return nil
 		}
+		// The comparison operators type-check the first operand right after
+		// it is parsed; a bad one aborts the whole value and leaves the parser
+		// at the comma (TGParser.cpp:1802-1826).
+		if len(args) == 0 && !p.checkCompareArg(v.Op, arg) {
+			return nil
+		}
+		// !interleave checks each argument as it is parsed (TGParser.cpp:
+		// 1827-1845).
+		if v.Op == XInterleave && !p.checkInterleaveArg(len(args), arg) {
+			return nil
+		}
 		if v.Op == XListConcat || v.Op == XListRemove {
 			if len(args) == 0 && arg.Type().Kind != InvalidType && arg.Type().Kind != ListType {
 				p.errAt(arg.Span(), "E_PARSE_BANG_LIST",
@@ -1096,6 +1116,63 @@ func (p *Parser) finishBinary(v *BangValue, rec *recordInfo, item *Type) Value {
 	}
 	v.Args = args
 	return v.withType(p.binaryResultType(v.Op, args, item))
+}
+
+// checkCompareArg applies TGParser's first-operand check for the six
+// comparison operators (TGParser.cpp:1802-1826). It reports at the operand and
+// returns false when the type cannot be compared.
+func (p *Parser) checkCompareArg(op Kind, arg Value) bool {
+	t := arg.Type()
+	if t.Kind == InvalidType {
+		return true
+	}
+	switch op {
+	case XEq, XNe:
+		switch t.Kind {
+		case IntType, BitType, BitsType, StringType, RecordType:
+			return true
+		}
+		p.errAt(arg.Span(), "E_PARSE_CMP",
+			"expected bit, bits, int, string, or record; got value of type '"+t.String()+"'")
+		return false
+	case XLe, XLt, XGe, XGt:
+		switch t.Kind {
+		case IntType, BitType, BitsType, StringType:
+			return true
+		}
+		p.errAt(arg.Span(), "E_PARSE_CMP",
+			"expected bit, bits, int, or string; got value of type '"+t.String()+"'")
+		return false
+	}
+	return true
+}
+
+// checkInterleaveArg mirrors the INTERLEAVE cases in ParseOperation's
+// argument loop: the first argument must be a list of string/int/bits/bit and
+// the second a string (TGParser.cpp:1827-1845).
+func (p *Parser) checkInterleaveArg(index int, arg Value) bool {
+	t := arg.Type()
+	if t.Kind == InvalidType {
+		return true
+	}
+	switch index {
+	case 0:
+		ok := t.Kind == ListType && t.Elem != nil &&
+			(t.Elem.Kind == StringType || t.Elem.Kind == IntType ||
+				t.Elem.Kind == BitsType || t.Elem.Kind == BitType)
+		if !ok {
+			p.errAt(arg.Span(), "E_PARSE_INTERLEAVE",
+				"expected list of string, int, bits, or bit; got value of type '"+t.String()+"'")
+		}
+		return ok
+	case 1:
+		if t.Kind != StringType {
+			p.errAt(arg.Span(), "E_PARSE_INTERLEAVE",
+				"expected second argument to be a string, got value of type '"+t.String()+"'")
+			return false
+		}
+	}
+	return true
 }
 
 func (p *Parser) binaryArgType(op Kind, item *Type) *Type {
@@ -1568,6 +1645,18 @@ func (p *Parser) finishSwitch(v *BangValue, rec *recordInfo, item *Type) Value {
 	return cond
 }
 
+// listOpName names the list-comprehension operator for diagnostics.
+func listOpName(op Kind) string {
+	switch op {
+	case XForEach:
+		return "foreach"
+	case XSort:
+		return "sort"
+	default:
+		return "filter"
+	}
+}
+
 func (p *Parser) finishListComprehension(v *BangValue, rec *recordInfo, item *Type) Value {
 	if !p.eat(LParen) {
 		p.errTok("E_PARSE_BANG_LPAREN", "expected '(' after !foreach/!filter")
@@ -1598,15 +1687,22 @@ func (p *Parser) finishListComprehension(v *BangValue, rec *recordInfo, item *Ty
 			inElem = *lt.Elem
 		}
 	case DagType:
+		// Only !foreach accepts a dag; the others report from the token
+		// after the comma, which has already been consumed
+		// (TGParser.cpp:2649-2657, :2668-2682).
+		if v.Op == XFilter || v.Op == XSort {
+			p.errTok("E_PARSE_"+listOpName(v.Op)+"_ARG", "!"+listOpName(v.Op)+" must have a list argument")
+			return nil
+		}
 		isDag = true
 		inElem = DagTy
 	case InvalidType, UnsetType:
 	default:
 		switch v.Op {
 		case XForEach:
-			p.errAt(v.OpSpan, "E_PARSE_FOREACH_ARG", "!foreach must have a list or dag argument")
+			p.errTok("E_PARSE_FOREACH_ARG", "!foreach must have a list or dag argument")
 		default:
-			p.errAt(v.OpSpan, "E_PARSE_FILTER_ARG", "!filter must have a list argument")
+			p.errTok("E_PARSE_"+listOpName(v.Op)+"_ARG", "!"+listOpName(v.Op)+" must have a list argument")
 		}
 		return nil
 	}
