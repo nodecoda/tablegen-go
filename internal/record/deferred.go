@@ -76,10 +76,6 @@ func (k *Keeper) deferBang(b *syntax.BangValue, env *Env, rec *Record) (Value, [
 		v, handled, err := k.deferCond(b, env, rec)
 		return v, nil, handled, err
 
-	case syntax.XSwitch:
-		v, handled, err := k.deferSwitch(b, env, rec)
-		return v, nil, handled, err
-
 	case syntax.XForEach, syntax.XFilter, syntax.XSort:
 		list, err := eval(0)
 		if err != nil {
@@ -397,35 +393,6 @@ func (k *Keeper) deferCond(b *syntax.BangValue, env *Env, rec *Record) (Value, b
 	}
 	if !deferred {
 		return nil, false, nil
-	}
-	return &Unresolved{Text: "!cond(" + strings.Join(texts, ", ") + ")"}, true, nil
-}
-
-// deferSwitch renders the !cond form TGParser desugars !switch into.
-func (k *Keeper) deferSwitch(b *syntax.BangValue, env *Env, rec *Record) (Value, bool, error) {
-	key, err := k.evalSyntax(b.Args[0], env, rec)
-	if err != nil {
-		return nil, true, err
-	}
-	if !isUnresolved(key) {
-		return nil, false, nil
-	}
-	texts := make([]string, 0, len(b.Cases))
-	for _, c := range b.Cases {
-		vv, err := k.evalSyntax(c.Value, env, rec)
-		if err != nil {
-			return nil, true, err
-		}
-		if c.Key == nil {
-			// TGParser desugars the default arm to `true`, which prints 1.
-			texts = append(texts, "1: "+printableOf(vv))
-			continue
-		}
-		kv, err := k.evalSyntax(c.Key, env, rec)
-		if err != nil {
-			return nil, true, err
-		}
-		texts = append(texts, "!eq("+printableOf(key)+", "+printableOf(kv)+"): "+printableOf(vv))
 	}
 	return &Unresolved{Text: "!cond(" + strings.Join(texts, ", ") + ")"}, true, nil
 }

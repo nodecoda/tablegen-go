@@ -976,38 +976,9 @@ func (k *Keeper) preFoldArgs(name string, class *Record, provided map[string]Bin
 	return rec
 }
 
-// preFoldExpr is preFold for an already-bound expression: evaluate it just far
-// enough to let a concrete class application instantiate, and throw the result
-// away. name carries the record's name so that `NAME` resolves the way
-// MapResolver resolves the class's implicit name; fields stay unresolved.
-func (k *Keeper) preFoldExpr(e Expr, rec *Record) {
-	var v syntax.Value
-	var env *Env
-	switch x := e.(type) {
-	case *AstExpr:
-		v, env = x.V, x.Env
-	case *AppendExpr:
-		k.preFoldExpr(x.Base, rec)
-		k.preFoldExpr(x.Add, rec)
-		return
-	case *BitsExpr:
-		k.preFoldExpr(x.Base, rec)
-		k.preFoldExpr(x.Add, rec)
-		return
-	default:
-		return
-	}
-	if !hasClassApply(v) {
-		return
-	}
-	name := ""
-	if rec != nil {
-		name = rec.Name
-	}
-	k.preFoldExprBound(&AstExpr{V: v, Env: env}, &Record{Name: name, keeper: k}, true)
-}
-
-// preFoldExprBound is preFoldExpr against a caller-supplied stand-in record.
+// preFoldExprBound pre-folds an expression against a caller-supplied
+// stand-in record: it evaluates just far enough to let a concrete class
+// application instantiate, and throws the result away.
 // A class application buried in a binding is invisible to a syntactic check,
 // so callers can pass requireApply=false to always evaluate.
 func (k *Keeper) preFoldExprBound(e Expr, rec *Record, requireApply bool) {

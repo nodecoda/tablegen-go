@@ -234,27 +234,6 @@ func (v *BitRef) String() string {
 	return v.Var + "{" + itoa(v.Index) + "}"
 }
 
-func quote(s string) string {
-	var b strings.Builder
-	b.WriteByte('"')
-	for i := 0; i < len(s); i++ {
-		switch c := s[i]; c {
-		case '"':
-			b.WriteString(`\"`)
-		case '\\':
-			b.WriteString(`\\`)
-		case '\n':
-			b.WriteString(`\n`)
-		case '\t':
-			b.WriteString(`\t`)
-		default:
-			b.WriteByte(c)
-		}
-	}
-	b.WriteByte('"')
-	return b.String()
-}
-
 // bitsFromInt produces bits<N> from an integer, least-significant bit first.
 // ok mirrors IntInit::convertInitializerTo(BitsRecTy): a value fits when
 // canFitInBitfield says so, so bits<4> accepts [-8, 15].

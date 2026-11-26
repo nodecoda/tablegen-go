@@ -702,17 +702,6 @@ func unsetText(want *Ty) string {
 	return "?"
 }
 
-// perBitCast renders int -> bits<N>: a BitsInit whose elements are the bits of
-// `!cast<bits<N>>(expr)`, high bit first.
-func perBitCast(inner string, width int) string {
-	cast := "!cast<bits<" + strconv.Itoa(width) + ">>(" + inner + ")"
-	parts := make([]string, width)
-	for i := range parts {
-		parts[i] = cast + "{" + strconv.Itoa(width-1-i) + "}"
-	}
-	return "{ " + strings.Join(parts, ", ") + " }"
-}
-
 // bitsInitForm renders a one-bit source as a BitsInit before it is cast.
 func bitsInitForm(v syntax.Value, env *Env) string {
 	switch v.(type) {

@@ -66,25 +66,6 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 		}
 		return nil, &EvalError{Msg: who + " does not have any true condition in:" + initText(b, env, nil), Span: b.Span(), AtRecord: true}
 
-	case syntax.XSwitch:
-		key, err := eval(0)
-		if err != nil {
-			return nil, err
-		}
-		for _, c := range b.Cases {
-			if c.Key == nil {
-				return k.evalSyntax(c.Value, env, rec)
-			}
-			kv, err := k.evalSyntax(c.Key, env, rec)
-			if err != nil {
-				return nil, err
-			}
-			if equalValues(key, kv) {
-				return k.evalSyntax(c.Value, env, rec)
-			}
-		}
-		return nil, &EvalError{Msg: "!switch has no matching case", Span: b.Span(), AtRecord: true}
-
 	case syntax.XEq, syntax.XNe, syntax.XLe, syntax.XLt, syntax.XGe, syntax.XGt:
 		lhs, err := eval(0)
 		if err != nil {
