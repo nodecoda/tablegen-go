@@ -570,6 +570,18 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 		if !ok {
 			return nil, &EvalError{Msg: "!getdagop expects a dag", Span: b.Span()}
 		}
+		if b.TypeArg.Kind != syntax.InvalidType {
+			// UnOpInit::Fold(GETDAGOP): the operator must be an instance of
+			// the requested class. Module-level, at CurRec->getLoc().
+			target := k.tyFromSyntax(b.TypeArg)
+			if opTy := d.Op.Type(); !opTy.IsA(target) {
+				return nil, &EvalError{
+					Msg: "Expected type '" + target.String() + "', got '" + opTy.String() +
+						"' in: !getdagop" + d.String() + "\n",
+					AtRecord: true,
+				}
+			}
+		}
 		return d.Op, nil
 
 	case syntax.XGetDagOpName:

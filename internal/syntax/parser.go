@@ -23,8 +23,9 @@ import (
 type binding struct {
 	ty       Type
 	lit      Value
-	arg      bool // a class/multiclass template argument
-	isDefvar bool // defvar is substituted at parse scope, shadowing args
+	arg      bool   // a class/multiclass template argument
+	qual     string // qualified name of a template argument ("C:a", "MC::a")
+	isDefvar bool   // defvar is substituted at parse scope, shadowing args
 	// lexical marks a binding introduced by a loop or a local variable, which
 	// shadows a class/multiclass template argument of the same name. A
 	// reference to it must not be qualified with the class name.
@@ -788,16 +789,18 @@ func (p *Parser) registerObjectNames(objs []Object, defmPrefix string, env map[s
 			}
 		case *DefStmt:
 			n, ok := p.materializeName(t.Name, defmPrefix, env)
-			if !ok || n == "" {
-				if !ok {
-					missed++
-				}
+			if !ok {
+				missed++
 				continue
 			}
 			// In a multiclass body, a name that does not mention NAME is
-			// prefixed with the defm name, matching ParseObjectName.
+			// prefixed with the defm name, matching ParseObjectName. `def ""`
+			// therefore registers the defm's own name.
 			if defmPrefix != "" && !usesNAME(t.Name) {
 				n = defmPrefix + n
+			}
+			if n == "" {
+				continue
 			}
 			if _, exists := p.globals[n]; exists {
 				continue
@@ -1701,9 +1704,20 @@ func (p *Parser) parseDeclaration(rec *recordInfo, isArg bool) (*Decl, bool) {
 		}
 	}
 	if isArg {
-		p.defineLocal(nt.Text, binding{ty: ty, lit: d.Value, arg: true})
+		// TGParser::QualifyName stores the owning record in the VarInit, so a
+		// reference keeps pointing at *this* class even when the surrounding
+		// record changes (an instance inheriting the class, a defm body).
+		sep := ":"
+		if p.curMulti != nil {
+			sep = "::"
+		}
+		b := binding{ty: ty, lit: d.Value, arg: true}
 		if rec != nil {
-			rec.fields[nt.Text] = binding{ty: ty, lit: d.Value, arg: true}
+			b.qual = rec.name + sep + nt.Text
+		}
+		p.defineLocal(nt.Text, b)
+		if rec != nil {
+			rec.fields[nt.Text] = b
 		}
 	}
 	d.Base.At = p.span(start)

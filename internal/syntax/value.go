@@ -205,7 +205,7 @@ func (p *Parser) parseIdentValue(rec *recordInfo, mode idMode, start int) Value 
 		return &ClassApplyValue{ValueBase: ValueBase{Base: Base{At: p.span(start)}, Ty: ty}, Class: nt.Text, ClassSpan: nt.Span, Args: args}
 	}
 	if b, ok := p.lookupLocal(nt.Text); ok {
-		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: b.ty}, Name: nt.Text, Lit: b.lit, Subst: b.isDefvar && b.lit != nil, Lexical: b.lexical, ArgRef: b.arg}
+		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: b.ty}, Name: nt.Text, Lit: b.lit, Subst: b.isDefvar && b.lit != nil, Lexical: b.lexical, ArgRef: b.arg, ArgQual: b.qual}
 	}
 	if mode == parseNameMode {
 		return &StringValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: StringTy}, Text: nt.Text}
@@ -495,6 +495,15 @@ func (p *Parser) parseSlice(base Value, start int) (Value, bool) {
 			if hi == nil {
 				return nil, false
 			}
+			// TGParser::ParseSliceElement: RHS then LHS must both be int.
+			if ty := hi.Type(); ty.Kind != InvalidType && ty.Kind != IntType {
+				p.errAt(hi.Span(), "E_PARSE_SLICE_RANGE", "expected int...int, got "+ty.String())
+				return nil, false
+			}
+			if ty := lo.Type(); ty.Kind != InvalidType && ty.Kind != IntType {
+				p.errAt(lo.Span(), "E_PARSE_SLICE_RANGE", "expected int...int, got "+ty.String())
+				return nil, false
+			}
 			el.Hi = hi
 		} else if p.at(IntVal) {
 			hiVal := -int64(p.cur().Num)
@@ -506,6 +515,19 @@ func (p *Parser) parseSlice(base Value, start int) (Value, bool) {
 			el.Hi = &IntValue{ValueBase: ValueBase{Base: Base{At: t.Span}, Ty: IntTy}, Num: uint64(hiVal)}
 		}
 		el.Base.At = p.span(elStart)
+		// ParseSliceElements: a list subscript must be list<int>; anything
+		// else that is not int is not a legal set of indices.
+		if el.Hi == nil {
+			if ty := lo.Type(); ty.Kind == ListType {
+				if ty.Elem != nil && ty.Elem.Kind != InvalidType && ty.Elem.Kind != IntType {
+					p.errAt(lo.Span(), "E_PARSE_SLICE_LIST", "expected list<int>, got "+ty.String())
+					return nil, false
+				}
+			} else if ty.Kind != InvalidType && ty.Kind != IntType {
+				p.errAt(lo.Span(), "E_PARSE_SLICE_TYPE", "unhandled type "+ty.String()+" in range")
+				return nil, false
+			}
+		}
 		elems = append(elems, el)
 		if lo.Type().Kind == ListType {
 			listResult = true

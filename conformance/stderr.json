@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 23,
+    "status:diff": 22,
     "status:msg-match": 17,
-    "status:same": 345,
+    "status:same": 346,
     "status:skipped": 7
   },
   "cases": [
@@ -1288,9 +1288,9 @@
         "msgs": [
           "error: Undefined reference to record: 'd1_r1_no_such_record'"
         ],
-        "full_sha256": "5dfc7eb407d10f6613dab7df26bb62f31e30680648feb941e48b9f7767b12774",
-        "full_len": 136,
-        "full": "\u003cfile\u003e:15:15: error: Undefined reference to record: 'd1_r1_no_such_record'\n  def _m01: B\u003c!cast\u003cA\u003e(s#\"_no_such_record\")\u003e;\n              ^"
+        "full_sha256": "4c5f9e96220feaea1e52f9977cb567eeafa276c298bf1a295e6b9ed5e4d9c6cc",
+        "full_len": 128,
+        "full": "\u003cfile\u003e:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'\n\n  def _m01: B\u003c!cast\u003cA\u003e(s#\"_no_such_record\")\u003e;\n      ^"
       },
       "status": "msg-match"
     },
@@ -3328,9 +3328,9 @@
       },
       "ours": {
         "exit": 1,
-        "full_sha256": "922c55e7624fb8fe8054c603ee2ec68b79352e9d074608811a88dc74190cb0ab",
-        "full_len": 46,
-        "full": "tblgen: open \u003cfile\u003e: no such file or directory"
+        "full_sha256": "e37ad4f1f68cdb9583c5c426f675fd712353d6207f56afa7fb4d5324f6198522",
+        "full_len": 71,
+        "full": "./tblgen: Could not open input file '\u003cfile\u003e': No such file or directory"
       },
       "status": "msg-match"
     },
@@ -3876,14 +3876,11 @@
       },
       "ours": {
         "exit": 1,
-        "msgs": [
-          "error: Undefined reference to record: ''"
-        ],
-        "full_sha256": "a8d712faec0054d64c4da49ad00884dd29d32d3e78fb4441b7fd975abf0407a0",
-        "full_len": 80,
-        "full": "\u003cfile\u003e:6:4: error: Undefined reference to record: ''\nif !cast\u003cA\u003e(\"\").x then\n   ^"
+        "full_sha256": "ae4c81e50018b6ff60e1c5c4e8272b7be1b87d1d71b183f3f429f23b7f2da3d6",
+        "full_len": 40,
+        "full": "error: Undefined reference to record: ''"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if.td",
@@ -5174,9 +5171,9 @@
       },
       "ours": {
         "exit": 1,
-        "full_sha256": "922c55e7624fb8fe8054c603ee2ec68b79352e9d074608811a88dc74190cb0ab",
-        "full_len": 46,
-        "full": "tblgen: open \u003cfile\u003e: no such file or directory"
+        "full_sha256": "e37ad4f1f68cdb9583c5c426f675fd712353d6207f56afa7fb4d5324f6198522",
+        "full_len": 71,
+        "full": "./tblgen: Could not open input file '\u003cfile\u003e': No such file or directory"
       },
       "status": "msg-match"
     },
@@ -5214,9 +5211,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "c0452abc00c4a3b0ea1e5b607e26fe6456df1ff6d194410b93ce274f5c05d20a",
+        "full_sha256": "a049d6cf1447083b85d470e5458aa8715701c587a5efe539bfc13df4eaa74c1c",
         "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3576827371/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3576827371/a.td:2:\n/tmp/tblgen-split-3576827371/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3247932285/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3247932285/a.td:2:\n/tmp/tblgen-split-3247932285/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5226,9 +5223,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "305aa4ad3c04b4285f4e38b72b098f348f36ee78ce55d2f0b7d85e6290521683",
+        "full_sha256": "f6e46df18d76d0a1e5cda10e5c2e79a10f4408aca1ee71fbe5e1920d77ff3594",
         "full_len": 724,
-        "full": "/tmp/tblgen-split-3576827371/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\n/tmp/tblgen-split-3576827371/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\n/tmp/tblgen-split-3576827371/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3576827371/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\n/tmp/tblgen-split-3576827371/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full": "/tmp/tblgen-split-3247932285/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3247932285/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3247932285/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\n/tmp/tblgen-split-3247932285/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\n/tmp/tblgen-split-3247932285/b.td:5:5: error: def already exists: b\ndef b;\n    ^\n/tmp/tblgen-split-3247932285/b.td:5:5: note: location of previous definition\ndef b;\n    ^\n/tmp/tblgen-split-3247932285/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\n/tmp/tblgen-split-3247932285/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },

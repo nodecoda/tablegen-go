@@ -480,6 +480,10 @@ type VarValue struct {
 	// template argument. TGParser qualifies such a reference immediately, so a
 	// field added later (or inherited by a child) must not steal the name.
 	ArgRef bool
+	// ArgQual is that qualified name ("Extension:Implies", "MC::NAME"). It is
+	// fixed at the parse site: resolving it against the instantiating record
+	// would find the instance's own field of the same name.
+	ArgQual string
 	// GlobalRef marks a name that resolved to a top-level definition while
 	// parsing. LLVM turns it into a DefInit immediately, so later record
 	// fields may not shadow it (RegisterOperand<RegClass> passes the global

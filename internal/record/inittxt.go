@@ -130,13 +130,30 @@ func resolveVar(x *syntax.VarValue, env *Env) (string, syntax.Value, *Env) {
 	if x.GlobalRef {
 		return x.Name, nil, nil
 	}
-	if q, _, ok := templateArgKey(env, x.Name, x.ArgRef); ok {
+	if x.Lexical {
+		// Loop variables (and other lexical bindings) print bare: they are not
+		// class fields, so TGParser never qualified them.
+		return x.Name, nil, nil
+	}
+	q := x.ArgQual
+	if q == "" {
+		var ok bool
+		q, _, ok = templateArgKey(env, x.Name, x.ArgRef)
+		if !ok {
+			q = ""
+		}
+	}
+	if q != "" {
 		if b, ok := env.Lookup(q); ok {
 			// Dynamic bindings are a class's own template arguments, left as
 			// VarInits for the concrete instantiation. A binding installed by
 			// AddParentClass for another record's application is already the
 			// caller's Init in the tree and must be substituted here.
-			if b.V != nil && (!b.Dynamic || b.Owner != env.owner) {
+			// A dynamic binding is the class's own argument; it stays a
+			// VarInit unless its value is already complete, in which case
+			// TGParser's AddParentClass would have substituted it (a defaulted
+			// argument prints as its default, not as `Class:arg`).
+			if b.V != nil && (!b.Dynamic || b.Owner != env.owner || b.Mapped) {
 				return "", b.V, env.StackOn(b.Env)
 			}
 			if b.Val != nil {

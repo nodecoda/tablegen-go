@@ -200,17 +200,28 @@ func writeShapeKey(b *strings.Builder, v syntax.Value, env *Env) {
 		}
 		// A class or multiclass template argument is a VarInit keyed by its
 		// qualified name and declared type; the qualification is what keeps
-		// two same-named arguments of different classes apart. The enclosing
-		// record's tables answer this even when a required argument has no
-		// binding yet (it is supplied only at instantiation).
-		if q, ty, ok := templateArgKey(env, x.Name, x.ArgRef); ok {
-			b.WriteByte('q')
-			b.WriteString(strconv.Quote(q))
-			b.WriteByte(':')
-			if ty != nil {
-				b.WriteString(ty.String())
+		// two same-named arguments of different classes apart. The parser
+		// already qualified the reference, which stays valid when the field is
+		// inherited by an instance.
+		if !x.Lexical {
+			if x.ArgQual != "" {
+				b.WriteByte('q')
+				b.WriteString(strconv.Quote(x.ArgQual))
+				b.WriteByte(':')
+				if x.Ty.Kind != syntax.InvalidType {
+					b.WriteString(x.Ty.String())
+				}
+				return
 			}
-			return
+			if q, ty, ok := templateArgKey(env, x.Name, x.ArgRef); ok {
+				b.WriteByte('q')
+				b.WriteString(strconv.Quote(q))
+				b.WriteByte(':')
+				if ty != nil {
+					b.WriteString(ty.String())
+				}
+				return
+			}
 		}
 		tyText := ""
 		if x.Ty.Kind != syntax.InvalidType {

@@ -270,7 +270,18 @@ func (k *Keeper) evalVar(t *syntax.VarValue, env *Env, rec *Record) (Value, erro
 		}
 	}
 	if !t.Lexical {
-		if q, ok := env.Qualify(t.Name); ok {
+		// A class or multiclass template argument was qualified by the parser
+		// at its parse site (TGParser::QualifyName stores the owning record in
+		// the VarInit). Use that key rather than qualifying again against the
+		// current record: an instance inheriting a field must not resolve the
+		// argument to a same-named field of the instance (SubtargetFeature's
+		// `!sort(f, i, f.Name)` has a loop variable and a template argument
+		// named f).
+		q := t.ArgQual
+		if q == "" {
+			q, _ = env.Qualify(t.Name)
+		}
+		if q != "" {
 			if b, ok := env.Lookup(q); ok {
 				return k.evalBinding(b, env, rec)
 			}
@@ -280,7 +291,11 @@ func (k *Keeper) evalVar(t *syntax.VarValue, env *Env, rec *Record) (Value, erro
 		return k.evalBinding(b, env, rec)
 	}
 	if rec != nil {
-		if rv := rec.Val(t.Name); rv != nil {
+		// A stand-in record built by preFoldArgs carries the class arguments as
+		// fields; only a record named by the qualifier may answer an argument
+		// reference. Any other record's same-named field is a different name.
+		fieldOK := !t.ArgRef || t.ArgQual == "" || argOwner(t.ArgQual) == rec.Name
+		if rv := rec.Val(t.Name); rv != nil && fieldOK {
 			v, err := rec.evalVal(rv)
 			if err != nil {
 				return nil, err
@@ -310,6 +325,18 @@ func (k *Keeper) evalVar(t *syntax.VarValue, env *Env, rec *Record) (Value, erro
 	}
 	if rec != nil && t.Name == "NAME" {
 		return &Str{S: rec.Name}, nil
+	}
+	if t.ArgRef {
+		// LLVM leaves an argument VarInit that no outer application mapped
+		// unresolved; it prints as the qualified name and only errors where a
+		// concrete value is demanded.
+		q := t.ArgQual
+		if q == "" {
+			q, _ = env.Qualify(t.Name)
+		}
+		if q != "" {
+			return &Unresolved{Text: q, Kind: "var", Var: q, Ty: k.tyFromSyntax(t.Ty)}, nil
+		}
 	}
 	return nil, &EvalError{Msg: "Variable not defined: '" + t.Name + "'", Span: t.Span()}
 }
@@ -740,6 +767,15 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		if err != nil {
 			return nil, err
 		}
+		if k.parseFold {
+			if containsUnresolved(v) {
+				// A parse-time fold reaches a class application whose
+				// arguments are still references. LLVM leaves the VarDefInit
+				// unresolved and only instantiates it (assigning the anonymous
+				// name) once a concrete record needs the value.
+				return nil, &EvalError{Msg: "class application is not concrete yet", Span: ca.Span()}
+			}
+		}
 		key += "\x00" + pos + ":" + name + "=" + valueKey(v)
 	}
 	if cached := k.anonCache[key]; cached != nil {
@@ -768,8 +804,13 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		return nil, err
 	}
 	// VarDefInit::instantiate checks assertions after the record is added.
-	for _, as := range rec.Asserts {
-		k.checkAssertion(as, rec)
+	// A pre-parse fold allocates the record only to reproduce anonymous-name
+	// numbering; its arguments may still be references, so there is no value
+	// to check yet. LLVM instantiates lazily and would not reach this point.
+	if !k.parseFold {
+		for _, as := range rec.Asserts {
+			k.checkAssertion(as, rec)
+		}
 	}
 	return rec, nil
 }
@@ -1016,10 +1057,22 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		if ta.Expr == nil {
 			return nil, &EvalError{Msg: "value not specified for template argument '" + ta.Name + "'", Span: diag.Span{Start: loc, End: loc}}
 		}
-		if ax, ok := ta.Expr.(*AstExpr); ok {
-			if _, unset := ax.V.(*syntax.UnsetValue); unset {
-				return nil, &EvalError{Msg: "value not specified for template argument '" + ta.Name + "'", Span: diag.Span{Start: loc, End: loc}}
-			}
+		ax, ok := ta.Expr.(*AstExpr)
+		if !ok {
+			continue
+		}
+		if _, unset := ax.V.(*syntax.UnsetValue); unset {
+			return nil, &EvalError{Msg: "value not specified for template argument '" + ta.Name + "'", Span: diag.Span{Start: loc, End: loc}}
+		}
+		// TGParser::resolveArguments maps every defaulted argument into the
+		// resolver (Init::isComplete is true for a VarInit; only `?` is
+		// incomplete). A field inherited through this class therefore sees the
+		// default value -- `class Leaf : Mid<r>` prints Mid's `p = []`, not
+		// `Mid:p`.
+		provided[class.Name+":"+ta.Name] = Binding{
+			V: ax.V, Env: ax.Env, Dynamic: true, Ty: ta.Ty,
+			Owner: class, Sep: ":", Self: class.Name + ":" + ta.Name,
+			Mapped: true,
 		}
 	}
 	return provided, nil
@@ -1282,4 +1335,47 @@ func boolInt(b bool) int64 {
 		return 1
 	}
 	return 0
+}
+
+// containsUnresolved reports whether a value still holds an unresolved
+// reference anywhere, directly or inside a list, bits, or dag.
+func containsUnresolved(v Value) bool {
+	switch x := v.(type) {
+	case *Unresolved:
+		return true
+	case *List:
+		for _, e := range x.Elems {
+			if containsUnresolved(e) {
+				return true
+			}
+		}
+	case *Bits:
+		for _, e := range x.B {
+			if containsUnresolved(e) {
+				return true
+			}
+		}
+	case *Dag:
+		if containsUnresolved(x.Op) {
+			return true
+		}
+		for _, a := range x.Args {
+			if containsUnresolved(a.Value) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// argOwner splits the declaring record out of a qualified template-argument
+// name ("C:a" or "MC::a").
+func argOwner(q string) string {
+	if i := strings.Index(q, "::"); i >= 0 {
+		return q[:i]
+	}
+	if i := strings.IndexByte(q, ':'); i >= 0 {
+		return q[:i]
+	}
+	return q
 }

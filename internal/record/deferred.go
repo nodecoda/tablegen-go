@@ -251,14 +251,36 @@ func (k *Keeper) bodyUndecidable(b *syntax.BangValue, list Value, env *Env, rec 
 	if len(b.VarNames) > 0 && b.VarNames[0] != "" {
 		name = b.VarNames[0]
 	}
-	for _, e := range ls.Elems {
-		// Evaluate the body per element: !filter needs an int, !sort a
-		// comparable key; an unresolved result makes Fold bail out.
+	useInt := false
+	for i, e := range ls.Elems {
+		// Evaluate the body per element: FilterHelper requires an IntInit;
+		// SortHelper takes the key type from the first element and then
+		// requires every key to agree (int when the first converts to int,
+		// StringInit otherwise). Anything else makes Fold return nullptr,
+		// leaving the operator unfolded.
 		v, err := k.evalSyntax(b.Args[1], env.With(map[string]Binding{name: {Val: e}}), rec)
 		if err != nil {
 			continue // the normal path reports this error
 		}
 		if isUnresolved(v) {
+			return true
+		}
+		if b.Op == syntax.XSort {
+			_, isInt := intValueOf(v)
+			if i == 0 {
+				useInt = isInt
+			}
+			if useInt && !isInt {
+				return true
+			}
+			if !useInt {
+				if _, isStr := v.(*Str); !isStr {
+					return true
+				}
+			}
+			continue
+		}
+		if _, ok := intValueOf(v); !ok {
 			return true
 		}
 	}

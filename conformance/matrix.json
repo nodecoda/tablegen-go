@@ -4,11 +4,11 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 79,
-    "status:err-wording": 24,
-    "status:exit-diff": 11,
-    "status:out-diff": 10,
-    "status:same": 192,
+    "status:err-diff": 77,
+    "status:err-wording": 25,
+    "status:exit-diff": 4,
+    "status:out-diff": 11,
+    "status:same": 199,
     "status:skipped": 291
   },
   "skips": {
@@ -2801,13 +2801,15 @@
         "err_head": "\u003cfile\u003e:23:26: error: expected list\u003cint\u003e, got list\u003cstring\u003e"
       },
       "ours": {
-        "exit": 0,
-        "out_sha256": "b9c540fb4e0ac7b4d53f8114da93b3863b23ffbaa0e5731bd538e48767f37363",
-        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Msgs": null,
-        "out_len": 77
+        "exit": 1,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "e829c0474a1e960d738ce8cace743f14d7dc0aaca8d90be7a6f5a51f8c66b4fa",
+        "Msgs": [
+          "error: expected list\u003cint\u003e, got list\u003cstring\u003e"
+        ],
+        "err_head": "\u003cfile\u003e:23:26: error: expected list\u003cint\u003e, got list\u003cstring\u003e"
       },
-      "status": "exit-diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListSlices-fail.td",
@@ -2826,13 +2828,15 @@
         "err_head": "\u003cfile\u003e:29:26: error: expected int...int, got list\u003cstring\u003e"
       },
       "ours": {
-        "exit": 0,
-        "out_sha256": "b9c540fb4e0ac7b4d53f8114da93b3863b23ffbaa0e5731bd538e48767f37363",
-        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Msgs": null,
-        "out_len": 77
+        "exit": 1,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "b748ba3caac19e0d871dd9d91fb5ff5c9044bd02bef9eb8c3585ab7883bb9931",
+        "Msgs": [
+          "error: expected int...int, got list\u003cstring\u003e"
+        ],
+        "err_head": "\u003cfile\u003e:29:26: error: expected int...int, got list\u003cstring\u003e"
       },
-      "status": "exit-diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListSlices-fail.td",
@@ -2851,13 +2855,15 @@
         "err_head": "\u003cfile\u003e:35:32: error: expected int...int, got list\u003cstring\u003e"
       },
       "ours": {
-        "exit": 0,
-        "out_sha256": "b9c540fb4e0ac7b4d53f8114da93b3863b23ffbaa0e5731bd538e48767f37363",
-        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Msgs": null,
-        "out_len": 77
+        "exit": 1,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "ef91ab33264fa4196579bc53b80c7a78ff3b872366ff7201ed8b2bb0840ddd6b",
+        "Msgs": [
+          "error: expected int...int, got list\u003cstring\u003e"
+        ],
+        "err_head": "\u003cfile\u003e:35:32: error: expected int...int, got list\u003cstring\u003e"
       },
-      "status": "exit-diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListSlices-fail.td",
@@ -2876,13 +2882,15 @@
         "err_head": "\u003cfile\u003e:41:26: error: unhandled type string in range"
       },
       "ours": {
-        "exit": 0,
-        "out_sha256": "b9c540fb4e0ac7b4d53f8114da93b3863b23ffbaa0e5731bd538e48767f37363",
-        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Msgs": null,
-        "out_len": 77
+        "exit": 1,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "0fa22ba1433ed13f81f98c6b3d62d8e4c3ace7f116238b80ff23618fd6605768",
+        "Msgs": [
+          "error: unhandled type string in range"
+        ],
+        "err_head": "\u003cfile\u003e:41:26: error: unhandled type string in range"
       },
-      "status": "exit-diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/ListSlices-fail.td",
@@ -3199,14 +3207,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "5dfc7eb407d10f6613dab7df26bb62f31e30680648feb941e48b9f7767b12774",
+        "err_sha256": "4c5f9e96220feaea1e52f9977cb567eeafa276c298bf1a295e6b9ed5e4d9c6cc",
         "Msgs": [
           "error: Undefined reference to record: 'd1_r1_no_such_record'"
         ],
-        "err_head": "\u003cfile\u003e:15:15: error: Undefined reference to record: 'd1_r1_no_such_record'"
+        "err_head": "\u003cfile\u003e:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'"
       },
       "status": "err-wording",
-      "err_text": "\u003cfile\u003e:15:15: error: Undefined reference to record: 'd1_r1_no_such_record'\n  def _m01: B\u003c!cast\u003cA\u003e(s#\"_no_such_record\")\u003e;\n              ^"
+      "err_text": "\u003cfile\u003e:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'\n\n  def _m01: B\u003c!cast\u003cA\u003e(s#\"_no_such_record\")\u003e;\n      ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm.td",
@@ -4603,17 +4611,14 @@
         "out_len": 63660222
       },
       "ours": {
-        "exit": 1,
-        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "c626b089f762573931fb705f8fe824962487ffdd241801d5bc8214dc99af1d4b",
-        "Msgs": [
-          "error: Variable not defined: 'VectorIndex1'"
-        ],
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/lib/Target/AArch64/AArch64InstrFormats.td:5780:47: error: Variable not defined: 'VectorIndex1'"
+        "exit": 0,
+        "out_sha256": "eb58e6e2c2787b515aa7b5ee84bf2162d6412e748258887e40ed7e505a2d0bd3",
+        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Msgs": null,
+        "out_len": 63656591
       },
-      "status": "exit-diff",
-      "out_len": 63660222,
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/lib/Target/AArch64/AArch64InstrFormats.td:5780:47: error: Variable not defined: 'VectorIndex1'"
+      "status": "out-diff",
+      "out_len": 63660222
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/aarch64-register-info-stats.td",
@@ -4750,7 +4755,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "acb042eb815d6eafc5f5a8309e651b53549581c0134abb0f397242ce03c9c99f",
+        "err_sha256": "012da26e2e467863c5a3f3e98316b27a3c15a3e4b8ba9a07c47e11be8dd10def",
         "Msgs": [
           "error: assertion failed: primary name is too long: Name",
           "error: assertion failed: first name is incorrect: Fred Smith",
@@ -4766,16 +4771,13 @@
           "error: assertion failed in this record",
           "error: assertion failed: person age is invalid: 150",
           "error: assertion failed in this record",
-          "error: assertion failed: person name is too long: Margaret Heafield And More Middle Names Hamilton",
-          "error: assertion failed in this record",
-          "error: assertion failed: person age is invalid: 0",
-          "error: assertion failed in this record",
           "error: assertion failed: MC1 id string is too long",
           "error: assertion failed: MC1 seq is too high",
           "error: assertion failed: MC2 phrase must be secret: secrex code",
           "error: assertion failed: MC2 phrase must be secret: xecret code",
           "error: assertion failed: MC5 name must include a space: Ada_Lovelace",
-          "error: Variable not defined: 'name'"
+          "error: assertion failed: person age is invalid: 666",
+          "error: assertion failed in this record"
         ],
         "err_head": "\u003cfile\u003e:11:1: error: assertion failed: primary name is too long: Name"
       },
@@ -6198,12 +6200,12 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "cc829e69dad4dcf3166e78983894114ae0a91e4ea583ad04cea204c725d55b6e",
+        "err_sha256": "478a43a7cf7865cb7d2e5070c2cc016652ac095a5845c552667a934d104d14e1",
         "Msgs": null,
-        "err_head": "tblgen: open main #$.td: no such file or directory"
+        "err_head": "./tblgen: Could not open input file 'main #$.td': No such file or directory"
       },
       "status": "err-wording",
-      "err_text": "tblgen: open main #$.td: no such file or directory"
+      "err_text": "./tblgen: Could not open input file 'main #$.td': No such file or directory"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-non-string.td",
@@ -6429,14 +6431,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "96448d286a6b007d83a3aab7e9586b65a13425a2d8870774b0ba101d1a41ef9a",
+        "err_sha256": "7aec6340a0fb6af79400c57d1b0cdd69998341dbea91a0c3429440b9ce100be9",
         "Msgs": [
-          "error: expected int, got string"
+          "error: Initializer of 'list1' in 'rec9' could not be fully resolved: !filter(item, [\"foo\", \"bar\", \"zoo\", \"foo\", \"snork\", \"snork\", \"quux\"], \"oops!\")"
         ],
-        "err_head": "\u003cfile\u003e:71:1: error: expected int, got string"
+        "err_head": "\u003cfile\u003e:71:5: error: Initializer of 'list1' in 'rec9' could not be fully resolved: !filter(item, [\"foo\", \"bar\", \"zoo\", \"foo\", \"snork\", \"snork\", \"quux\"], \"oops!\")"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:71:1: error: expected int, got string\ndef rec9 {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/find.td",
@@ -6994,14 +6995,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "633eaa887393e5795cff6c7d8ddb782d62f5b05d3d3e0c36b103cb0682342a31",
+        "err_sha256": "00b6de2da330494de27325247f80022b5d8578f49e22dbc34aa2bc7ff9b06c85",
         "Msgs": [
-          "error: value of type 'OtherBase' is incompatible with 'Base'"
+          "error: Expected type 'Base', got 'OtherBase' in: !getdagop(qux \"hello\", ?:$world)"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: value of type 'OtherBase' is incompatible with 'Base'"
+        "err_head": "\u003cfile\u003e:25:5: error: Expected type 'Base', got 'OtherBase' in: !getdagop(qux \"hello\", ?:$world)"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: value of type 'OtherBase' is incompatible with 'Base'\ndef test {\n^"
+      "err_text": "\u003cfile\u003e:25:5: error: Expected type 'Base', got 'OtherBase' in: !getdagop(qux \"hello\", ?:$world)\n\ndef test {\n    ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7023,14 +7024,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "19eb33116cb907a80bcb8c1bd3b32f39a1a79e0eb92116b1fdfe54afe29572e3",
+        "err_sha256": "5da6e39bd5404623d1fd3e1c42aba39f433b20c1714fc816662493a1ec75e1ec",
         "Msgs": [
-          "error: value of type 'Base' is incompatible with 'int'"
+          "error: Expected type 'int', got 'Base' in: !getdagop(foo 1, 2:$a, ?:$b)"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: value of type 'Base' is incompatible with 'int'"
+        "err_head": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop(foo 1, 2:$a, ?:$b)"
       },
       "status": "err-diff",
-      "err_text": "\u003cfile\u003e:25:1: error: value of type 'Base' is incompatible with 'int'\ndef test {\n^"
+      "err_text": "\u003cfile\u003e:25:5: error: Expected type 'int', got 'Base' in: !getdagop(foo 1, 2:$a, ?:$b)\n\ndef test {\n    ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7217,13 +7218,16 @@
         "err_head": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop((!cast\u003cTestInstruction\u003e(TestInstructionAndPattern::NAME) foo))"
       },
       "ours": {
-        "exit": 0,
-        "out_sha256": "aaa4d50539f3e2424dc49733a5792cddcb37c2ff2c24d7b13ca952f4a7b79fbf",
-        "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Msgs": null,
-        "out_len": 2253
+        "exit": 1,
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "4a90fbd8edaf8e510e1fe3a487303054e4a86852df856a62d4dd49494d94c59d",
+        "Msgs": [
+          "error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)"
+        ],
+        "err_head": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)"
       },
-      "status": "exit-diff"
+      "status": "err-diff",
+      "err_text": "\u003cfile\u003e:187:3: error: Expected type 'OtherTestInstruction', got 'TestInstruction' in: !getdagop(testInst0 foo)\n\n  def : TestPattern\u003c(!cast\u003cTestInstruction\u003e(NAME) foo)\u003e;\n  ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-empty-list-arg.td",
@@ -7291,14 +7295,11 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a8d712faec0054d64c4da49ad00884dd29d32d3e78fb4441b7fd975abf0407a0",
-        "Msgs": [
-          "error: Undefined reference to record: ''"
-        ],
-        "err_head": "\u003cfile\u003e:6:4: error: Undefined reference to record: ''"
+        "err_sha256": "ae4c81e50018b6ff60e1c5c4e8272b7be1b87d1d71b183f3f429f23b7f2da3d6",
+        "Msgs": null,
+        "err_head": "error: Undefined reference to record: ''"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:6:4: error: Undefined reference to record: ''\nif !cast\u003cA\u003e(\"\").x then\n   ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if.td",
@@ -9392,7 +9393,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a0f30c0e1f509327cafb382fe177bd5cf581b38909557e3d8c5f3fdeea0f617e",
+        "err_sha256": "8a153adc72f413a28310a2de3456a184674e5a8cd235938352992e986a4a63c5",
         "Msgs": [
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
@@ -9400,7 +9401,7 @@
         "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif"
       },
       "status": "err-wording",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:1:7: error: the latest preprocessor control is here\n// RUN: not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s\n      ^"
+      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:2:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag11-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12.td",
@@ -9423,16 +9424,15 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "69aa0375d45d8300a57bb524972a06b843ec11efe490618a48c21eb4826f1783",
+        "err_sha256": "4ba3b30f6db8a69b352e1d6b012ef940c77c274435121d5d49f5894248b60243",
         "Msgs": [
-          "error: reached EOF without matching #endif",
           "error: reached EOF without matching #endif",
           "error: the latest preprocessor control is here"
         ],
         "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif"
       },
-      "status": "err-diff",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n// CHECK: error: reached EOF without matching #endif\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:7: error: the latest preprocessor control is here\n// RUN: not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s\n      ^"
+      "status": "err-wording",
+      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:3:1: error: reached EOF without matching #endif\n\n^\n/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag12-include.inc:1:7: error: the latest preprocessor control is here\n#ifdef ENABLED\n      ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag13.td",
@@ -9946,12 +9946,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2825755202/inc",
-        "/tmp/tblgen-split-2825755202/main.td",
+        "/tmp/tblgen-split-916325978/inc",
+        "/tmp/tblgen-split-916325978/main.td",
         "-o",
-        "/tmp/tblgen-split-2825755202/out.td",
+        "/tmp/tblgen-split-916325978/out.td",
         "-d",
-        "/tmp/tblgen-split-2825755202/out.d"
+        "/tmp/tblgen-split-916325978/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9972,12 +9972,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-2825755202/inc",
-        "/tmp/tblgen-split-2825755202/main.td",
+        "/tmp/tblgen-split-916325978/inc",
+        "/tmp/tblgen-split-916325978/main.td",
         "-o",
-        "/tmp/tblgen-split-2825755202/out.td",
+        "/tmp/tblgen-split-916325978/out.td",
         "-d",
-        "/tmp/tblgen-split-2825755202/out2.d"
+        "/tmp/tblgen-split-916325978/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9998,10 +9998,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2825755202/inc",
-        "/tmp/tblgen-split-2825755202/main.td",
+        "/tmp/tblgen-split-916325978/inc",
+        "/tmp/tblgen-split-916325978/main.td",
         "-d",
-        "/tmp/tblgen-split-2825755202/out.d"
+        "/tmp/tblgen-split-916325978/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10087,8 +10087,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3978148123",
-        "/tmp/tblgen-split-3978148123/main.td"
+        "/tmp/tblgen-split-190922901",
+        "/tmp/tblgen-split-190922901/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10112,8 +10112,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3978148123",
-        "/tmp/tblgen-split-3978148123/multi.td"
+        "/tmp/tblgen-split-190922901",
+        "/tmp/tblgen-split-190922901/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10746,14 +10746,15 @@
         "err_head": "\u003cfile\u003e:68:5: error: Initializer of 'bad' in 'err_keytype' could not be fully resolved: !sort(t, [thing_c30, thing_a20, thing_a10, thing_b20, thing_d10], t)"
       },
       "ours": {
-        "exit": 2,
+        "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "ae779f38b3fa6ec96b05df68c0c3223e2ee042cb30d3af16c61421345a5d71fa",
-        "Msgs": null,
-        "err_head": "panic: runtime error: invalid memory address or nil pointer dereference"
+        "err_sha256": "b00157e90c7110cc761f3647cd36be89ffc479e0fca5c41a82e3a15d0e1e0847",
+        "Msgs": [
+          "error: Initializer of 'bad' in 'err_keytype' could not be fully resolved: !sort(t, [thing_c30, thing_a20, thing_a10, thing_b20, thing_d10], t)"
+        ],
+        "err_head": "\u003cfile\u003e:68:5: error: Initializer of 'bad' in 'err_keytype' could not be fully resolved: !sort(t, [thing_c30, thing_a20, thing_a10, thing_b20, thing_d10], t)"
       },
-      "status": "exit-diff",
-      "err_text": "panic: runtime error: invalid memory address or nil pointer dereference\n[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x533550]\n\ngoroutine 1 [running]:\ntblgen/internal/record.(*Keeper).evalListComprehension.func1(0xc000010858?, 0x1?)\n\t/home/ubuntu/tablegen-go/internal/record/bang.go:995 +0xd0\nsort.insertionSort_func({0xc00019b180?, 0xc000015860?}, 0x0, 0x5)\n\t/usr/lib/go-1.22/src/sort/zsortfunc.go:12 +0xa7\nsort.stable_func({0xc00019b180?, 0xc000015860?}, 0x5)\n\t/usr/lib/go-1.22/src/sort/zsortfunc.go:343 +0x75\nsort.SliceStable({0x57f620?, 0xc000010858?}, 0xc00019b180)\n\t/usr/lib/go-\n... (truncated)"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/spurious-semi.td",
@@ -11803,7 +11804,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "52d5cf428d8ddddd5d15599b8548864d5a590462345995d4d1b0a9ffe086bc7a",
+        "err_sha256": "054f6c70074d9669566b84c5b85ebdb03b9a433c743c1a00b23f915c8a0d36db",
         "Msgs": [
           "error: unterminated comment",
           "error: unexpected character",
@@ -11812,7 +11813,7 @@
         "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment"
       },
       "status": "err-diff",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n// RUN: not llvm-tblgen -I %p %s 2\u003e\u00261 | FileCheck %s\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
+      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-c-comment-include.inc:1:1: error: unterminated comment\n/* comment starts here and finished in the parent file.\n^\n\u003cfile\u003e:5:46: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                             ^\n\u003cfile\u003e:5:47: error: unexpected character\ninclude \"unterminated-c-comment-include.inc\" */\n                                              ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block.td",
@@ -11835,14 +11836,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "2b9f7ebe7d4e746cd78220f3d190a0660b11b4d4638b461b952b56e8c5b77dcc",
+        "err_sha256": "9a0f7e9ad45afc4734fc64d4843f5facc5a1aacb321a62a12f7b9f9cf0c6f6ac",
         "Msgs": [
           "error: unterminated code block"
         ],
         "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block"
       },
       "status": "err-diff",
-      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block"
+      "err_text": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/unterminated-code-block-include.inc:8:16: error: unterminated code block\ndef foo : test\u003c[{ hello world!\n               ^"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/usevalname.td",

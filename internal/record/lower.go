@@ -114,7 +114,7 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 			l.errorAt(err, t.Span())
 		}
 	case *syntax.DefStmt:
-		if _, err := l.buildDef(t, env, lets, nil, nil, nil, ""); err != nil {
+		if _, err := l.buildDef(t, env, scopedLets(lets, env), nil, nil, nil, ""); err != nil {
 			l.errorAt(err, t.Span())
 		}
 	case *syntax.DefmStmt:
@@ -442,7 +442,11 @@ func (l *Lowerer) applyLet(rec *Record, b *syntax.LetBind, env *Env) error {
 	if rv == nil {
 		return &EvalError{Msg: "Value '" + b.Field + "' unknown!", Span: b.FieldSpan}
 	}
-	if vv, ok := b.Value.(*syntax.VarValue); ok && vv.Name == b.Field {
+	// `let X = X` is a self-assignment only when X is the field. A template
+	// argument or loop variable of the same name is a different binding
+	// (multiclass CompareAndSwap does `let Acq = Acq`).
+	if vv, ok := b.Value.(*syntax.VarValue); ok && vv.Name == b.Field &&
+		!vv.ArgRef && !vv.Lexical && !vv.GlobalRef {
 		return &EvalError{Msg: "Recursion / self-assignment forbidden", Span: b.Value.Span()}
 	}
 	add := &AstExpr{V: b.Value, Env: env}
@@ -496,13 +500,29 @@ func (l *Lowerer) applyLet(rec *Record, b *syntax.LetBind, env *Env) error {
 	return nil
 }
 
+func scopedLets(bs []*syntax.LetBind, env *Env) []scopedLet {
+	out := make([]scopedLet, len(bs))
+	for i, b := range bs {
+		out[i] = scopedLet{b: b, env: env}
+	}
+	return out
+}
+
+// scopedLet is a let binding together with the environment it was written in.
+// A let inside a multiclass body is substituted with that body's template
+// arguments, even when it is applied after the def has been built.
+type scopedLet struct {
+	b   *syntax.LetBind
+	env *Env
+}
+
 // deferredDef is a defm entry that has been through TGParser's resolve phase
 // but not yet through addDefOne. See expandDefm.
 type deferredDef struct {
 	rec          *Record
 	anonymous    bool
 	env          *Env
-	postLets     []*syntax.LetBind
+	postLets     []scopedLet
 	extraParents []*syntax.ParentRef
 	loopSeq      int
 }
@@ -511,7 +531,7 @@ type deferredDef struct {
 // parents, then top-level lets, then the body; for defm-generated records the
 // trailing classes and the defm's own let stack are applied after the body,
 // and every entry of the defm is finalised only once all of them are built.
-func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef, extraLocs []diag.Pos, fixedName string) (*Record, error) {
+func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []scopedLet, extraParents []*syntax.ParentRef, extraLocs []diag.Pos, fixedName string) (*Record, error) {
 	rec, anonymous, err := l.makeDef(st, env, preLets, extraLocs, fixedName)
 	if err != nil {
 		return nil, err
@@ -535,8 +555,8 @@ func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []*sy
 	if err := l.applyParents(rec, extraParents, env); err != nil {
 		return nil, err
 	}
-	for _, b := range postLets {
-		if err := l.applyLet(rec, b, nil); err != nil {
+	for _, lb := range postLets {
+		if err := l.applyLet(rec, lb.b, lb.env); err != nil {
 			return nil, err
 		}
 	}
@@ -597,7 +617,7 @@ func (l *Lowerer) finishDef(rec *Record, anonymous bool) error {
 
 // makeDef parses one def up to (but excluding) the trailing classes, the defm
 // let stack, and addDefOne.
-func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []*syntax.LetBind, extraLocs []diag.Pos, fixedName string) (*Record, bool, error) {
+func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, extraLocs []diag.Pos, fixedName string) (*Record, bool, error) {
 	loc := st.Span().Start
 	name := fixedName
 	anonymous := false
@@ -639,8 +659,8 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []*syntax.LetBin
 			return nil, false, err
 		}
 	}
-	for _, b := range preLets {
-		if err := l.applyLet(rec, b, env); err != nil {
+	for _, lb := range preLets {
+		if err := l.applyLet(rec, lb.b, lb.env); err != nil {
 			return nil, false, err
 		}
 	}
@@ -812,13 +832,13 @@ func (l *Lowerer) defm(st *syntax.DefmStmt, env *Env, lets []*syntax.LetBind) er
 		}
 		defmName = n
 	}
-	return l.expandDefm(st, defmName, env, lets, nil, nil)
+	return l.expandDefm(st, defmName, env, scopedLets(lets, env), nil, nil)
 }
 
 // expandDefm expands every multiclass in st's parent list. defmName is the
 // final prefix for the generated defs; outerLocs are the defm locations of
 // enclosing multiclass instantiations, innermost first.
-func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, postLets []*syntax.LetBind, outerLocs []diag.Pos, extraParents []*syntax.ParentRef) error {
+func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, postLets []scopedLet, outerLocs []diag.Pos, extraParents []*syntax.ParentRef) error {
 	// LLVM expands a defm nested in a multiclass at parse time and applies the
 	// trailing classes right there, so the inner trailing list comes first and
 	// the enclosing defm's trailing classes are appended after it.
@@ -864,8 +884,8 @@ func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, pos
 	// Phase 3: the defm let stack, then addDefOne per entry (this is where a
 	// class application in a field initialiser instantiates its anonymous def).
 	for _, d := range pool {
-		for _, b := range d.postLets {
-			if err := l.applyLet(d.rec, b, nil); err != nil {
+		for _, lb := range d.postLets {
+			if err := l.applyLet(d.rec, lb.b, lb.env); err != nil {
 				return err
 			}
 		}
@@ -880,7 +900,7 @@ func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, pos
 	return nil
 }
 
-func (l *Lowerer) expandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg, defmName string, locs []diag.Pos, callEnv *Env, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef) error {
+func (l *Lowerer) expandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg, defmName string, locs []diag.Pos, callEnv *Env, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
 	prevEager := l.eager
 	l.eager = true
 	defer func() { l.eager = prevEager }()
@@ -965,7 +985,7 @@ func (l *Lowerer) bindMCArgs(mc *syntax.MultiClassStmt, args []*syntax.Arg, call
 	return out, nil
 }
 
-func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []*syntax.LetBind, defmName string, outerLocs []diag.Pos, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef) error {
+func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
 	for _, o := range objs {
 		switch t := o.(type) {
 		case *syntax.DefStmt:
@@ -985,7 +1005,7 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []*syntax.Le
 				return err
 			}
 		case *syntax.LetStmt:
-			nl := append(append([]*syntax.LetBind(nil), preLets...), t.Binds...)
+			nl := append(append([]scopedLet(nil), preLets...), scopedLets(t.Binds, env)...)
 			if err := l.mcObjects(t.Body, env, nl, defmName, outerLocs, postLets, extraParents); err != nil {
 				return err
 			}
@@ -1051,7 +1071,7 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []*syntax.Le
 			}
 			// A let around a defm is applied after the generated records,
 			// with inner lets winning over outer ones.
-			nl := append(append([]*syntax.LetBind(nil), postLets...), preLets...)
+			nl := append(append([]scopedLet(nil), postLets...), preLets...)
 			if err := l.expandDefm(t, inner, env, nl, outerLocs, extraParents); err != nil {
 				return err
 			}
@@ -1062,7 +1082,7 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []*syntax.Le
 	return nil
 }
 
-func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, env *Env, preLets []*syntax.LetBind, defmName string, outerLocs []diag.Pos, postLets []*syntax.LetBind, extraParents []*syntax.ParentRef) error {
+func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
 	var elems []Value
 	if st.Range != nil {
 		for _, n := range st.Range {

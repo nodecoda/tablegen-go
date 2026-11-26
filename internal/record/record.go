@@ -70,6 +70,10 @@ type Binding struct {
 	// variables substituted by a parse-time-unrolled foreach). Anything that
 	// depends on a multiclass template argument is not parse-time known.
 	ParseTime bool
+	// Mapped marks a complete default that TGParser::resolveArguments installed
+	// for an omitted template argument (MapResolver). Unlike a class's own
+	// default frame, it replaces the VarInit in a child's copied fields.
+	Mapped bool
 }
 
 // Env is a stack of template-argument frames. Values are parser expressions,
