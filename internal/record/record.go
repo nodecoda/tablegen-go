@@ -869,6 +869,8 @@ type Keeper struct {
 
 	anon      int
 	anonCache map[string]*Record
+	// recTys interns RecordTy values by name set. See tyFromSyntax.
+	recTys map[string]*Ty
 	// defOrder keeps defs in creation order; defset lists are built from it.
 	defOrder []*Record
 	diags    *diag.Collector

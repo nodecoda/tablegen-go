@@ -881,6 +881,9 @@ func classDefaultBindings(class *Record, provided *Frame) *Frame {
 		return nil
 	}
 	out := &Frame{}
+	if n := len(class.TArgs); n > 0 && n <= smallFrame {
+		out.entries = make([]frameEntry, 0, n)
+	}
 	prefix := class.Name + ":"
 	collect := func(k string, b Binding) {
 		if !strings.HasPrefix(k, prefix) {

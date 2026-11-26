@@ -235,6 +235,16 @@ func scalarTy(k syntax.TypeKind) *Ty {
 	return anyTy
 }
 
+// recordTypeKey identifies a record-type spelling. The names are kept in the
+// parser's order: Equality falls back to them, and `{A, B}` is not the same
+// spelling as `{B, A}` in a diagnostic.
+func recordTypeKey(names []string) string {
+	if len(names) == 1 {
+		return names[0]
+	}
+	return strings.Join(names, "\x00")
+}
+
 // tyFromSyntax converts a parser Type into a record Ty, resolving class names
 // through the keeper when possible.
 func (k *Keeper) tyFromSyntax(st syntax.Type) *Ty {
@@ -263,12 +273,36 @@ func (k *Keeper) tyFromSyntax(st syntax.Type) *Ty {
 		}
 		return &Ty{Kind: ListTy, Elem: k.tyFromSyntax(*st.Elem)}
 	case syntax.RecordType:
-		t := &Ty{Kind: RecordTy}
+		// A record type repeats for every field and for every def that names
+		// the class as a parent: dag-isel-subregs.td converts about 1.5M of
+		// them. Intern the type once all names resolve. A type built while a
+		// class is still undefined must not enter the cache: its Recs would
+		// stay empty even after the class table is complete.
+		key := recordTypeKey(st.Recs)
+		if k.recTys != nil {
+			if t := k.recTys[key]; t != nil {
+				return t
+			}
+		}
+		t := &Ty{
+			Kind:  RecordTy,
+			Names: make([]string, 0, len(st.Recs)),
+			Recs:  make([]*Record, 0, len(st.Recs)),
+		}
+		resolved := true
 		for _, name := range st.Recs {
 			t.Names = append(t.Names, name)
 			if r := k.Class(name); r != nil {
 				t.Recs = append(t.Recs, r)
+			} else {
+				resolved = false
 			}
+		}
+		if resolved {
+			if k.recTys == nil {
+				k.recTys = make(map[string]*Ty, 8)
+			}
+			k.recTys[key] = t
 		}
 		return t
 	default:
