@@ -329,6 +329,15 @@ func (k *Keeper) evalVar(t *syntax.VarValue, env *Env, rec *Record) (Value, erro
 		return &DefVal{Rec: rec}, nil
 	}
 	if rec != nil && t.Name == "NAME" {
+		// AddParentClass maps the parent's implicit name to a VarInit of the
+		// child's own name when the child is a class, and to the record name
+		// string only for a def (TGParser.cpp:356-362). A class body therefore
+		// keeps `PseudoToVInst<NAME>` unresolved: no anonymous instance is
+		// created for it, which is why RISCV's PseudoToVInst count only covers
+		// defs.
+		if rec.IsClass {
+			return &Unresolved{Text: rec.Name + ":NAME", Kind: "var", Var: rec.Name + ":NAME"}, nil
+		}
 		return &Str{S: rec.Name}, nil
 	}
 	if t.ArgRef {
@@ -797,19 +806,6 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		key += "\x00" + pos + ":" + name + "=" + valueKey(v)
 	}
 	if cached := k.anonCache[key]; cached != nil {
-		// The instance was created while a multiclass body was parsed; the
-		// defm expansion that finally refers to it registers it now, keeping
-		// the name it was given there (TGParser::resolve copies the entry and
-		// addDefOne adds it under its existing name).
-		if cached.PendingAdd && !k.readOnly {
-			cached.PendingAdd = false
-			if err := k.addDef(cached); err != nil {
-				return nil, err
-			}
-			// The defm expansion that finally refers to the instance is its
-			// VarDefInit::instantiate, so its dumps run exactly here.
-			k.emitDumps(cached)
-		}
 		// A parse-time fold (preFold) creates the record only to reproduce
 		// llvm-tblgen's anonymous numbering: its arguments may still be
 		// references, so LLVM would not have instantiated it yet and there was
@@ -848,12 +844,10 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 		delete(k.anonCache, key)
 		return nil, err
 	}
-	if k.preInstantiate {
-		// Parsing a multiclass body only consumes the name; the def itself is
-		// added when the enclosing defm expands (see Record.PendingAdd).
-		rec.PendingAdd = true
-		return rec, nil
-	}
+	// VarDefInit::instantiate registers the record as soon as it is resolved,
+	// even when a multiclass body that is merely being parsed created it
+	// (Record.cpp:2403-2405). A defm expansion that later references the same
+	// application reuses this record and its name.
 	if err := k.addDef(rec); err != nil {
 		delete(k.anonCache, key)
 		return nil, err
@@ -949,7 +943,7 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	// its anonymous record (and gets its anonymous_N name), even if a later
 	// `let` replaces the field. Reproduce the side effect only; the copied
 	// fields stay lazy so the final values are resolved as before.
-	stand := k.preFoldArgs(target.Name, class, provided)
+	stand := k.preFoldArgs(target.Name, class, provided, target.IsClass)
 	for _, f := range class.Vals {
 		// Unconditional: the class application we care about may sit inside a
 		// binding this field only names (e.g. Intrinsic's IntrProperties is
@@ -980,8 +974,8 @@ func qualifiedNameValue(name string) syntax.Value {
 // of an Env frame) lets references resolve even when they were captured in a
 // different environment, e.g. inside the argument expression of a parent
 // class applied while the class itself was parsed.
-func (k *Keeper) preFoldArgs(name string, class *Record, provided *Frame) *Record {
-	rec := &Record{Name: name, keeper: k}
+func (k *Keeper) preFoldArgs(name string, class *Record, provided *Frame, isClass bool) *Record {
+	rec := &Record{Name: name, IsClass: isClass, keeper: k}
 	for _, ta := range class.TArgs {
 		b, ok := provided.get(class.Name + ":" + ta.Name)
 		if !ok {
