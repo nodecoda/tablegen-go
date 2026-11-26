@@ -85,6 +85,11 @@ type Env struct {
 	owner    *Record // class or multiclass whose template arguments live here
 	ownerSep string  // ":" for classes, "::" for multiclasses
 	hidden   map[string]bool
+	// implicitTo overrides the record name used for the implicit NAME when a
+	// class body is printed. TGParser::AddParentClass rewrites a parent's
+	// VarInit("Parent:NAME") to the inheriting record via MapResolver
+	// (TGParser.cpp:382), so the copied field prints `Child:NAME`.
+	implicitTo string
 }
 
 // hasVal reports whether the record declares a field with this name.
@@ -115,6 +120,7 @@ func (e *Env) With(vars map[string]Binding) *Env {
 		out.frames = append(out.frames, e.frames...)
 		out.owner = e.owner
 		out.ownerSep = e.ownerSep
+		out.implicitTo = e.implicitTo
 		if len(e.hidden) > 0 {
 			out.hidden = make(map[string]bool, len(e.hidden))
 			for k, v := range e.hidden {
@@ -150,6 +156,7 @@ func (e *Env) StackOn(base *Env) *Env {
 	out.frames = append(out.frames, e.frames...)
 	out.owner = base.owner
 	out.ownerSep = base.ownerSep
+	out.implicitTo = base.implicitTo
 	switch {
 	case len(base.hidden) > 0 && len(e.hidden) > 0:
 		out.hidden = make(map[string]bool, len(base.hidden)+len(e.hidden))
@@ -749,3 +756,13 @@ type EvalError struct {
 }
 
 func (e *EvalError) Error() string { return e.Msg }
+
+// WithImplicitName returns e with the printable implicit NAME owner replaced.
+func (e *Env) WithImplicitName(name string) *Env {
+	if e == nil {
+		return &Env{implicitTo: name}
+	}
+	out := *e
+	out.implicitTo = name
+	return &out
+}

@@ -252,3 +252,58 @@ func itoa(n int) string {
 	}
 	return string(b[i:])
 }
+
+// sameRecTy is RecTy::typeIsA for the record phase. LLVM has no CodeRecTy:
+// `code` is a StringInit format, so string and code are the same type there,
+// and list<code> typeIsA list<string>.
+func sameRecTy(a, b *Ty) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.Kind == StringTy || a.Kind == CodeTy {
+		return b.Kind == StringTy || b.Kind == CodeTy
+	}
+	if a.Kind != b.Kind {
+		return false
+	}
+	switch a.Kind {
+	case BitsTy:
+		return a.Bits == b.Bits
+	case ListTy:
+		return sameRecTy(a.Elem, b.Elem)
+	case RecordTy:
+		return a.Equal(b)
+	}
+	return true
+}
+
+// syntaxTypeOf is the inverse of tyFromSyntax, for a synthesized cast.
+func syntaxTypeOf(t *Ty) syntax.Type {
+	if t == nil {
+		return syntax.Type{Kind: syntax.InvalidType}
+	}
+	switch t.Kind {
+	case BitTy:
+		return syntax.Type{Kind: syntax.BitType}
+	case BitsTy:
+		return syntax.Type{Kind: syntax.BitsType, Bits: t.Bits}
+	case IntTy:
+		return syntax.Type{Kind: syntax.IntType}
+	case StringTy:
+		return syntax.Type{Kind: syntax.StringType}
+	case CodeTy:
+		return syntax.Type{Kind: syntax.CodeType}
+	case DagTy:
+		return syntax.Type{Kind: syntax.DagType}
+	case ListTy:
+		out := syntax.Type{Kind: syntax.ListType}
+		if t.Elem != nil {
+			e := syntaxTypeOf(t.Elem)
+			out.Elem = &e
+		}
+		return out
+	case RecordTy:
+		return syntax.Type{Kind: syntax.RecordType, Recs: t.recordNames()}
+	}
+	return syntax.Type{Kind: syntax.InvalidType}
+}

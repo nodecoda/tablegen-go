@@ -544,6 +544,11 @@ type ClassApplyValue struct {
 	Class     string
 	ClassSpan Span
 	Args      []*Arg
+	// FoldName is the anonymous record the application was folded to while
+	// parsing (VarDefInit::Fold in TGParser.cpp:3041): once every argument is
+	// concrete the Init tree holds a DefInit and prints that record's name.
+	// Empty means the application is still unresolved and prints as written.
+	FoldName string
 }
 
 // BangValue is every `!operator` form. The header (`!op` + optional `<T>`) is

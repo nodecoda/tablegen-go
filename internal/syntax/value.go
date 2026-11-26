@@ -746,6 +746,10 @@ func (p *Parser) parseBangBody(rec *recordInfo, item *Type) Value {
 				return nil
 			}
 			v.Args = []Value{arg}
+		} else {
+			// TGParser.cpp:1526: an omitted regex becomes the wildcard
+			// StringInit(".*"), so the Init tree always carries an argument.
+			v.Args = []Value{&StringValue{ValueBase: ValueBase{Base: Base{At: loc}, Ty: StringTy}, Text: ".*"}}
 		}
 		if !p.eat(RParen) {
 			p.errTok("E_PARSE_BANG_RPAREN", "expected ')' in !instances")
@@ -1323,9 +1327,26 @@ func (p *Parser) finishSwitch(v *BangValue, rec *recordInfo, item *Type) Value {
 		p.errTok("E_PARSE_SWITCH_TYPE", "could not determine type for !switch from its arguments")
 		return nil
 	}
-	v.Args = []Value{key}
-	v.Cases = cases
-	return v.withType(ty)
+	// TGParser.cpp:2900-2923 reduces !switch to !cond while parsing: each
+	// case becomes !eq(Key, caseKey) and the mandatory default arm is guarded
+	// by the literal 1. The Init tree downstream (and therefore
+	// -print-records output) only ever carries the !cond form.
+	cond := &BangValue{ValueBase: ValueBase{Base: v.Base}, Op: XCond, OpSpan: v.OpSpan}
+	for _, c := range cases {
+		eqKey := Value(&IntValue{ValueBase: ValueBase{Base: Base{At: c.Base.At}, Ty: IntTy}, Num: 1})
+		if c.Key != nil {
+			eq := &BangValue{
+				ValueBase: ValueBase{Base: Base{At: c.Key.Span()}, Ty: BitTy},
+				Op:        XEq,
+				OpSpan:    c.Key.Span(),
+				Args:      []Value{key, c.Key},
+			}
+			eqKey = eq
+		}
+		cond.Cases = append(cond.Cases, &BangCase{Base: c.Base, Key: eqKey, Value: c.Value})
+	}
+	cond.Ty = ty
+	return cond
 }
 
 func (p *Parser) finishListComprehension(v *BangValue, rec *recordInfo, item *Type) Value {

@@ -184,6 +184,12 @@ func main() {
 	if code := diagExit(lowerDiags); code != 0 {
 		os.Exit(code)
 	}
+	// Main.cpp:292 returns right after parsing when ErrorsPrinted > 0: a
+	// PrintError from a folding operator still suppresses the backend output
+	// (find.td -DERROR1 prints neither the classes nor the defs).
+	if softErr {
+		os.Exit(1)
+	}
 
 	if *nullBackend {
 		return

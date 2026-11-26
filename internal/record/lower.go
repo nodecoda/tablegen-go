@@ -432,7 +432,7 @@ func (l *Lowerer) bodyItem(rec *Record, item syntax.BodyItem, env *Env) error {
 		}
 		rv := &RecordVal{Name: t.Name, Ty: ty, Nonconcrete: nonconcrete, Loc: t.Span().Start}
 		if t.Value != nil {
-			rv.Expr = &AstExpr{V: t.Value, Env: env}
+			rv.Expr = &AstExpr{V: l.k.implicitCast(ty, t.Value, rec), Env: env}
 		}
 		rec.addVal(rv)
 		return nil
@@ -516,6 +516,7 @@ func (l *Lowerer) applyLet(rec *Record, b *syntax.LetBind, env *Env) error {
 			if err := l.k.checkFieldValue(rv.Ty, b.Value, rec, env, rv.Name); err != nil {
 				return err
 			}
+			add = &AstExpr{V: l.k.implicitCast(rv.Ty, b.Value, rec), Env: env}
 		}
 		rv.Expr = add
 	}
@@ -1503,7 +1504,15 @@ func (l *Lowerer) tryInstantiate(ca *syntax.ClassApplyValue, env *Env, rec *Reco
 			return
 		}
 	}
-	_, _ = l.k.evalSyntax(ca, env, rec)
+	v, err := l.k.evalSyntax(ca, env, rec)
+	if err != nil {
+		return
+	}
+	if dv, ok := v.(*DefVal); ok && !l.namesOnly {
+		// VarDefInit::Fold returns the DefInit; later prints and evaluations
+		// see the anonymous record, not `Class<args>`.
+		ca.FoldName = dv.Rec.Name
+	}
 }
 
 // hasReference reports whether an evaluated value still contains a VarInit or
@@ -1594,6 +1603,80 @@ func hasClassApply(v syntax.Value) bool {
 				return true
 			}
 		}
+	}
+	return false
+}
+
+// implicitCast reproduces the conversion TGParser::SetValue performs before
+// storing a value: TGParser.cpp:326 calls RecordVal::setValue, which calls
+// V->getCastTo(FieldTy) (Record.cpp:2767). TypedInit::getCastTo
+// (Record.cpp:2262) keeps identical types, folds what convertInitializerTo can
+// handle (bit -> bits<1> included), and otherwise stores `!cast<Ty>(V)` as an
+// UnOpInit. That node is what --print-records shows inside a class body, so
+// the cast has to exist in our expression tree too.
+func (k *Keeper) implicitCast(want *Ty, v syntax.Value, self *Record) syntax.Value {
+	if want == nil || v == nil || want.Kind == AnyTy {
+		return v
+	}
+	st := v.Type()
+	if st.Kind == syntax.InvalidType || st.Kind == syntax.UnsetType {
+		return v
+	}
+	got := k.staticTy(st, self)
+	if got == nil || got.Kind == AnyTy || sameRecTy(got, want) {
+		return v
+	}
+	// TypedInit::convertInitializerTo covers bit -> bits<1> without a cast.
+	if got.Kind == BitTy && want.Kind == BitsTy && want.Bits == 1 {
+		return v
+	}
+	if !got.ConvertibleTo(want) || concreteInit(v) {
+		return v
+	}
+	return &syntax.BangValue{
+		ValueBase: syntax.ValueBase{Base: syntax.Base{At: v.Span()}, Ty: syntaxTypeOf(want)},
+		Op:        syntax.XCast,
+		OpSpan:    v.Span(),
+		TypeArg:   syntaxTypeOf(want),
+		Args:      []syntax.Value{v},
+	}
+}
+
+// concreteInit reports whether a parsed value is already a concrete Init, the
+// state in which getCastTo folds the conversion to a literal instead of
+// building a cast operator.
+func concreteInit(v syntax.Value) bool {
+	switch x := v.(type) {
+	case *syntax.IntValue, *syntax.StringValue:
+		return true
+	case *syntax.UnsetValue:
+		// UnsetInit::isConcrete() is false, so FieldInit::Fold keeps the
+		// reference (`B:impl.value`) instead of folding `?`.
+		return false
+	case *syntax.BitsValue:
+		for _, e := range x.Elems {
+			if !concreteInit(e) {
+				return false
+			}
+		}
+		return true
+	case *syntax.ListValue:
+		for _, e := range x.Elems {
+			if !concreteInit(e) {
+				return false
+			}
+		}
+		return true
+	case *syntax.DagValue:
+		if x.Op != nil && !concreteInit(x.Op) {
+			return false
+		}
+		for _, a := range x.Args {
+			if a.Value != nil && !concreteInit(a.Value) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }

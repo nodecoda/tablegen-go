@@ -203,7 +203,8 @@ func TestBangOps(t *testing.T) {
 		{`!add(1, 2)`, "!add"},
 		{`!if(1, 2, 3)`, "!if"},
 		{`!cond(1: "a", 0: "b")`, "!cond"},
-		{`!switch(1, 1: "a", "d")`, "!switch"},
+		// TGParser.cpp:2900 desugars !switch to !cond while parsing.
+		{`!switch(1, 1: "a", "d")`, `!cond(!eq(1, 1): "a", 1: "d")`},
 		{`!foreach(x, [1], !mul(x, 2))`, "!foreach"},
 		{`!foldl(0, [1], a, b, !add(a, b))`, "!foldl"},
 		{`!substr("abc", 1)`, "!substr"},

@@ -179,7 +179,11 @@ func resolveVar(x *syntax.VarValue, env *Env) (string, syntax.Value, *Env) {
 			if sep == "" {
 				sep = ":"
 			}
-			return env.owner.Name + sep + x.Name, nil, nil
+			owner := env.owner.Name
+			if x.Name == "NAME" && env.implicitTo != "" {
+				owner = env.implicitTo
+			}
+			return owner + sep + x.Name, nil, nil
 		}
 	}
 	return x.Name, nil, nil
@@ -227,6 +231,9 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		}
 		return varBits(text, x.Type(), w)
 	case *syntax.FieldValue:
+		if x.Lit != nil && concreteInit(x.Lit) {
+			return bitTexts(x.Lit, env, w, depth+1)
+		}
 		text := rawText(v, env)
 		return varBits(text, x.Type(), w)
 	case *syntax.BitRangeValue:
@@ -590,13 +597,24 @@ func (r *Record) exprText(v *RecordVal) string {
 func (r *Record) renderExpr(e Expr, want *Ty) string {
 	switch x := e.(type) {
 	case *AstExpr:
-		return initText(x.V, x.Env, want)
+		env := x.Env
+		if r.IsClass {
+			env = env.WithImplicitName(r.Name)
+		}
+		return initText(x.V, env, want)
 	case *BindExpr:
 		if x.Rec != nil {
 			return x.Rec.Name
 		}
 		return unsetText(want)
 	case *AppendExpr:
+		// TGParser::SetValue builds BinOpInit(LISTCONCAT/STRCONCAT/CONCAT) and
+		// folds it immediately (TGParser.cpp:266-282). BinOpInit::Fold
+		// (Record.cpp:1220) only folds when both operands are already concrete
+		// inits, so a VarInit or compound operator keeps the !con text.
+		if v, ok := r.constAppend(x); ok {
+			return v.String()
+		}
 		base := r.renderExpr(x.Base, nil)
 		add := r.renderExpr(x.Add, nil)
 		if x.Prepend {
@@ -711,6 +729,17 @@ func rawText(v syntax.Value, env *Env) string {
 		}
 		return text
 	case *syntax.FieldValue:
+		// FieldInit::Fold (Record.cpp:2498): at parse time a reference to a
+		// field of a def whose value is already concrete is replaced by that
+		// value, so the Init tree shows the literal.
+		if x.Lit != nil && concreteInit(x.Lit) {
+			// SetValue stored the field's value converted to its declared
+			// type, so a `bits<4> = 11` field yields the BitsInit literal.
+			if text, ok := literalAs(x.Lit, x.Type(), env); ok {
+				return text
+			}
+			return rawText(x.Lit, env)
+		}
 		return rawText(x.Base, env) + "." + x.Field
 	case *syntax.SliceValue:
 		return rawText(x.Base, env) + "[" + sliceText(x, env) + "]"
@@ -735,6 +764,9 @@ func rawText(v syntax.Value, env *Env) string {
 		}
 		return "!strconcat(" + stringOperand(x.LHS, env) + ", " + stringOperand(x.RHS, env) + ")"
 	case *syntax.ClassApplyValue:
+		if x.FoldName != "" {
+			return x.FoldName
+		}
 		var b strings.Builder
 		b.WriteString(x.Class)
 		b.WriteByte('<')
@@ -1206,4 +1238,134 @@ func bindNames(env *Env, names []string) *Env {
 // which is what DetailedRecordsBackend prints for global variables.
 func (g *Global) Text() string {
 	return (&Record{}).renderExpr(g.Expr, nil)
+}
+
+// constAppend mirrors the parse-time fold of `let append/prepend`: it evaluates
+// only syntactic literals, so a class body shows [1, 2, 3] where LLVM's Init
+// tree holds the folded list, and keeps !con(...) where LLVM keeps a BinOpInit.
+func (r *Record) constAppend(x *AppendExpr) (Value, bool) {
+	base, ok := r.constExpr(x.Base)
+	if !ok {
+		return nil, false
+	}
+	add, ok := r.constExpr(x.Add)
+	if !ok {
+		return nil, false
+	}
+	// TGParser::SetValue assigns directly when the current value is unset.
+	if _, unset := base.(*Unset); unset {
+		return add, true
+	}
+	if x.Prepend {
+		base, add = add, base
+	}
+	switch x.Kind {
+	case StringTy, CodeTy:
+		a, ok1 := base.(*Str)
+		b, ok2 := add.(*Str)
+		if !ok1 || !ok2 {
+			return nil, false
+		}
+		return &Str{S: a.S + b.S, Code: a.Code || b.Code}, true
+	case ListTy:
+		a, ok1 := base.(*List)
+		b, ok2 := add.(*List)
+		if !ok1 || !ok2 {
+			return nil, false
+		}
+		out := &List{Elem: a.Elem}
+		out.Elems = append(append([]Value(nil), a.Elems...), b.Elems...)
+		return out, true
+	}
+	return nil, false
+}
+
+// constExpr is constAppend's view of an expression: literals and chains of
+// append/prepend over them.
+func (r *Record) constExpr(e Expr) (Value, bool) {
+	switch x := e.(type) {
+	case *AstExpr:
+		return constLiteral(x.V)
+	case *AppendExpr:
+		return r.constAppend(x)
+	}
+	return nil, false
+}
+
+// constLiteral converts the literal forms of a parsed value. Anything that
+// would need a record (a VarValue, a field reference, a class application, or
+// a compound operator) reports false: LLVM's Fold leaves those as inits.
+func constLiteral(v syntax.Value) (Value, bool) {
+	switch t := v.(type) {
+	case *syntax.UnsetValue:
+		return &Unset{}, true
+	case *syntax.IntValue:
+		return &Int{N: int64(t.Num)}, true
+	case *syntax.StringValue:
+		return &Str{S: t.Text, Code: t.Code}, true
+	case *syntax.BitsValue:
+		out := make([]Value, 0, len(t.Elems))
+		for i := len(t.Elems) - 1; i >= 0; i-- {
+			ev, ok := constLiteral(t.Elems[i])
+			if !ok {
+				return nil, false
+			}
+			if bits, ok := ev.(*Bits); ok {
+				out = append(out, bits.B...)
+				continue
+			}
+			b, ok := ev.(*Int)
+			if !ok || (b.N != 0 && b.N != 1) {
+				return nil, false
+			}
+			out = append(out, &Bit{B: b.N == 1})
+		}
+		return &Bits{B: out}, true
+	case *syntax.ListValue:
+		out := &List{}
+		for _, e := range t.Elems {
+			ev, ok := constLiteral(e)
+			if !ok {
+				return nil, false
+			}
+			out.Elems = append(out.Elems, ev)
+		}
+		return out, true
+	case *syntax.PasteValue:
+		// `#` on two strings is folded by BinOpInit::getStrConcat as soon as
+		// the operands parse (TGParser.cpp:3429), before any resolver runs.
+		ls, ok1 := constLiteral(t.LHS)
+		rs, ok2 := constLiteral(t.RHS)
+		if !ok1 || !ok2 {
+			return nil, false
+		}
+		a, ok1 := ls.(*Str)
+		b, ok2 := rs.(*Str)
+		if !ok1 || !ok2 {
+			return nil, false
+		}
+		return &Str{S: a.S + b.S, Code: a.Code || b.Code}, true
+	}
+	return nil, false
+}
+
+// literalAs prints a concrete literal the way RecordVal::setValue stores it
+// for a destination of type want: an int assigned to bits<N> becomes a BitsInit
+// of N one-bit entries, and an int assigned to bit becomes that bit.
+func literalAs(v syntax.Value, want syntax.Type, env *Env) (string, bool) {
+	switch want.Kind {
+	case syntax.BitsType:
+		bits, ok := bitTexts(v, env, want.Bits, 0)
+		if !ok {
+			return "", false
+		}
+		return "{ " + strings.Join(reverseBits(bits), ", ") + " }", true
+	case syntax.BitType:
+		bits, ok := bitTexts(v, env, 1, 0)
+		if !ok {
+			return "", false
+		}
+		return bits[0], true
+	}
+	return "", false
 }

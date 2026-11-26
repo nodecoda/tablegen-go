@@ -241,6 +241,7 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 
 	case syntax.XStrConcat:
 		var sb strings.Builder
+		code := false
 		for i := range b.Args {
 			v, err := eval(i)
 			if err != nil {
@@ -251,8 +252,11 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 				return nil, &EvalError{Msg: "!strconcat expects strings", Span: b.Span()}
 			}
 			sb.WriteString(s.S)
+			// Record.cpp:1064 ConcatStringInits: the result keeps the code
+			// format when either operand has it.
+			code = code || s.Code
 		}
-		return &Str{S: sb.String()}, nil
+		return &Str{S: sb.String(), Code: code}, nil
 
 	case syntax.XListFlatten:
 		v, err := eval(0)
@@ -405,10 +409,14 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 				stringPath = true
 			}
 		}
+		// Record.cpp:1076 interleaveStringList starts at SF_String and ORs in
+		// the format of every element (the delimiter does not participate).
+		code := false
 		for i, e := range ls.Elems {
 			if stringPath {
 				if v, ok := e.(*Str); ok {
 					parts[i] = v.S
+					code = code || v.Code
 					continue
 				}
 			}
@@ -418,7 +426,7 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			}
 			parts[i] = strconv.FormatInt(n, 10)
 		}
-		return &Str{S: strings.Join(parts, d.S)}, nil
+		return &Str{S: strings.Join(parts, d.S), Code: code}, nil
 
 	case syntax.XToLower, syntax.XToUpper:
 		v, err := eval(0)
@@ -463,7 +471,7 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 		}
 		size := int64(len(s.S))
 		if start < 0 || start > size {
-			k.softError("!substr start position is out of range 0..."+strconv.FormatInt(size, 10)+": "+strconv.FormatInt(start, 10), b.Span())
+			k.softErrorAt("!substr start position is out of range 0..."+strconv.FormatInt(size, 10)+": "+strconv.FormatInt(start, 10), b.Span(), rec)
 		}
 		end := size
 		if len(b.Args) > 2 {
@@ -516,9 +524,10 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 		}
 		if start < 0 || start > int64(len(s.S)) {
 			// Record.cpp:1894 uses PrintError here: the message is emitted but
-			// the fold still yields -1.
-			k.softError("!find start position is out of range 0..."+
-				strconv.Itoa(len(s.S))+": "+strconv.FormatInt(start, 10), b.Span())
+			// the fold still yields -1. The location is CurRec->getLoc(), the
+			// record's name token, not the operator.
+			k.softErrorAt("!find start position is out of range 0..."+
+				strconv.Itoa(len(s.S))+": "+strconv.FormatInt(start, 10), b.Span(), rec)
 			return &Int{N: -1}, nil
 		}
 		idx := strings.Index(s.S[start:], q.S)
@@ -1202,6 +1211,16 @@ func (k *Keeper) softError(msg string, span diag.Span) {
 	if k.diags != nil {
 		k.diags.SoftError("E_SEMANTIC", msg, span)
 	}
+}
+
+// softErrorAt anchors a PrintError to Record::getLoc() the way the folding
+// operators do (Record.cpp:1877, 1896): the record's name token when one is
+// being resolved, and the operator otherwise.
+func (k *Keeper) softErrorAt(msg string, span diag.Span, rec *Record) {
+	if rec != nil && len(rec.Locs) > 0 {
+		span = diag.Span{Start: rec.Locs[0], End: rec.Locs[0]}
+	}
+	k.softError(msg, span)
 }
 
 func (k *Keeper) evalGetDagArg(b *syntax.BangValue, env *Env, rec *Record) (Value, error) {

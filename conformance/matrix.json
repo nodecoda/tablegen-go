@@ -6,8 +6,8 @@
   "counts": {
     "status:err-diff": 77,
     "status:err-wording": 26,
-    "status:out-diff": 10,
-    "status:same": 201,
+    "status:out-diff": 1,
+    "status:same": 210,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -4611,10 +4611,10 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "eb58e6e2c2787b515aa7b5ee84bf2162d6412e748258887e40ed7e505a2d0bd3",
+        "out_sha256": "df9b7f838e07773d84d631c0dfd653411a640445dc672ec3849b53077b5bce6d",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 63656591
+        "out_len": 63641234
       },
       "status": "out-diff",
       "out_len": 63660222
@@ -4989,12 +4989,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "2298a3c95d0d6679d318a4b926bc35396fadb5c7976f4cc5add44a7a3e7e21af",
+        "out_sha256": "922d184d6aa6188a702489d3856074844f92d6ab0310e0b2fc3f41f8f9f14957",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
         "out_len": 1163
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 1163
     },
     {
@@ -5524,12 +5524,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "6ba82eed398ea026aebad4f8069e675fbbc3030b2fb036d257d69cb1da84a4d0",
+        "out_sha256": "2ac598ce953b5fa5298b38cbf09243ff6475edcf92ac8fde6faea680b73c54ff",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 1358
+        "out_len": 1363
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 1363
     },
     {
@@ -6475,16 +6475,14 @@
       },
       "ours": {
         "exit": 1,
-        "out_sha256": "3d41ad9dd3756af476f67cf1c9b210e0fcea5145d4b7a6c0ec622de7fdf2ff1a",
-        "err_sha256": "446939fbc65a449ef52c42eaffb512d86e8f0e6f92296d2842a4325d1dca2f8c",
+        "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "err_sha256": "da094e2aa977ddbaa1df2dfbd5c4f3eb46758ef8d18b27958b7dc39204ce3e8f",
         "Msgs": [
           "error: !find start position is out of range 0...29: 100"
         ],
-        "err_head": "\u003cfile\u003e:61:15: error: !find start position is out of range 0...29: 100",
-        "out_len": 608
+        "err_head": "\u003cfile\u003e:60:5: error: !find start position is out of range 0...29: 100"
       },
-      "status": "out-diff",
-      "err_text": "\u003cfile\u003e:61:15: error: !find start position is out of range 0...29: 100\n  int Test1 = !find(Sentence, \"the\", 100);\n              ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foldl.td",
@@ -7514,18 +7512,17 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "3320bc4c02535dba76985e917fa405a3c6e4ebf07abbe77f0663f1d17b0fe0d5",
+        "out_sha256": "7b12bd5cb3e672046fd8b4b7c6594b0ebd5269b0f4b6bed7189e5caae3151af0",
         "err_sha256": "e319d89458b858524e5aeca383e7e8633203dd7c5e6c0f3d2de50e92733d2463",
         "Msgs": [
           "warning: unused template argument: D:n",
           "warning: unused template argument: TestArgument:d"
         ],
         "err_head": "\u003cfile\u003e:97:13: warning: unused template argument: D:n",
-        "out_len": 1640
+        "out_len": 1660
       },
-      "status": "out-diff",
-      "out_len": 1660,
-      "err_text": "\u003cfile\u003e:97:13: warning: unused template argument: D:n\nclass D\u003cint n\u003e;\n            ^\n\u003cfile\u003e:99:22: warning: unused template argument: TestArgument:d\nclass TestArgument\u003cD d = D\u003c0\u003e\u003e {\n                     ^"
+      "status": "same",
+      "out_len": 1660
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/instances.td",
@@ -7636,12 +7633,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "d6f48f53bd87e41302eb942d226469d7c7587a10f93da6c53e85e3fc5c2a00ee",
+        "out_sha256": "9ccec51b08cb49245718636cb8aa9be6f559c0a224888ad9154a69a972f54000",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
         "out_len": 1169
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 1169
     },
     {
@@ -8159,12 +8156,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "bee2b2a02a3640066d09a869e9efa0924a09a5997e8027470c49197f7aa15d2a",
+        "out_sha256": "fe252103545c0299e5c541e67b0cd50313fc9665f4c56e1e4c4fc5ba0b800e0d",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 2927
+        "out_len": 2893
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 2893
     },
     {
@@ -8798,12 +8795,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "65e44f27655993a803be9177d686245501941823b6c990ad9e0576806be6ef97",
+        "out_sha256": "9e447dd25fb7e68a2039e8644cb44b4d68d34005c4179e9e2ac4236cef1852d0",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 815
+        "out_len": 811
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 811
     },
     {
@@ -9942,12 +9939,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-398170395/inc",
-        "/tmp/tblgen-split-398170395/main.td",
+        "/tmp/tblgen-split-3886446350/inc",
+        "/tmp/tblgen-split-3886446350/main.td",
         "-o",
-        "/tmp/tblgen-split-398170395/out.td",
+        "/tmp/tblgen-split-3886446350/out.td",
         "-d",
-        "/tmp/tblgen-split-398170395/out.d"
+        "/tmp/tblgen-split-3886446350/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9967,12 +9964,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-398170395/inc",
-        "/tmp/tblgen-split-398170395/main.td",
+        "/tmp/tblgen-split-3886446350/inc",
+        "/tmp/tblgen-split-3886446350/main.td",
         "-o",
-        "/tmp/tblgen-split-398170395/out.td",
+        "/tmp/tblgen-split-3886446350/out.td",
         "-d",
-        "/tmp/tblgen-split-398170395/out2.d"
+        "/tmp/tblgen-split-3886446350/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9993,10 +9990,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-398170395/inc",
-        "/tmp/tblgen-split-398170395/main.td",
+        "/tmp/tblgen-split-3886446350/inc",
+        "/tmp/tblgen-split-3886446350/main.td",
         "-d",
-        "/tmp/tblgen-split-398170395/out.d"
+        "/tmp/tblgen-split-3886446350/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10083,8 +10080,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2762430008",
-        "/tmp/tblgen-split-2762430008/main.td"
+        "/tmp/tblgen-split-3780460915",
+        "/tmp/tblgen-split-3780460915/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10108,8 +10105,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2762430008",
-        "/tmp/tblgen-split-2762430008/multi.td"
+        "/tmp/tblgen-split-3780460915",
+        "/tmp/tblgen-split-3780460915/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -11037,12 +11034,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "c1d02e0624dd3901f1f07a59b59ef528fd7e755dfc4b744cf1115bdb86883356",
+        "out_sha256": "130190cc73789e749ee2f723194e59e319089e477435906d3b29032e421f547a",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 1257
+        "out_len": 1302
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 1302
     },
     {
@@ -11357,12 +11354,12 @@
       },
       "ours": {
         "exit": 0,
-        "out_sha256": "d2f6a60bb066b4471aa66ebbcd78e69b3370958e7da5f40ff24ea00c294b451d",
+        "out_sha256": "1aff52d9372b99213d7dcc366365ff97192c6ec76de6653b673ac1caa0920195",
         "err_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Msgs": null,
-        "out_len": 865
+        "out_len": 877
       },
-      "status": "out-diff",
+      "status": "same",
       "out_len": 877
     },
     {
