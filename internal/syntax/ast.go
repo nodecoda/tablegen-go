@@ -193,6 +193,11 @@ type File struct {
 	// `def ""#x#VTI.Suffix` (RISCV and ARM). The driver fills in
 	// Known.Defms from the first lowering pass.
 	DynDefmNames bool
+	// DynFieldNames reports that the missing name itself reads a record field
+	// (`def VT.Suffix`, `if !initialized(VT.MaskType)`). Such a name cannot be
+	// learned by a names-only lowering pass, which never resolves fields, so
+	// the driver starts with full lowering instead of probing.
+	DynFieldNames bool
 }
 
 // KnownDef is a record created by a statement-level foreach or defm, fed back

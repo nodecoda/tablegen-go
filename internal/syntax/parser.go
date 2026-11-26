@@ -101,16 +101,17 @@ type Parser struct {
 	anonCount   int
 	includeDirs []string
 
-	curRec       *recordInfo
-	classDepth   int // >0 while parsing a class body (defs there are not global)
-	loopSeq      int // next statement-level foreach number
-	defmSeq      int // next statement-level defm number
-	known        *Known
-	dynLoopNames bool // a statement-level loop had names we could not materialize
-	dynDefmNames bool // a statement-level defm had names we could not materialize
-	classArgs    map[string][]*Decl
-	classParents map[string][]*ParentRef
-	defParents   []defParentsRec
+	curRec        *recordInfo
+	classDepth    int // >0 while parsing a class body (defs there are not global)
+	loopSeq       int // next statement-level foreach number
+	defmSeq       int // next statement-level defm number
+	known         *Known
+	dynLoopNames  bool // a statement-level loop had names we could not materialize
+	dynDefmNames  bool // a statement-level defm had names we could not materialize
+	dynFieldNames bool // a missing name reads a record field the parser cannot resolve
+	classArgs     map[string][]*Decl
+	classParents  map[string][]*ParentRef
+	defParents    []defParentsRec
 
 	opts Options
 	// abort stops the file after an error LLVM's caller propagates out of
@@ -198,6 +199,7 @@ func (t *Tokens) Parse(file, src string, includeDirs []string, known *Known, opt
 	f := p.parseFile()
 	f.DynLoopNames = p.dynLoopNames
 	f.DynDefmNames = p.dynDefmNames
+	f.DynFieldNames = p.dynFieldNames
 	f.Sources = t.Sources
 	diags := append(append([]diag.Diagnostic{}, t.Diags...), p.diags.Diags...)
 	return f, diags
@@ -890,6 +892,9 @@ func (p *Parser) registerObjectNames(objs []Object, defmPrefix string, env map[s
 		case *DefStmt:
 			n, ok := p.materializeObjName(t.Name, defmPrefix, env)
 			if !ok {
+				if usesField(t.Name) {
+					p.dynFieldNames = true
+				}
 				missed++
 				continue
 			}
@@ -920,6 +925,9 @@ func (p *Parser) registerObjectNames(objs []Object, defmPrefix string, env map[s
 		case *DefmStmt:
 			inner, ok := p.materializeObjName(t.Name, defmPrefix, env)
 			if !ok {
+				if usesField(t.Name) {
+					p.dynFieldNames = true
+				}
 				missed++
 				continue
 			}
@@ -949,6 +957,9 @@ func (p *Parser) registerObjectNames(objs []Object, defmPrefix string, env map[s
 				// `!initialized(VT.MaskType)` above). The records this arm
 				// creates are only known to lowering, so ask the driver for a
 				// second pass.
+				if usesField(t.Cond) {
+					p.dynFieldNames = true
+				}
 				missed++
 			}
 		case *LetStmt:
@@ -956,6 +967,9 @@ func (p *Parser) registerObjectNames(objs []Object, defmPrefix string, env map[s
 		case *ForeachStmt:
 			vals, ok := p.loopValues(t.List, t.Range, env)
 			if !ok {
+				if usesField(t.List) {
+					p.dynFieldNames = true
+				}
 				missed++
 				continue
 			}
@@ -1039,6 +1053,71 @@ func (p *Parser) bindLiteralArgs(mc *MultiClassStmt, args []*Arg, callerEnv, dst
 			dst[decl.Name] = s
 		}
 	}
+}
+
+// usesField reports whether a value tree reads a record field. The parser
+// cannot resolve such a reference, and neither can a names-only lowering pass:
+// only full lowering instantiates the class body the field lives on
+// (TGParser::AddParentClass, TGParser.cpp:346-374).
+func usesField(v Value) bool {
+	switch t := v.(type) {
+	case *FieldValue:
+		return true
+	case *BitsValue:
+		for _, e := range t.Elems {
+			if usesField(e) {
+				return true
+			}
+		}
+	case *ListValue:
+		for _, e := range t.Elems {
+			if usesField(e) {
+				return true
+			}
+		}
+	case *DagValue:
+		if usesField(t.Op) {
+			return true
+		}
+		for _, a := range t.Args {
+			if usesField(a.Value) {
+				return true
+			}
+		}
+	case *VarValue:
+		return t.Lit != nil && usesField(t.Lit)
+	case *SliceValue:
+		if usesField(t.Base) {
+			return true
+		}
+		for _, e := range t.Index {
+			if usesField(e.Lo) || usesField(e.Hi) {
+				return true
+			}
+		}
+	case *BitRangeValue:
+		return usesField(t.Base)
+	case *PasteValue:
+		return usesField(t.LHS) || usesField(t.RHS)
+	case *ClassApplyValue:
+		for _, a := range t.Args {
+			if usesField(a.Value) {
+				return true
+			}
+		}
+	case *BangValue:
+		for _, a := range t.Args {
+			if usesField(a) {
+				return true
+			}
+		}
+		for _, c := range t.Cases {
+			if usesField(c.Key) || usesField(c.Value) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // usesNAME reports whether an object name mentions the implicit NAME.

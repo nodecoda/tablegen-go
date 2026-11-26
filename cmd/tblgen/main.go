@@ -161,7 +161,7 @@ func main() {
 	// multiclass parent (TGParser aborts there), hiding everything after it.
 	// Each round installs the names learned so far, which moves that point
 	// later, so repeat while the undefined-name count falls.
-	if file.DynLoopNames || file.DynDefmNames {
+	if (file.DynLoopNames || file.DynDefmNames) && hasUndefinedName(diags) {
 		strictFile, strictDiags := file, diags
 		// Re-parse with undefined names kept in place. A dynamic name used
 		// inside the very loop or let block that creates it (the SiFive and
@@ -169,27 +169,70 @@ func main() {
 		// block, hiding the loop from the lowering pass that learns the name.
 		lenient := popts
 		lenient.LenientUndefinedNames = true
-		file, diags = tokens.Parse(inputName, string(src), includes, nil, lenient)
-		loops, defms := map[int]map[string]syntax.KnownDef{}, map[int]map[string]syntax.KnownDef{}
+		// learn installs the names one lowering pass discovers and re-parses,
+		// repeating while the undefined-name count falls. A names-only probe
+		// is an order of magnitude cheaper than full lowering (147ms vs
+		// 1.77s on dag-isel-subregs.td), but it cannot see a defm name that
+		// depends on a resolved multiclass field: applyParent does not
+		// instantiate the class body in that mode. LLVM's driver needs no
+		// probe at all because TGParser resolves each statement as it parses
+		// (TGParser.cpp:4202-4241).
+		learn := func(probe bool) (*syntax.File, []diag.Diagnostic, *syntax.Known) {
+			f, d := tokens.Parse(inputName, string(src), includes, nil, lenient)
+			loops, defms := map[int]map[string]syntax.KnownDef{}, map[int]map[string]syntax.KnownDef{}
+			var known *syntax.Known
+			full := !probe
+			for round := 0; round < 16 && hasUndefinedName(d); round++ {
+				if !f.DynLoopNames && !f.DynDefmNames {
+					break
+				}
+				var k *record.Keeper
+				if full {
+					k, _ = record.Lower(f, inputName)
+				} else {
+					k, _ = record.LowerNames(f, inputName)
+				}
+				// Merge both tables before deciding: `&&` would short-circuit
+				// and leave the defm names unlearned whenever a loop grew.
+				grewLoops := mergeKnown(loops, k.LoopDefs())
+				grewDefms := mergeKnown(defms, k.DefmDefs())
+				if !grewLoops && !grewDefms {
+					if full {
+						break
+					}
+					// The probe has learned everything it can. Names it could
+					// not see come from resolved fields (applyParent skips the
+					// class body in that mode), so continue this same round
+					// with full lowering instead of restarting it.
+					full = true
+					continue
+				}
+				known = &syntax.Known{Loops: flattenKnown(loops), Defms: flattenKnown(defms)}
+				f2, d2 := tokens.Parse(inputName, string(src), includes, known, lenient)
+				if countUndefined(d2) >= countUndefined(d) {
+					if full {
+						break
+					}
+					full = true
+					continue
+				}
+				f, d = f2, d2
+			}
+			return f, d, known
+		}
 		var known *syntax.Known
-		for round := 0; round < 16 && hasUndefinedName(diags); round++ {
-			if !file.DynLoopNames && !file.DynDefmNames {
-				break
-			}
-			k, _ := record.Lower(file, inputName)
-			// Merge both tables before deciding: `&&` would short-circuit and
-			// leave the defm names unlearned whenever a loop also grew.
-			grewLoops := mergeKnown(loops, k.LoopDefs())
-			grewDefms := mergeKnown(defms, k.DefmDefs())
-			if !grewLoops && !grewDefms {
-				break
-			}
-			known = &syntax.Known{Loops: flattenKnown(loops), Defms: flattenKnown(defms)}
-			f2, d2 := tokens.Parse(inputName, string(src), includes, known, lenient)
-			if countUndefined(d2) >= countUndefined(diags) {
-				break
-			}
-			file, diags = f2, d2
+		// The probe is speculative: it costs one names-only pass (1.1s on
+		// RISCV) and a file whose names read record fields can never settle
+		// that way (TGParser has the parent's fields at parse time because
+		// AddParentClass copies them immediately, TGParser.cpp:346-374).
+		// Spend it when no name needs a field, or when only a handful of
+		// names are missing at all; a large count means the file's dynamic
+		// statements are dominated by field-named defms.
+		const maxProbeUndefined = 8
+		if !file.DynFieldNames || countUndefined(diags) <= maxProbeUndefined {
+			file, diags, known = learn(true)
+		} else {
+			file, diags, known = learn(false)
 		}
 		// The lenient parse exists only to feed the lowering pass. Report from
 		// a strict parse with the names learned, so the diagnostics match the
