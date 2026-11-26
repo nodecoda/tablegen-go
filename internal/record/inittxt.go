@@ -1,6 +1,7 @@
 package record
 
 import (
+	"math/bits"
 	"strconv"
 	"strings"
 
@@ -746,13 +747,22 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 				}
 			}
 			return 0, false
+		case syntax.XLog2:
+			// UnOpInit::Fold's LOG2 is floor(log2) of a positive int
+			// (Record.cpp:930-943); a non-positive operand is a fatal error at
+			// evaluation time, so it never folds here.
+			a, ok := arg(0)
+			if !ok || a <= 0 {
+				return 0, false
+			}
+			return int64(bits.Len64(uint64(a))) - 1, true
 		case syntax.XSize:
 			if len(x.Args) == 1 {
 				if l, ok := constList(x.Args[0], env, depth+1); ok {
 					return int64(len(l)), true
 				}
-				if sv, ok := x.Args[0].(*syntax.StringValue); ok {
-					return int64(len(sv.Text)), true
+				if t, _, ok := constStrCode(x.Args[0], env, depth+1); ok {
+					return int64(len(t)), true
 				}
 				if dv, ok := x.Args[0].(*syntax.DagValue); ok {
 					return int64(len(dv.Args)), true
@@ -766,8 +776,11 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 					}
 					return 0, true
 				}
-				if sv, ok := x.Args[0].(*syntax.StringValue); ok {
-					if sv.Text == "" {
+				// A class body keeps the argument as a VarInit until the
+				// inheriting record substitutes it; AddParentClass resolves
+				// that copy, so `!empty(argstr)` folds there.
+				if t, _, ok := constStrCode(x.Args[0], env, depth+1); ok {
+					if t == "" {
 						return 1, true
 					}
 					return 0, true

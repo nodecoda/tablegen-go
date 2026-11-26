@@ -5212,18 +5212,18 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "ff6ce4603ec6a25535a000eb753e7fb68a0831e15a6c5b31a5336d3429364560",
-        "full_len": 263,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-71767931/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-71767931/a.td:2:\n/tmp/tblgen-split-71767931/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "5c7e42e34187deff291faadbad1accecd3ef81aa19afabfb5557fa643df9f1cc",
+        "full_len": 269,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3234924367/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3234924367/a.td:2:\n/tmp/tblgen-split-3234924367/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "ff6ce4603ec6a25535a000eb753e7fb68a0831e15a6c5b31a5336d3429364560",
-        "full_len": 263,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-71767931/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-71767931/a.td:2:\n/tmp/tblgen-split-71767931/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "5c7e42e34187deff291faadbad1accecd3ef81aa19afabfb5557fa643df9f1cc",
+        "full_len": 269,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3234924367/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3234924367/a.td:2:\n/tmp/tblgen-split-3234924367/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "status": "same"
     },

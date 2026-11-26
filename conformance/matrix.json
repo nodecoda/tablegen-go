@@ -9866,12 +9866,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2773146661/inc",
-        "/tmp/tblgen-split-2773146661/main.td",
+        "/tmp/tblgen-split-1507315119/inc",
+        "/tmp/tblgen-split-1507315119/main.td",
         "-o",
-        "/tmp/tblgen-split-2773146661/out.td",
+        "/tmp/tblgen-split-1507315119/out.td",
         "-d",
-        "/tmp/tblgen-split-2773146661/out.d"
+        "/tmp/tblgen-split-1507315119/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9891,12 +9891,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-2773146661/inc",
-        "/tmp/tblgen-split-2773146661/main.td",
+        "/tmp/tblgen-split-1507315119/inc",
+        "/tmp/tblgen-split-1507315119/main.td",
         "-o",
-        "/tmp/tblgen-split-2773146661/out.td",
+        "/tmp/tblgen-split-1507315119/out.td",
         "-d",
-        "/tmp/tblgen-split-2773146661/out2.d"
+        "/tmp/tblgen-split-1507315119/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9917,10 +9917,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-2773146661/inc",
-        "/tmp/tblgen-split-2773146661/main.td",
+        "/tmp/tblgen-split-1507315119/inc",
+        "/tmp/tblgen-split-1507315119/main.td",
         "-d",
-        "/tmp/tblgen-split-2773146661/out.d"
+        "/tmp/tblgen-split-1507315119/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10006,8 +10006,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-4275809551",
-        "/tmp/tblgen-split-4275809551/main.td"
+        "/tmp/tblgen-split-3303735823",
+        "/tmp/tblgen-split-3303735823/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10031,8 +10031,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-4275809551",
-        "/tmp/tblgen-split-4275809551/multi.td"
+        "/tmp/tblgen-split-3303735823",
+        "/tmp/tblgen-split-3303735823/multi.td"
       ],
       "oracle": {
         "exit": 0,

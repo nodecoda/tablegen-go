@@ -85,6 +85,40 @@ def op {
 	}
 }
 
+// UnOpInit::Fold covers !logtwo (floor log2 of a positive int,
+// Record.cpp:930-943), !empty and !size; inside a class body the operand may
+// still be a VarInit that AddParentClass substitutes when the child is built,
+// so the fold must resolve the substituted argument rather than only a written
+// literal. Expected text is llvm-tblgen 24.0.0git's.
+func TestPrintRecordsUnaryFolds(t *testing.T) {
+	src := `class B { int c = !add(1, !mul(!logtwo(8), 2)); }
+class C<string s> { bit e = !empty(s); int z = !size(s); }
+class D : C<"abc">;
+class E : C<"">;
+`
+	want := `------------- Classes -----------------
+class B {
+  int c = 7;
+}
+class C<string C:s = ?> {
+  bit e = !cast<bit>(!empty(C:s));
+  int z = !size(C:s);
+}
+class D {	// C
+  bit e = 0;
+  int z = 3;
+}
+class E {	// C
+  bit e = 1;
+  int z = 0;
+}
+------------- Defs -----------------
+`
+	if got := printRecords(t, src); got != want {
+		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 // A `Class<arg>` application inside a class body prints as written when the
 // argument is the body's own template parameter: LLVM never resolves a class
 // body, and only AddParentClass resolves the copy it installs on the child,
