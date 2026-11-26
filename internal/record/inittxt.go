@@ -261,6 +261,23 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		if len(x.Bits) != w {
 			return nil, false
 		}
+		// A bit-select on a already-literal bits value is that bit: the
+		// VarBitInit of a BitsInit resolves to the selected element
+		// (VarBitInit::resolveReferences -> BitsInit element).
+		if bv, isLit := x.Base.(*syntax.BitsValue); isLit {
+			if hi, ok := bitListCandidates(bv, env, depth+1); ok {
+				out := make([]string, w)
+				for i := 0; i < w; i++ {
+					bit := int(x.Bits[w-1-i])
+					j := len(hi) - 1 - bit
+					if j < 0 || j >= len(hi) {
+						return nil, false
+					}
+					out[i] = hi[j]
+				}
+				return out, true
+			}
+		}
 		out := make([]string, w)
 		for i := 0; i < w; i++ {
 			bit := x.Bits[w-1-i]
@@ -1188,6 +1205,28 @@ func rawText(v syntax.Value, env *Env) string {
 		if x.Op == syntax.XCond {
 			if v, ok := condArm(x, env, 0); ok {
 				return rawText(v, env)
+			}
+		}
+		// BinOpInit::Fold's CONCAT merges two DagInits when their operators
+		// agree, keeping the left name (Record.cpp:1219-1248), so a subclass
+		// that fills in !con's operands prints one dag.
+		if x.Op == syntax.XConcat && len(x.Args) == 2 {
+			if l, lok := constDagParts(x.Args[0], env); lok {
+				if r, rok := constDagParts(x.Args[1], env); rok && l.op == r.op {
+					return dagPartsText(l, r)
+				}
+			}
+		}
+		// !strconcat's Fold concatenates adjacent StringInits and keeps the
+		// operator only for the unresolved operand (Record.cpp:1200-1210),
+		// so a chain nested on the right collapses to one literal.
+		if x.Op == syntax.XStrConcat && len(x.Args) == 2 {
+			if rs, rcode, ok := constStrCode(x.Args[1], env, 0); ok {
+				if ls, lcode, ok := constStrCode(x.Args[0], env, 0); ok {
+					return stringLiteral(ls+rs, lcode || rcode)
+				}
+				return "!strconcat(" + stringOperand(x.Args[0], env) + ", " +
+					stringLiteral(rs, rcode) + ")"
 			}
 		}
 		if str, ok := constStr(x, env, 0); ok {
