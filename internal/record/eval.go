@@ -401,10 +401,13 @@ func (k *Keeper) evalBindingInner(b Binding, env *Env, rec *Record) (Value, erro
 		e.owner = b.Owner
 		e.ownerSep = b.Sep
 		if b.Self != "" {
-			if e.hidden == nil {
-				e.hidden = map[string]bool{}
+			// e shares the parent's hidden set, so copy before adding.
+			hidden := make(map[string]bool, len(e.hidden)+1)
+			for k := range e.hidden {
+				hidden[k] = true
 			}
-			e.hidden[b.Self] = true
+			hidden[b.Self] = true
+			e.hidden = hidden
 		}
 		return k.evalSyntax(b.V, e, rec)
 	}
@@ -890,6 +893,16 @@ func classDefaultBindings(class *Record, provided map[string]Binding) map[string
 				out = map[string]Binding{}
 			}
 			out[k] = b
+		}
+	}
+	// Env keeps a lone binding outside frames (Env.WithBinding). Classes are
+	// built with With, but collect it too so the scan cannot go stale.
+	if kv := class.Env.kv; kv != nil && strings.HasPrefix(kv.name, prefix) {
+		if _, ok := provided[kv.name]; !ok {
+			if out == nil {
+				out = map[string]Binding{}
+			}
+			out[kv.name] = kv.b
 		}
 	}
 	return out

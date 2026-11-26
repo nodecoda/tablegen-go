@@ -81,7 +81,14 @@ type Binding struct {
 // concrete arguments of whichever def finally inherits it. Frames are searched
 // from the innermost (last) outward.
 type Env struct {
-	frames   []map[string]Binding
+	frames []map[string]Binding
+	// kv is the single binding WithBinding pushed, kept out of frames: it is
+	// called once per Class* or loop iteration, and a one-entry map plus a
+	// copied frame slice was the largest allocation in --dump-json. It is a
+	// pointer so that the Env copies made for every expression stay small;
+	// kvBinding is immutable once built. Lookup consults it first, because
+	// WithBinding pushes the newest binding on top.
+	kv       *kvBinding
 	owner    *Record // class or multiclass whose template arguments live here
 	ownerSep string  // ":" for classes, "::" for multiclasses
 	hidden   map[string]bool
@@ -101,6 +108,13 @@ type Env struct {
 	printing *Record
 }
 
+// kvBinding is one binding stored outside Env.frames. It is shared by every
+// Env copy that still has it on top and never mutated after construction.
+type kvBinding struct {
+	name string
+	b    Binding
+}
+
 // hasVal reports whether the record declares a field with this name.
 func (r *Record) hasVal(name string) bool {
 	for _, v := range r.Vals {
@@ -115,6 +129,9 @@ func (e *Env) Lookup(name string) (Binding, bool) {
 	if e == nil || e.hidden[name] {
 		return Binding{}, false
 	}
+	if e.kv != nil && e.kv.name == name {
+		return e.kv.b, true
+	}
 	for i := len(e.frames) - 1; i >= 0; i-- {
 		if v, ok := e.frames[i][name]; ok {
 			return v, true
@@ -124,34 +141,55 @@ func (e *Env) Lookup(name string) (Binding, bool) {
 }
 
 func (e *Env) With(vars map[string]Binding) *Env {
-	out := &Env{}
-	if e != nil {
-		out.frames = append(out.frames, e.frames...)
-		out.owner = e.owner
-		out.ownerSep = e.ownerSep
-		out.implicitTo = e.implicitTo
-		out.printing = e.printing
-		// Sub-environments must keep the printer's record graph: a helper that
-		// narrows the bindings (bindNames, WithBinding) still prints the same
-		// Init tree, and folding a Def.Field needs the keeper.
-		out.keeper = e.keeper
-		if len(e.hidden) > 0 {
-			out.hidden = make(map[string]bool, len(e.hidden))
-			for k, v := range e.hidden {
-				out.hidden[k] = v
-			}
+	if e == nil {
+		if vars == nil {
+			return &Env{}
 		}
+		return &Env{frames: []map[string]Binding{vars}}
 	}
-	if vars != nil {
-		out.frames = append(out.frames, vars)
+	out := *e
+	// Frames are read-only once built (only this method appends, and it always
+	// appends to a fresh slice), so a nil frame can share the slice and the
+	// hidden set. An empty but non-nil map is still pushed: lower.go installs a
+	// class's template-argument frame before filling it in
+	// (TGParser::ParseClass, TGParser.cpp:880-920), and a map is reached
+	// through the slice rather than copied.
+	if vars == nil {
+		return &out
 	}
-	return out
+	// The new frame must shadow the single binding, so fold that binding into
+	// a frame below vars when one is pending.
+	if out.kv != nil {
+		frames := make([]map[string]Binding, 0, len(e.frames)+2)
+		frames = append(frames, e.frames...)
+		frames = append(frames, map[string]Binding{out.kv.name: out.kv.b}, vars)
+		out.frames = frames
+		out.kv = nil
+		return &out
+	}
+	frames := make([]map[string]Binding, 0, len(e.frames)+1)
+	frames = append(frames, e.frames...)
+	out.frames = append(frames, vars)
+	return &out
 }
 
 // WithBinding is With for the single-variable frame a loop body or
 // comprehension binding needs.
 func (e *Env) WithBinding(name string, b Binding) *Env {
-	return e.With(map[string]Binding{name: b})
+	kv := &kvBinding{name: name, b: b}
+	if e == nil {
+		return &Env{kv: kv}
+	}
+	out := *e
+	if out.kv != nil {
+		// Two pending single bindings: fold the older one into a frame so the
+		// newer keeps the top slot.
+		frames := make([]map[string]Binding, 0, len(e.frames)+1)
+		frames = append(frames, e.frames...)
+		out.frames = append(frames, map[string]Binding{out.kv.name: out.kv.b})
+	}
+	out.kv = kv
+	return &out
 }
 
 // StackOn builds the environment a substituted Init tree must be resolved in:
@@ -165,9 +203,13 @@ func (e *Env) StackOn(base *Env) *Env {
 		return e
 	}
 	out := &Env{}
-	out.frames = make([]map[string]Binding, 0, len(base.frames)+len(e.frames))
+	out.frames = make([]map[string]Binding, 0, len(base.frames)+len(e.frames)+1)
 	out.frames = append(out.frames, base.frames...)
+	if base.kv != nil {
+		out.frames = append(out.frames, map[string]Binding{base.kv.name: base.kv.b})
+	}
 	out.frames = append(out.frames, e.frames...)
+	out.kv = e.kv
 	out.owner = base.owner
 	out.ownerSep = base.ownerSep
 	out.implicitTo = base.implicitTo
@@ -213,10 +255,13 @@ func (e *Env) LexicalOnly() *Env {
 		return nil
 	}
 	out := &Env{}
+	lexical := func(k string, b Binding) bool {
+		return b.Owner == nil && b.Self == "" && !strings.Contains(k, ":")
+	}
 	for _, f := range e.frames {
 		var keep map[string]Binding
 		for k, b := range f {
-			if b.Owner != nil || b.Self != "" || strings.Contains(k, ":") {
+			if !lexical(k, b) {
 				continue
 			}
 			if keep == nil {
@@ -227,6 +272,9 @@ func (e *Env) LexicalOnly() *Env {
 		if keep != nil {
 			out.frames = append(out.frames, keep)
 		}
+	}
+	if e.kv != nil && lexical(e.kv.name, e.kv.b) {
+		out.kv = e.kv
 	}
 	return out
 }
@@ -897,19 +945,25 @@ func (e *Env) WithImplicitName(name string) *Env {
 // only the copy made for a child can fold to a DefInit.
 func (e *Env) HideOwnArgs(r *Record) *Env {
 	var hidden map[string]bool
+	hide := func(k string) {
+		if hidden == nil {
+			hidden = make(map[string]bool, len(e.hidden)+4)
+			for hk, hv := range e.hidden {
+				hidden[hk] = hv
+			}
+		}
+		hidden[k] = true
+	}
 	for _, f := range e.frames {
 		for k, b := range f {
 			if b.Owner != r || b.Self == "" {
 				continue
 			}
-			if hidden == nil {
-				hidden = make(map[string]bool, len(e.hidden)+4)
-				for hk, hv := range e.hidden {
-					hidden[hk] = hv
-				}
-			}
-			hidden[k] = true
+			hide(k)
 		}
+	}
+	if e.kv != nil && e.kv.b.Owner == r && e.kv.b.Self != "" {
+		hide(e.kv.name)
 	}
 	if hidden == nil {
 		return e

@@ -1,7 +1,6 @@
 package record
 
 import (
-	"fmt"
 	"math"
 	"regexp"
 	"sort"
@@ -808,8 +807,15 @@ func valueInt(v Value) (int64, error) {
 		}
 		return 0, &EvalError{Msg: "bits value has unresolved bits"}
 	}
-	return 0, &EvalError{Msg: fmt.Sprintf("expected int, got %s", v.Type().String())}
+	return 0, &notIntErr{v: v}
 }
+
+// notIntErr defers the message's formatting: !sort and the comparison helpers
+// probe keys that are often strings, and building the text on every probe was
+// a visible allocation in --dump-json profiles.
+type notIntErr struct{ v Value }
+
+func (e *notIntErr) Error() string { return "expected int, got " + e.v.Type().String() }
 
 func leadingZeros(x uint64) int {
 	n := 0

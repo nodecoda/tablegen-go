@@ -195,6 +195,46 @@ func (t *Ty) ConvertibleTo(u *Ty) bool {
 	return false
 }
 
+// Small, immutable types repeat for every field and every template argument,
+// so they are shared instead of allocated per conversion. The arrays are
+// built once, which keeps tyFromSyntax read-only.
+var (
+	bitsTys = func() [129]*Ty {
+		var a [129]*Ty
+		for i := range a {
+			a[i] = &Ty{Kind: BitsTy, Bits: i}
+		}
+		return a
+	}()
+	// listOfKind[i] is list<scalar> for the scalar kind with value i; entries
+	// for composite kinds stay nil and take the allocating path.
+	listOfKind = func() [64]*Ty {
+		var a [64]*Ty
+		for _, k := range []syntax.TypeKind{syntax.IntType, syntax.BitType,
+			syntax.StringType, syntax.CodeType, syntax.DagType} {
+			a[int(k)] = &Ty{Kind: ListTy, Elem: scalarTy(k)}
+		}
+		return a
+	}()
+	listOfUnset = &Ty{Kind: ListTy}
+)
+
+func scalarTy(k syntax.TypeKind) *Ty {
+	switch k {
+	case syntax.IntType:
+		return intTy
+	case syntax.BitType:
+		return bitTy
+	case syntax.StringType:
+		return stringTy
+	case syntax.CodeType:
+		return codeTy
+	case syntax.DagType:
+		return dagTy
+	}
+	return anyTy
+}
+
 // tyFromSyntax converts a parser Type into a record Ty, resolving class names
 // through the keeper when possible.
 func (k *Keeper) tyFromSyntax(st syntax.Type) *Ty {
@@ -204,6 +244,9 @@ func (k *Keeper) tyFromSyntax(st syntax.Type) *Ty {
 	case syntax.BitType:
 		return bitTy
 	case syntax.BitsType:
+		if st.Bits >= 0 && st.Bits < len(bitsTys) {
+			return bitsTys[st.Bits]
+		}
 		return &Ty{Kind: BitsTy, Bits: st.Bits}
 	case syntax.StringType:
 		return stringTy
@@ -212,11 +255,13 @@ func (k *Keeper) tyFromSyntax(st syntax.Type) *Ty {
 	case syntax.DagType:
 		return dagTy
 	case syntax.ListType:
-		var elem *Ty
-		if st.Elem != nil {
-			elem = k.tyFromSyntax(*st.Elem)
+		if st.Elem == nil {
+			return listOfUnset
 		}
-		return &Ty{Kind: ListTy, Elem: elem}
+		if int(st.Elem.Kind) < len(listOfKind) && listOfKind[st.Elem.Kind] != nil {
+			return listOfKind[st.Elem.Kind]
+		}
+		return &Ty{Kind: ListTy, Elem: k.tyFromSyntax(*st.Elem)}
 	case syntax.RecordType:
 		t := &Ty{Kind: RecordTy}
 		for _, name := range st.Recs {
