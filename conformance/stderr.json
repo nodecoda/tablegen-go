@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:diff": 6,
+    "status:diff": 3,
     "status:msg-match": 4,
-    "status:same": 375,
+    "status:same": 378,
     "status:skipped": 7
   },
   "cases": [
@@ -2655,13 +2655,13 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: value of type 'A' is incompatible with 'B'"
+          "error: Expected type 'B', got 'A' in: !cast\u003cB\u003e(\"A0\")"
         ],
-        "full_sha256": "6927ca654bf15ec172adaaef4abbb3610e11e83e278a088bd807cf05a4bce139",
-        "full_len": 84,
-        "full": "\u003cfile\u003e:13:1: error: value of type 'A' is incompatible with 'B'\ndef Test : C\u003c\"A0\"\u003e;\n^"
+        "full_sha256": "38d71a30a9c94ef9df394348abbe8afb14427e6ed41e4e2c2c55ebf243b702dd",
+        "full_len": 92,
+        "full": "\u003cfile\u003e:13:5: error: Expected type 'B', got 'A' in: !cast\u003cB\u003e(\"A0\")\n\ndef Test : C\u003c\"A0\"\u003e;\n    ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast.td",
@@ -3546,13 +3546,14 @@
         "exit": 1,
         "msgs": [
           "error: Unknown or reserved token when parsing a value",
+          "error: expected integer value as end of range",
           "error: expected declaration in for"
         ],
-        "full_sha256": "71a5749bf90d1d9594f040ad38b458a1f849648abcc1b6c42dd61dd81d55f7d1",
-        "full_len": 214,
-        "full": "\u003cfile\u003e:17:22: error: Unknown or reserved token when parsing a value\nforeach Index = 0 -  in {\n                     ^\n\u003cfile\u003e:17:22: error: expected declaration in for\nforeach Index = 0 -  in {\n                     ^"
+        "full_sha256": "6d5124ba365bafefa2291dd7eb36dfdaa21a1aefd6d93297aa0af8e37a697e7f",
+        "full_len": 323,
+        "full": "\u003cfile\u003e:17:22: error: Unknown or reserved token when parsing a value\nforeach Index = 0 -  in {\n                     ^\n\u003cfile\u003e:17:22: error: expected integer value as end of range\nforeach Index = 0 -  in {\n                     ^\n\u003cfile\u003e:17:22: error: expected declaration in for\nforeach Index = 0 -  in {\n                     ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/foreach-range-parse-errors1.td",
@@ -3968,13 +3969,14 @@
       "ours": {
         "exit": 1,
         "msgs": [
-          "error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'"
+          "error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'",
+          "error: Initializer of 'D' in 'y' could not be fully resolved: !add(F, 1)"
         ],
-        "full_sha256": "f5feae7969b093dc7bb1e59138d5d81ae609fe212ced07d2d17d48deee6efdd9",
-        "full_len": 127,
-        "full": "\u003cfile\u003e:15:14: error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'\n  string F = \"0\";\n             ^"
+        "full_sha256": "74b0631d2da4f68056df6dfc358ea8b4a0e6f84787282be4cf77953306b1fb7e",
+        "full_len": 230,
+        "full": "\u003cfile\u003e:15:14: error: Field 'F' of type 'int' is incompatible with value '\"0\"' of type 'string'\n  string F = \"0\";\n             ^\n\u003cfile\u003e:18:5: error: Initializer of 'D' in 'y' could not be fully resolved: !add(F, 1)\ndef y : Y;\n    ^"
       },
-      "status": "diff"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/inhibit-pset.td",
@@ -5208,9 +5210,9 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "829e08e6d985d2ad4e56bbc60d72fc0e8575bb89a5e9ddc62843625266009c75",
+        "full_sha256": "1e51bd29f94cc84222261ee2d5fd6d5d76ed405809c87abaa3b663763bbfe482",
         "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-1324681830/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-3050786774/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
@@ -5220,9 +5222,9 @@
           "error: def already exists: b",
           "error: def already exists: a_last"
         ],
-        "full_sha256": "1e6f38dfec1522634310cc776672e1accb65f7f8c440c33219bd07f2a76e03af",
+        "full_sha256": "649526d53d181bbabba83c7f127b251d86c379c6dbc75233a021495e309b0f83",
         "full_len": 1120,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1324681830/a.td:2:\n/tmp/tblgen-split-1324681830/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-1324681830/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
+        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:1:7: error: def already exists: a_first\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:1:7: note: location of previous definition\n  def a_first;\n      ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-3050786774/a.td:2:\n/tmp/tblgen-split-3050786774/b.td:5:5: note: location of previous definition\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:3:5: error: def already exists: a_last\ndef a_last;\n    ^\nIncluded from \u003cfile\u003e:7:\n/tmp/tblgen-split-3050786774/a.td:3:5: note: location of previous definition\ndef a_last;\n    ^"
       },
       "status": "diff"
     },

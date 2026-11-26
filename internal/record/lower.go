@@ -472,7 +472,14 @@ func (l *Lowerer) bodyItem(rec *Record, item syntax.BodyItem, env *Env) error {
 		}
 		if t.Value != nil {
 			if err := l.k.checkFieldValue(ty, t.Value, rec, env, t.Name); err != nil {
-				return err
+				// TGParser::AddValue resets a redeclared field to `?` before
+				// the initializer is set, and RecordVal::setValue leaves it
+				// there when the value does not fit (TGParser.cpp:218-231,
+				// Record.cpp:2766-2792). The error is reported and parsing
+				// continues, so later expressions see the unset value.
+				rec.addVal(&RecordVal{Name: t.Name, Ty: ty, Nonconcrete: nonconcrete, Loc: t.Span().Start})
+				l.errorAt(err, t.Span())
+				return nil
 			}
 			l.preFold(t.Value, env)
 		}

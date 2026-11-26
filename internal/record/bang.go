@@ -937,7 +937,19 @@ func (k *Keeper) evalCast(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 	case RecordTy:
 		if s, ok := v.(*Str); ok {
 			if d := k.Def(s.S); d != nil {
-				return &DefVal{Rec: d}, nil
+				// UnOpInit::Fold(CAST) reports a record that is not an
+				// instance of the target type, printing the whole cast node
+				// (which still spells the string operand) and the node's own
+				// type (Record.cpp:843-849).
+				dv := &DefVal{Rec: d}
+				if !dv.Type().ConvertibleTo(target) {
+					return nil, &EvalError{
+						Msg: "Expected type '" + target.String() + "', got '" + dv.Type().String() +
+							"' in: !cast<" + target.String() + ">(" + v.String() + ")\n",
+						Span: b.Span(), AtRecord: true,
+					}
+				}
+				return dv, nil
 			}
 			// UnOpInit::Fold allows a self-reference by name, but only at the
 			// final resolve (IsFinal); earlier passes leave the cast as-is. A

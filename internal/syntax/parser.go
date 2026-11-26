@@ -2214,10 +2214,13 @@ func (p *Parser) parseRangePiece(first Value) ([]int32, bool) {
 	case DotDotDot, Minus:
 		p.advance()
 		v := p.parseValue(p.curRecOrNil(), nil, parseValueMode)
-		if v == nil {
-			return nil, false
+		var e int64
+		ok := false
+		if v != nil {
+			e, ok = constInt(v)
 		}
-		e, ok := constInt(v)
+		// ParseRangePiece treats a failed value like a non-int one: both make
+		// dyn_cast_or_null<IntInit> null (TGParser.cpp:1044-1048).
 		if !ok {
 			p.errTok("E_PARSE_RANGE_END", "expected integer value as end of range")
 			return nil, false
