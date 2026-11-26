@@ -252,9 +252,16 @@ func (k *Keeper) evalVar(t *syntax.VarValue, env *Env, rec *Record) (Value, erro
 		return k.evalSyntax(t.Lit, env, rec)
 	}
 	if t.GlobalRef {
-		// A name that named a top-level definition when the file was parsed is
-		// a DefInit in LLVM and is never re-bound by a record field of the
-		// same name.
+		// TGParser resolves the name while parsing: a def wins over a
+		// top-level defvar of the same name (RecordKeeper::getGlobal checks
+		// Defs before ExtraGlobals). A defvar only wins when the def did not
+		// exist yet at the reference's parse site, which the parser records
+		// as GlobalVar.
+		if !t.GlobalVar {
+			if d := k.defs[t.Name]; d != nil {
+				return &DefVal{Rec: d}, nil
+			}
+		}
 		if val, ok, err := k.Global(t.Name); ok {
 			return val, err
 		}

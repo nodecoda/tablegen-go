@@ -97,7 +97,11 @@ func main() {
 		src, err = os.ReadFile(inputName)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "tblgen: %v\n", err)
+		// TableGenMain's reportError: "<argv0>: Could not open input file
+		// '<name>': <message>" (Main.cpp:245). The OS text is capitalized
+		// there, so match that too.
+		fmt.Fprintf(os.Stderr, "%s: Could not open input file '%s': %s\n",
+			os.Args[0], inputName, osErrText(err))
 		os.Exit(1)
 	}
 	if *printExpandedSource {
@@ -192,6 +196,23 @@ func main() {
 		writeDepfile(*outFile, inputName, *depFile)
 		return
 	}
+}
+
+// osErrText renders an OS error the way std::error_code::message does:
+// capitalized, without the "open <path>: " prefix os.PathError adds.
+func osErrText(err error) string {
+	if pe, ok := err.(*os.PathError); ok {
+		err = pe.Err
+	}
+	s := err.Error()
+	if s == "" {
+		return s
+	}
+	r := []rune(s)
+	if r[0] >= 'a' && r[0] <= 'z' {
+		r[0] -= 'a' - 'A'
+	}
+	return string(r)
 }
 
 // writeDepfile emits the make-style dependency file `-d` asks for: the output

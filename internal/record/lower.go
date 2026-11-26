@@ -74,8 +74,13 @@ func (l *Lowerer) errorAt(err error, fallback diag.Span) {
 		l.diags.Error("E_UNSUPPORTED", e.Feature, span)
 		return
 	case *EvalError:
+		if e.NoLoc {
+			// PrintFatalError(Twine): no location, no source line, no caret.
+			l.diags.Error("E_SEMANTIC", e.Msg, diag.Span{})
+			return
+		}
 		span = e.Span
-		if span.Start.File == "" && !e.NoLoc {
+		if span.Start.File == "" {
 			span = fallback
 		}
 		if e.Note.File != "" {
@@ -600,6 +605,14 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []*syntax.LetBin
 		if st.Name == nil || isUnset(st.Name) {
 			anonymous = true
 		} else {
+			// TGParser registers a VarDefInit for every class application
+			// while parsing, including the ones inside a def's name
+			// (`def !foldl(..., Idx<N>.slice, ...) : C`). The node keeps the
+			// parse site's location, so the anonymous instance it later
+			// creates reports the name's line even when the first *use* is
+			// further down the body. Folding the name here mirrors
+			// ParseObjectName -> ParseValue -> VarDefInit::Fold.
+			l.preFold(st.Name, env)
 			n, err := l.evalName(st.Name, env)
 			if err != nil {
 				return nil, false, err
@@ -681,6 +694,7 @@ func (l *Lowerer) reserveAnonNames(items []syntax.Object) {
 			if t.Name == nil || isUnset(t.Name) {
 				l.anonName[t] = l.k.newAnonymous(t.Span().Start).Name
 			}
+			l.preFold(t.Name, nil)
 			l.preFoldParents(t.Parents)
 			l.preFoldItems(t.Body)
 		case *syntax.DefmStmt:
@@ -750,6 +764,7 @@ func (l *Lowerer) preFoldParseItems(items []syntax.Object) {
 	for _, o := range items {
 		switch t := o.(type) {
 		case *syntax.DefStmt:
+			l.preFold(t.Name, nil)
 			l.preFoldParents(t.Parents)
 			l.preFoldItems(t.Body)
 		case *syntax.ClassStmt:

@@ -215,7 +215,8 @@ func (p *Parser) parseIdentValue(rec *recordInfo, mode idMode, start int) Value 
 		if g != nil && g.kind == gClass {
 			ty = recordType(g.rec.name)
 		}
-		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: ty}, Name: nt.Text, Lit: b.lit, GlobalRef: true}
+		globalVar := g != nil && (g.kind == gDefvar || g.kind == gDefset)
+		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: ty}, Name: nt.Text, Lit: b.lit, GlobalRef: true, GlobalVar: globalVar}
 	}
 	if rec != nil && rec.isClass && nt.Text == "NAME" {
 		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: StringTy}, Name: nt.Text}

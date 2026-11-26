@@ -8,9 +8,8 @@
     "oracle:valid": 330,
     "scope:in-scope": 385,
     "scope:skipped": 7,
-    "status:diff": 10,
-    "status:match": 323,
-    "status:reject-match": 52
+    "status:match": 330,
+    "status:reject-match": 55
   },
   "cases": [
     {
@@ -2000,7 +1999,7 @@
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm-fail.td:15:15: error: Undefined reference to record: 'd1_r1_no_such_record'",
+        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/MultiClass-defm-fail.td:15:7: error: Undefined reference to record: 'd1_r1_no_such_record'",
         "err_line": 15
       },
       "status": "reject-match"
@@ -3878,10 +3877,10 @@
       "ours": {
         "exit": 0,
         "class": "valid",
-        "out_sha256": "014cd2ed0873a9c3c4ba0549f0f282c3272dfde2ced5a8fa847e12f19f349919",
-        "out_len": 29320864
+        "out_sha256": "10176c6f9bb625801c1e98a5141c0b294cf803ef6ab7b55df4cbff3c55fb2762",
+        "out_len": 29320783
       },
-      "status": "diff"
+      "status": "match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/address-space-patfrags.td",
@@ -4155,10 +4154,10 @@
       "ours": {
         "exit": 0,
         "class": "valid",
-        "out_sha256": "c741091dfe7415781ef4880921ea3314df1e0879c1af6618ed853084833bf8cb",
+        "out_sha256": "9e4bb65a8183cbbef82e005d1686cfa8cbcc8bc049f2684d7d87d326627a0b67",
         "out_len": 28827633
       },
-      "status": "diff"
+      "status": "match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/check-duplicate-tuple-regs.td",
@@ -4180,10 +4179,10 @@
       "ours": {
         "exit": 0,
         "class": "valid",
-        "out_sha256": "db9d6098316bcd9cd3c77cd1adf2ee6d1b6c0b64932d687320329636d9d6bd52",
+        "out_sha256": "404376073c4794d11c85d6fa1e806c1cc65f57a33c3b4db243917943d4352b6d",
         "out_len": 28826025
       },
-      "status": "diff"
+      "status": "match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/code.td",
@@ -4550,10 +4549,10 @@
       "ours": {
         "exit": 0,
         "class": "valid",
-        "out_sha256": "9770807403bb4739185eed41e6d8537bf6267a76130dd79855ac24bb059554e4",
+        "out_sha256": "a5e34c63c8ed19f874d51f64f0d2239dc3fc76eea7cf2e37dfb027da7c5fc006",
         "out_len": 28826421
       },
-      "status": "diff"
+      "status": "match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/dag-pattern-crash-on-set.td",
@@ -5053,9 +5052,9 @@
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "tblgen: open main #$.td: no such file or directory"
+        "err_head": "./tblgen: Could not open input file 'main #$.td': No such file or directory"
       },
-      "status": "diff"
+      "status": "reject-match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/exists-error-non-string.td",
@@ -5728,10 +5727,9 @@
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if-unresolved-cast.td:6:4: error: Undefined reference to record: ''",
-        "err_line": 6
+        "err_head": "error: Undefined reference to record: ''"
       },
-      "status": "diff"
+      "status": "reject-match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/if.td",
@@ -5852,10 +5850,10 @@
       "ours": {
         "exit": 0,
         "class": "valid",
-        "out_sha256": "956e641f78041f2c5d3a1c7c59067ed735688c9c097b5301330a485598354bfd",
+        "out_sha256": "e260c2233b86bd1785a995993b70bc83ca9dfa354fce2bff2ae0051530b284be",
         "out_len": 28826584
       },
-      "status": "diff"
+      "status": "match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/initialized.td",
@@ -7401,24 +7399,24 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t/inc %t/main.td -o %t/out.td -d %t/out.d ; FileCheck %s --input-file=%t/out.d --match-full-lines -DDIR=%t ; llvm-tblgen -I %t/inc %t/main.td -o %t/out.td -d %t/out2.d ; cmp %t/out.d %t/out2.d ; not llvm-tblgen -E -I %t/inc %t/main.td -d %t/out.d 2\u003e\u00261 | FileCheck %s --check-prefix=NO-OUTPUT",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-2499436285/out.td",
+      "input": "/tmp/tblgen-split-1786534970/out.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-2499436285/inc"
+        "/tmp/tblgen-split-1786534970/inc"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-2499436285/out.td': No such file or directory"
+        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-1786534970/out.td': No such file or directory"
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "tblgen: open /tmp/tblgen-split-2499436285/out.td: no such file or directory"
+        "err_head": "./tblgen: Could not open input file '/tmp/tblgen-split-1786534970/out.td': No such file or directory"
       },
-      "status": "diff"
+      "status": "reject-match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-errors.td",
@@ -7462,23 +7460,23 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-include.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t %t/main.td | FileCheck %s --match-full-lines --strict-whitespace ; llvm-tblgen -E -I %t %t/multi.td | FileCheck %s --check-prefix=MULTI --match-full-lines --strict-whitespace",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-4066899728/main.td",
+      "input": "/tmp/tblgen-split-1584784418/main.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-4066899728"
+        "/tmp/tblgen-split-1584784418"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "Included from /tmp/tblgen-split-4066899728/main.td:3:",
+        "err_head": "Included from /tmp/tblgen-split-1584784418/main.td:3:",
         "err_line": 5
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/tmp/tblgen-split-4066899728/b.td:5:5: error: def already exists: b",
+        "err_head": "/tmp/tblgen-split-1584784418/b.td:5:5: error: def already exists: b",
         "err_line": 5
       },
       "status": "reject-match"
@@ -7522,10 +7520,10 @@
       "ours": {
         "exit": 0,
         "class": "valid",
-        "out_sha256": "c64038317492e9846a984848657e7e977eb89fe16579e342fe05509ef07b4082",
+        "out_sha256": "3c0bbffa11fb00a212fe28487588bb817a1e09c636101fbd315143c8f310686c",
         "out_len": 28824308
       },
-      "status": "diff"
+      "status": "match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/pseudo-inst-expansion.td",
@@ -7627,10 +7625,10 @@
       "ours": {
         "exit": 0,
         "class": "valid",
-        "out_sha256": "73e9ba87e97d8424bda23dde6c43c6c6deca01c3b19af0c6576d9ecafe0a206d",
+        "out_sha256": "51042e89e3dc1ee5209e72883e29dcca705728e8d99536e999dcee9f60aebb5c",
         "out_len": 28827074
       },
-      "status": "diff"
+      "status": "match"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/regunit-intervals-impossible.td",

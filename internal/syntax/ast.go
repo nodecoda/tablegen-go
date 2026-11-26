@@ -485,6 +485,10 @@ type VarValue struct {
 	// fields may not shadow it (RegisterOperand<RegClass> passes the global
 	// `RegClass` while defining a field of the same name).
 	GlobalRef bool
+	// GlobalVar marks a GlobalRef that resolved to a top-level defvar or
+	// defset rather than a def. RecordKeeper::getGlobal checks Defs before
+	// ExtraGlobals, so a def of the same name defined later still wins.
+	GlobalVar bool
 	// Lexical marks a name bound by a loop or a local variable at parse time.
 	// It shadows a class template argument of the same name, so the record
 	// phase must not qualify it with the class name.

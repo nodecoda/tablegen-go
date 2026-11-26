@@ -36,6 +36,9 @@ func TestClassify(t *testing.T) {
 	valid := runResult{Class: "valid", OutSHA: "aa"}
 	validOther := runResult{Class: "valid", OutSHA: "bb"}
 	invalid := func(line int) runResult { return runResult{Class: "invalid", Exit: 1, ErrLine: line} }
+	unsigned := func(head string) runResult {
+		return runResult{Class: "invalid", Exit: 1, ErrHead: head}
+	}
 	cases := []struct {
 		name         string
 		oracle, ours runResult
@@ -48,7 +51,11 @@ func TestClassify(t *testing.T) {
 		{"exec failure", valid, runResult{Exit: -1}, "crash"},
 		{"same error line", invalid(9), invalid(9), "reject-match"},
 		{"different error line", invalid(9), invalid(10), "diff"},
-		{"unknown line never matches", invalid(0), invalid(0), "diff"},
+		{"loc-less errors compare their message", unsigned("error: no loc"), unsigned("error: no loc"), "reject-match"},
+		{"loc-less errors with different messages", unsigned("error: one"), unsigned("error: two"), "diff"},
+		// reportError prefixes argv0, which differs between the two binaries.
+		{"program prefix is stripped", unsigned("/a/llvm-tblgen: Could not open input file 'x'"),
+			unsigned("/b/tblgen: Could not open input file 'x'"), "reject-match"},
 		{"oracle valid, ours invalid", valid, invalid(3), "diff"},
 	}
 	for _, c := range cases {

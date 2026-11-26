@@ -445,6 +445,15 @@ func errorLine(stderr string) int {
 	return 0
 }
 
+// stripProgram removes the "<argv0>: " prefix reportError adds. Both binaries
+// print their own path there, so it carries no conformance information.
+func stripProgram(s string) string {
+	if i := strings.Index(s, ": "); i > 0 && strings.Contains(s[:i], "tblgen") {
+		return s[i+2:]
+	}
+	return s
+}
+
 func firstNonEmptyLine(s string) string {
 	for _, line := range strings.Split(s, "\n") {
 		if t := strings.TrimSpace(line); t != "" {
@@ -471,6 +480,13 @@ func classify(oracle, ours runResult) string {
 		}
 		return "diff"
 	case oracle.Class == "invalid" && ours.Class == "invalid" && oracle.ErrLine == ours.ErrLine && oracle.ErrLine != 0:
+		return "reject-match"
+	case oracle.Class == "invalid" && ours.Class == "invalid" &&
+		oracle.ErrLine == 0 && ours.ErrLine == 0 &&
+		stripProgram(oracle.ErrHead) == stripProgram(ours.ErrHead):
+		// No source location on either side: compare the message itself.
+		// The program name is part of the line ("/path/llvm-tblgen: ..."),
+		// so it cannot match across two different binaries.
 		return "reject-match"
 	default:
 		return "diff"

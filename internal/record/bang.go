@@ -917,7 +917,19 @@ func (k *Keeper) evalCast(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			if rec != nil && rec.Name == s.S && !k.parseFold {
 				return &DefVal{Rec: rec}, nil
 			}
-			return nil, &EvalError{Msg: "Undefined reference to record: '" + s.S + "'", Span: b.Span()}
+			// Record.cpp:839 prints this through PrintFatalErrorHelper: at
+			// the record when one is being resolved, and with no location at
+			// all from a global scope (if-unresolved-cast.td).
+			// Record.cpp:839: the message itself ends with "\n" and
+			// PrintFatalErrorHelper prints at the record, or with no
+			// location at all from global scope (if-unresolved-cast.td).
+			ee := &EvalError{Msg: "Undefined reference to record: '" + s.S + "'\n", Span: b.Span()}
+			if rec != nil {
+				ee.AtRecord = true
+			} else {
+				ee.NoLoc = true
+			}
+			return nil, ee
 		}
 	}
 	return k.coerce(v, target)
