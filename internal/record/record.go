@@ -108,11 +108,36 @@ type Env struct {
 	printing *Record
 }
 
-// kvBinding is one binding stored outside Env.frames. It is shared by every
-// Env copy that still has it on top and never mutated after construction.
+// kvBinding is one binding stored outside Env.frames. Successive WithBinding
+// calls chain instead of folding each older binding into a one-entry map: a
+// map with one Binding costs a whole bucket, which showed up as ~500MB of
+// --dump-json allocation. A chain keeps the newest binding first (Lookup walks
+// it before frames) and is immutable, so Env copies share it.
 type kvBinding struct {
 	name string
 	b    Binding
+	next *kvBinding
+}
+
+// fold builds one frame holding the whole chain, oldest first, so a later
+// entry shadows an earlier one inside the frame exactly as the chain does.
+func (kv *kvBinding) fold(vars map[string]Binding) []map[string]Binding {
+	frames := make([]map[string]Binding, 0, 2)
+	if kv != nil {
+		var order []*kvBinding
+		for n := kv; n != nil; n = n.next {
+			order = append(order, n)
+		}
+		m := make(map[string]Binding, len(order))
+		for i := len(order) - 1; i >= 0; i-- {
+			m[order[i].name] = order[i].b
+		}
+		frames = append(frames, m)
+	}
+	if vars != nil {
+		frames = append(frames, vars)
+	}
+	return frames
 }
 
 // hasVal reports whether the record declares a field with this name.
@@ -129,8 +154,10 @@ func (e *Env) Lookup(name string) (Binding, bool) {
 	if e == nil || e.hidden[name] {
 		return Binding{}, false
 	}
-	if e.kv != nil && e.kv.name == name {
-		return e.kv.b, true
+	for kv := e.kv; kv != nil; kv = kv.next {
+		if kv.name == name {
+			return kv.b, true
+		}
 	}
 	for i := len(e.frames) - 1; i >= 0; i-- {
 		if v, ok := e.frames[i][name]; ok {
@@ -157,13 +184,13 @@ func (e *Env) With(vars map[string]Binding) *Env {
 	if vars == nil {
 		return &out
 	}
-	// The new frame must shadow the single binding, so fold that binding into
-	// a frame below vars when one is pending.
+	// The new frame must shadow the pending single bindings, so fold that
+	// chain into one frame below vars.
 	if out.kv != nil {
 		frames := make([]map[string]Binding, 0, len(e.frames)+2)
 		frames = append(frames, e.frames...)
-		frames = append(frames, map[string]Binding{out.kv.name: out.kv.b}, vars)
-		out.frames = frames
+		frames = append(frames, out.kv.fold(nil)...)
+		out.frames = append(frames, vars)
 		out.kv = nil
 		return &out
 	}
@@ -176,19 +203,11 @@ func (e *Env) With(vars map[string]Binding) *Env {
 // WithBinding is With for the single-variable frame a loop body or
 // comprehension binding needs.
 func (e *Env) WithBinding(name string, b Binding) *Env {
-	kv := &kvBinding{name: name, b: b}
 	if e == nil {
-		return &Env{kv: kv}
+		return &Env{kv: &kvBinding{name: name, b: b}}
 	}
 	out := *e
-	if out.kv != nil {
-		// Two pending single bindings: fold the older one into a frame so the
-		// newer keeps the top slot.
-		frames := make([]map[string]Binding, 0, len(e.frames)+1)
-		frames = append(frames, e.frames...)
-		out.frames = append(frames, map[string]Binding{out.kv.name: out.kv.b})
-	}
-	out.kv = kv
+	out.kv = &kvBinding{name: name, b: b, next: e.kv}
 	return &out
 }
 
@@ -203,11 +222,10 @@ func (e *Env) StackOn(base *Env) *Env {
 		return e
 	}
 	out := &Env{}
-	out.frames = make([]map[string]Binding, 0, len(base.frames)+len(e.frames)+1)
+	baseFrames := base.kv.fold(nil)
+	out.frames = make([]map[string]Binding, 0, len(base.frames)+len(e.frames)+len(baseFrames))
 	out.frames = append(out.frames, base.frames...)
-	if base.kv != nil {
-		out.frames = append(out.frames, map[string]Binding{base.kv.name: base.kv.b})
-	}
+	out.frames = append(out.frames, baseFrames...)
 	out.frames = append(out.frames, e.frames...)
 	out.kv = e.kv
 	out.owner = base.owner
@@ -273,8 +291,15 @@ func (e *Env) LexicalOnly() *Env {
 			out.frames = append(out.frames, keep)
 		}
 	}
-	if e.kv != nil && lexical(e.kv.name, e.kv.b) {
-		out.kv = e.kv
+	// Rebuild the chain in place order, keeping only lexical bindings.
+	var kept []*kvBinding
+	for kv := e.kv; kv != nil; kv = kv.next {
+		if lexical(kv.name, kv.b) {
+			kept = append(kept, kv)
+		}
+	}
+	for i := len(kept) - 1; i >= 0; i-- {
+		out.kv = &kvBinding{name: kept[i].name, b: kept[i].b, next: out.kv}
 	}
 	return out
 }
@@ -962,8 +987,10 @@ func (e *Env) HideOwnArgs(r *Record) *Env {
 			hide(k)
 		}
 	}
-	if e.kv != nil && e.kv.b.Owner == r && e.kv.b.Self != "" {
-		hide(e.kv.name)
+	for kv := e.kv; kv != nil; kv = kv.next {
+		if kv.b.Owner == r && kv.b.Self != "" {
+			hide(kv.name)
+		}
 	}
 	if hidden == nil {
 		return e

@@ -897,13 +897,17 @@ func classDefaultBindings(class *Record, provided map[string]Binding) map[string
 	}
 	// Env keeps a lone binding outside frames (Env.WithBinding). Classes are
 	// built with With, but collect it too so the scan cannot go stale.
-	if kv := class.Env.kv; kv != nil && strings.HasPrefix(kv.name, prefix) {
-		if _, ok := provided[kv.name]; !ok {
-			if out == nil {
-				out = map[string]Binding{}
-			}
-			out[kv.name] = kv.b
+	for kv := class.Env.kv; kv != nil; kv = kv.next {
+		if !strings.HasPrefix(kv.name, prefix) {
+			continue
 		}
+		if _, ok := provided[kv.name]; ok {
+			continue
+		}
+		if out == nil {
+			out = map[string]Binding{}
+		}
+		out[kv.name] = kv.b
 	}
 	return out
 }

@@ -63,6 +63,31 @@ func TestEnvSingleBinding(t *testing.T) {
 	}
 }
 
+// Successive WithBinding calls chain, newest first; the whole chain must sit
+// above the frames and fold into one frame when a wider map arrives.
+func TestEnvBindingChain(t *testing.T) {
+	env := (&Env{}).
+		WithBinding("a", Binding{Val: &Int{N: 1}}).
+		WithBinding("b", Binding{Val: &Int{N: 2}}).
+		WithBinding("a", Binding{Val: &Int{N: 3}}).
+		With(map[string]Binding{"c": {Val: &Int{N: 4}}})
+	if got := intOf(env, "a", t); got != 3 {
+		t.Errorf("newest chain entry must win, got %d", got)
+	}
+	if got := intOf(env, "b", t); got != 2 {
+		t.Errorf("middle chain entry lost, got %d", got)
+	}
+	if got := intOf(env, "c", t); got != 4 {
+		t.Errorf("wider frame lost, got %d", got)
+	}
+	if env.kv != nil {
+		t.Error("With must fold the chain")
+	}
+	if len(env.frames) != 2 {
+		t.Errorf("chain folded into %d frames, want 2", len(env.frames))
+	}
+}
+
 // LexicalOnly keeps loop variables (no owner, no colon) and drops template
 // arguments; a pending single binding must follow the same rule.
 func TestEnvLexicalOnlySingleBinding(t *testing.T) {
