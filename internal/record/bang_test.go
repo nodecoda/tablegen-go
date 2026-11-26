@@ -65,3 +65,53 @@ func lowerSrc(t *testing.T, src string) (*Keeper, []diag.Diagnostic) {
 	k, ldiags := Lower(f, "t.td")
 	return k, ldiags
 }
+
+// Folding operators that fail while a def's field is resolved report at
+// CurRec->getLoc(), the def's name token, not at the operator
+// (Record.cpp:930-936, 1474-1506, 1410, 1914).
+func TestFoldErrorsAnchorAtRecord(t *testing.T) {
+	cases := []struct {
+		src, want string
+		line, col int
+	}{
+		{"def D { int v = !div(1, 0); }", "Illegal operation: division by zero", 1, 5},
+		{"def D { int v = !logtwo(0); }", "Illegal operation: logtwo is undefined", 1, 5},
+		{"def D { int v = !shl(1, 64); }", "Illegal operation: out of bounds shift", 1, 5},
+		{"def op;\ndef D {\n  dag d = (op 1);\n  int v = !getdagarg<int>(d, -1);\n}",
+			"!getdagarg index -1 is negative", 2, 5},
+	}
+	for _, c := range cases {
+		_, diags := lowerSrc(t, c.src)
+		found := false
+		for _, d := range diags {
+			if !strings.Contains(d.Message, c.want) {
+				continue
+			}
+			found = true
+			if d.Span.Start.Line != c.line || d.Span.Start.Col != c.col {
+				t.Errorf("%s: at %d:%d, want %d:%d", c.want, d.Span.Start.Line, d.Span.Start.Col, c.line, c.col)
+			}
+		}
+		if !found {
+			t.Errorf("%s: diagnostic missing: %v", c.want, diags)
+		}
+	}
+}
+
+// TGParser type-checks the middle argument of !setdagarg/!setdagname and
+// reports at that argument's own location (TGParser.cpp:2192-2199).
+func TestSetDagArgKeyTypeAnchoredAtArgument(t *testing.T) {
+	src := "def op;\ndef D {\n  dag d = (op 1);\n  dag e = !setdagarg(d, op, 1);\n}"
+	_, diags := lowerSrc(t, src)
+	want := "expected integer index or string name"
+	for _, d := range diags {
+		if !strings.Contains(d.Message, want) {
+			continue
+		}
+		if d.Span.Start.Line != 4 || d.Span.Start.Col != 25 {
+			t.Fatalf("at %d:%d, want 4:25", d.Span.Start.Line, d.Span.Start.Col)
+		}
+		return
+	}
+	t.Fatalf("no %q diagnostic: %v", want, diags)
+}

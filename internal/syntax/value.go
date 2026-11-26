@@ -1649,7 +1649,9 @@ func (p *Parser) finishSwitch(v *BangValue, rec *recordInfo, item *Type) Value {
 		}
 	}
 	if len(cases) < 2 {
-		p.errAt(v.OpSpan, "E_PARSE_SWITCH_EMPTY",
+		// TGParser's TokError fires after the closing ')' was consumed, so the
+		// caret sits on the token that follows it (TGParser.cpp:2889-2891).
+		p.errTok("E_PARSE_SWITCH_EMPTY",
 			"there should be at least 1 'case: value' in the !switch operator")
 		return nil
 	}

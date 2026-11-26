@@ -20,3 +20,28 @@ func TestNormalizeArgs(t *testing.T) {
 		}
 	}
 }
+
+func TestReorderArgs(t *testing.T) {
+	cases := []struct {
+		in      []string
+		opts    []string
+		files   []string
+		missing string
+	}{
+		// A value-taking option steals the next argument whatever it looks
+		// like, and keeps doing so after a positional (cl parses argv in order).
+		{[]string{"x.td", "-D", "A"}, []string{"-D", "A"}, []string{"x.td"}, ""},
+		{[]string{"x.td", "-D", "-I", "."}, []string{"-D", "-I"}, []string{"x.td", "."}, ""},
+		// `file -D` has no value: cl errors instead of reaching back to the
+		// already-seen positional (CommandLine.cpp:719-726).
+		{[]string{"x.td", "-D"}, []string{"-D"}, []string{"x.td"}, "-D"},
+		{[]string{"-I"}, []string{"-I"}, nil, "-I"},
+	}
+	for _, c := range cases {
+		opts, files, missing := reorderArgs(c.in)
+		if !reflect.DeepEqual(opts, c.opts) || !reflect.DeepEqual(files, c.files) || missing != c.missing {
+			t.Errorf("reorderArgs(%q) = %q, %q, %q; want %q, %q, %q",
+				c.in, opts, files, missing, c.opts, c.files, c.missing)
+		}
+	}
+}

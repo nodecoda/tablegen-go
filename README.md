@@ -34,13 +34,12 @@ in-scope, 7 skipped because they need `split-file`):
 | byte differences | 0 |
 | rejected like the oracle | 55 (`reject-match`: same first-error line) |
 | diagnostics with the same message | 62/62 |
-| diagnostics rendered identically (message + caret) | 61/62 |
+| diagnostics rendered identically (message + caret) | 62/62 |
 
 `make matrix` replays every `RUN:` line (including `-D` variants). It reports
-295 identical runs, 2 identical diagnostic reports, 0 output / error / exit
-differences, and 19 cases where the message matches but the wording of a
-secondary note differs. `make score` prints all four numbers and a delta
-against the previous run; `make check` is the ratchet.
+314 identical runs, 2 identical diagnostic reports, and 0 output, error, or
+exit differences. `make score` prints all four numbers and a delta against the
+previous run; `make check` is the ratchet.
 
 Real-target evidence, beyond the corpus:
 
@@ -53,7 +52,10 @@ Real-target evidence, beyond the corpus:
 
 The JSON run exercises `dump`, deferred `foreach`/`if` inside multiclasses,
 anonymous instantiation order and the `!locs` chain; the site rules are pinned
-by `internal/record/names_test.go`.
+by `internal/record/names_test.go`. Diagnostics carry the include instance in
+`diag.Pos.Inc`, because SourceMgr opens a fresh buffer per `include` and the
+same file included twice has two different `Included from` chains
+(`SourceMgr.cpp:58-67`); `internal/diag/diag_test.go` pins that rendering.
 
 Known deviations (measured, not guessed):
 
@@ -67,8 +69,9 @@ Known deviations (measured, not guessed):
    prints `mve_addr_rq_shift<0: 0>` where llvm-tblgen, resolving the inherited
    field, already instantiated `anonymous_19464`. Display only; the JSON dump is
    byte-identical.
-3. `preprocess-include.td` renders one diagnostic with a different caret line,
-   and `make matrix` reports 19 runs whose secondary note wording differs.
+3. `--print-records` for RISCV prints some class-field `!if(...)`/`!strconcat`
+   nodes unfolded where llvm-tblgen folds them; the JSON dump agrees because
+   both carry the same resolved value.
 
 ## Commands
 

@@ -172,3 +172,36 @@ func TestIncludeInsideClassBody(t *testing.T) {
 		t.Fatalf("included field missing: %v", tokenKinds(toks))
 	}
 }
+
+// Each `include` opens a fresh SourceMgr buffer (SourceMgr.cpp:58-67), so the
+// same file included twice gives two instances with their own IncludeLoc
+// chain. Tokens carry the instance in Pos.Inc and Includes.Parents maps it
+// back to the include site.
+func TestIncludeInstancesAreDistinct(t *testing.T) {
+	dir := t.TempDir()
+	main := filepath.Join(dir, "main.td")
+	sub := filepath.Join(dir, "sub.td")
+	writeFile(t, sub, "def C;\n")
+	src := "include \"sub.td\"\ninclude \"sub.td\"\n"
+	writeFile(t, main, src)
+
+	toks, ds, _, includes := TokenizeWithDeps(main, src, nil, []string{dir})
+	if len(ds) != 0 {
+		t.Fatalf("unexpected diagnostics: %v", ds)
+	}
+	var incs []int
+	for _, tok := range toks {
+		if tok.Kind == Id && tok.Text == "C" {
+			incs = append(incs, tok.Span.Start.Inc)
+		}
+	}
+	if len(incs) != 2 || incs[0] == 0 || incs[0] == incs[1] {
+		t.Fatalf("instances = %v, want two distinct non-main ids", incs)
+	}
+	for i, inc := range incs {
+		site, ok := includes.Parent(diag.Pos{Inc: inc})
+		if !ok || site.Line != i+1 || site.Col != 1 || site.Inc != 0 {
+			t.Fatalf("instance %d parent = %+v, %v; want main.td:%d:1", i, site, ok, i+1)
+		}
+	}
+}

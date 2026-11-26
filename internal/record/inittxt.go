@@ -110,6 +110,47 @@ func constBits(n int64, w int) []string {
 	return out
 }
 
+// classApplyName is the DefInit a fully concrete VarDefInit prints as. The
+// application is resolved exactly like the parse-time AddParentClass copy
+// (concrete arguments, no inlined record fields), and the instance must
+// already exist: a printer that assigned a new anonymous number would make the
+// dump depend on the order records are visited. An unresolved argument leaves
+// the VarDefInit in the tree (TrackUnresolvedResolver, Record.cpp:2423-2452).
+func classApplyName(ca *syntax.ClassApplyValue, env *Env) (string, bool) {
+	if env == nil || env.keeper == nil || env.keeper.Class(ca.Class) == nil {
+		return "", false
+	}
+	if p := env.printing; p != nil && p.IsClass {
+		// AddParentClass is the only place a class body's field is resolved,
+		// and it resolves a copy with the inheriting record's arguments
+		// (TGParser.cpp:346-374). Inside the class's own body a reference to
+		// its template argument is still a VarInit, so an application using
+		// it stays unresolved even when the argument has a default.
+		env = env.HideOwnArgs(p)
+	}
+	k := env.keeper
+	prevFold, prevReadOnly := k.parseFold, k.readOnly
+	k.parseFold, k.readOnly = true, true
+	defer func() { k.parseFold, k.readOnly = prevFold, prevReadOnly }()
+	for _, a := range ca.Args {
+		if a.Value == nil {
+			return "", false
+		}
+		v, err := k.evalSyntax(a.Value, env, nil)
+		if err != nil || v == nil || hasReference(v) {
+			return "", false
+		}
+	}
+	v, err := k.evalSyntax(ca, env, nil)
+	if err != nil {
+		return "", false
+	}
+	if dv, ok := v.(*DefVal); ok {
+		return dv.Rec.Name, true
+	}
+	return "", false
+}
+
 // castBits is the Init tree of `!cast<bits<w>>(expr)`: one VarBitInit per bit.
 func castBits(expr string, w int) []string {
 	cast := "!cast<bits<" + strconv.Itoa(w) + ">>(" + expr + ")"
@@ -789,7 +830,12 @@ func (r *Record) astEnv(x *AstExpr) *Env {
 	if r.IsClass {
 		env = env.WithImplicitName(r.Name)
 	}
-	return env.WithKeeper(r.keeper)
+	env = env.WithKeeper(r.keeper)
+	// Printing must know which record's Init tree this is: a class body is
+	// never resolved, so a `Class<arg>` application there must not fold even
+	// when the argument has a default value (see classApplyName).
+	env.printing = r
+	return env
 }
 
 func (r *Record) renderExpr(e Expr, want *Ty) string {
@@ -1291,6 +1337,14 @@ func rawText(v syntax.Value, env *Env) string {
 	case *syntax.ClassApplyValue:
 		if x.FoldName != "" {
 			return x.FoldName
+		}
+		// AddParentClass resolves a copied field's Init with the class
+		// arguments bound (TGParser.cpp:346-374), and VarDefInit::
+		// resolveReferences folds the application to a DefInit as soon as
+		// every argument is concrete (Record.cpp:2423-2452). A class body
+		// therefore prints the instance name, not `Class<args>`.
+		if name, ok := classApplyName(x, env); ok {
+			return name
 		}
 		var b strings.Builder
 		b.WriteString(x.Class)

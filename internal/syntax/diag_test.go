@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"strings"
 	"testing"
 
 	"tblgen/internal/diag"
@@ -173,5 +174,60 @@ def test {
 	}
 	if p := diags[0].Span.Start; p.Line != 4 || p.Col != 38 {
 		t.Fatalf("diagnostic at %d:%d, want 4:38", p.Line, p.Col)
+	}
+}
+
+// TokError reports at the current token. For an empty !switch the parser has
+// already consumed the closing ')' when it checks the case count, so the caret
+// lands on the following token (TGParser.cpp:2888-2891).
+func TestSwitchEmptyCaseCaret(t *testing.T) {
+	line := "  int bad = !switch(1, 99);"
+	_, diags := Parse("t.td", "def D {\n"+line+"\n}\n", nil, nil)
+	var d *diag.Diagnostic
+	for i := range diags {
+		if diags[i].Message == "there should be at least 1 'case: value' in the !switch operator" {
+			d = &diags[i]
+			break
+		}
+	}
+	if d == nil {
+		t.Fatalf("missing !switch diagnostic: %v", msgs(diags))
+	}
+	want := strings.Index(line, ";") + 1
+	if d.Span.Start.Line != 2 || d.Span.Start.Col != want {
+		t.Fatalf("at %d:%d, want 2:%d", d.Span.Start.Line, d.Span.Start.Col, want)
+	}
+}
+
+// A body-ending semicolon prints the error and then a standalone note
+// (TGParser.cpp:3877-3882, 4545-4550).
+func TestSpuriousSemicolonNote(t *testing.T) {
+	_, diags := Parse("t.td", "def D {\n};\nclass C {\n};\n", nil, nil)
+	if len(diags) != 4 {
+		t.Fatalf("got %d diagnostics, want 2 errors + 2 notes: %v", len(diags), msgs(diags))
+	}
+	for i := 0; i < len(diags); i += 2 {
+		if diags[i].Severity != diag.Error || !strings.Contains(diags[i].Message, "should not end with a semicolon") {
+			t.Fatalf("diag[%d] = %q, want the semicolon error", i, msgs(diags)[i])
+		}
+		n := diags[i+1]
+		if n.Severity != diag.NoteSev || n.Message != "Semicolon ignored; remove to eliminate this error" {
+			t.Fatalf("diag[%d] = %q, want the standalone note", i+1, msgs(diags)[i+1])
+		}
+		if n.Span.Start.File != "" || !strings.HasPrefix(n.Render(""), "note: ") {
+			t.Fatalf("note carries a location: %+v", n.Span)
+		}
+	}
+}
+
+// prepLexMacroName moves TokStart to the macro name, so a duplicate #define is
+// reported there rather than at the '#' (TGLexer.cpp:888-894, 968-976).
+func TestDuplicateMacroWarningAtName(t *testing.T) {
+	_, diags := Tokenize("t.td", "#define ENABLED1\n#define ENABLED1\n", nil)
+	if len(diags) != 1 {
+		t.Fatalf("got %d diagnostics, want 1: %v", len(diags), msgs(diags))
+	}
+	if p := diags[0].Span.Start; p.Line != 2 || p.Col != 9 {
+		t.Fatalf("warning at %d:%d, want 2:9", p.Line, p.Col)
 	}
 }

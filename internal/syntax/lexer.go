@@ -50,11 +50,16 @@ type Lexer struct {
 	// errSpan is where the failed token sits; it becomes the Error token the
 	// parser reports at.
 	errSpan diag.Span
-	// includes maps an included file to where it was included from. LLVM
-	// stores this as BufferInfo::IncludeLoc and prints it as the
-	// "Included from <file>:<line>:" chain in front of every diagnostic
-	// (SourceMgr::PrintIncludeStack, SourceMgr.cpp:288-299).
-	includes map[string]diag.Pos
+	// includes is the include table indexed by Pos.Inc: one entry per
+	// `include` instance, because LLVM opens a fresh buffer for every include
+	// and prints each buffer's IncludeLoc as an "Included from <file>:<line>:"
+	// line (SourceMgr.cpp:58-67, 288-299).
+	includes diag.IncludeSites
+	// inc is the current buffer id: 0 for the main input. nextInc hands out a
+	// fresh id per include; SourceMgr appends a buffer for every include
+	// rather than reusing one, so ids never repeat.
+	inc     int
+	nextInc int
 }
 
 // includeFrame is the lexer state of an including file. LLVM pushes a new
@@ -66,6 +71,7 @@ type includeFrame struct {
 	i         int
 	line      int
 	col       int
+	inc       int
 	prep      []prepEntry
 	lineStart bool
 }
@@ -109,13 +115,15 @@ func TokenizeWithDirs(file, src string, macros, includeDirs []string) ([]Token, 
 }
 
 // TokenizeWithDeps also returns the resolved include paths, which -d writes.
-func TokenizeWithDeps(file, src string, macros, includeDirs []string) ([]Token, []diag.Diagnostic, []string, map[string]diag.Pos) {
+func TokenizeWithDeps(file, src string, macros, includeDirs []string) ([]Token, []diag.Diagnostic, []string, diag.IncludeSites) {
 	l := NewLexerWithDirs(file, src, macros, includeDirs)
 	toks, diags := l.Lex()
 	return toks, diags, l.deps, l.includes
 }
 
-func (l *Lexer) pos() diag.Pos { return diag.Pos{File: l.file, Line: l.line, Col: l.col} }
+func (l *Lexer) pos() diag.Pos {
+	return diag.Pos{File: l.file, Line: l.line, Col: l.col, Inc: l.inc}
+}
 
 func (l *Lexer) spanFrom(from diag.Pos) diag.Span { return diag.Span{Start: from, End: l.pos()} }
 
@@ -516,13 +524,17 @@ func (l *Lexer) lexInclude(from diag.Pos) {
 	}
 	l.included = append(l.included, includeFrame{
 		file: l.file, src: l.src, i: l.i, line: l.line, col: l.col,
-		prep: l.prep, lineStart: l.lineStart,
+		inc: l.inc, prep: l.prep, lineStart: l.lineStart,
 	})
 	l.deps = append(l.deps, path)
-	if l.includes == nil {
-		l.includes = map[string]diag.Pos{}
+	// AddNewSourceBuffer appends one buffer per include with IncludeLoc set
+	// to the include site; buffer ids are 1-based (SourceMgr.cpp:58-67).
+	l.nextInc++
+	l.inc = l.nextInc
+	for len(l.includes.Parents) <= l.inc {
+		l.includes.Parents = append(l.includes.Parents, diag.Pos{})
 	}
-	l.includes[path] = from
+	l.includes.Parents[l.inc] = from
 	l.file, l.src, l.i, l.line, l.col = path, src, 0, 1, 1
 	l.prep = nil
 	l.lineStart = true
@@ -600,7 +612,7 @@ func (l *Lexer) popInclude() bool {
 	}
 	top := l.included[len(l.included)-1]
 	l.included = l.included[:len(l.included)-1]
-	l.file, l.src, l.i, l.line, l.col = top.file, top.src, top.i, top.line, top.col
+	l.file, l.src, l.i, l.line, l.col, l.inc = top.file, top.src, top.i, top.line, top.col, top.inc
 	l.prep = top.prep
 	// LLVM: "Leaving an include file means that the next symbol is located at
 	// the end of the 'include "..."' construct" and is not at line start.
@@ -974,13 +986,19 @@ func (l *Lexer) handleDirective(kind Kind, live bool) bool {
 		return true
 
 	case Define:
+		// prepLexMacroName moves TokStart to the macro name, so the duplicate
+		// warning is reported there (TGLexer.cpp:888-894, 968-976).
+		for l.peek(0) == ' ' || l.peek(0) == '\t' {
+			l.advance()
+		}
+		nameAt := l.pos()
 		name := l.prepLexMacroName()
 		if name == "" {
-			l.errorf("E_LEX_PREP_MACRO", "expected macro name after #define", l.pos())
+			l.errorf("E_LEX_PREP_MACRO", "expected macro name after #define", nameAt)
 			return false
 		}
 		if l.macros[name] {
-			l.diags.Warn("W_LEX_MACRO_DUP", "duplicate definition of macro: "+name, l.spanFrom(l.start))
+			l.diags.Warn("W_LEX_MACRO_DUP", "duplicate definition of macro: "+name, l.spanFrom(nameAt))
 		}
 		l.macros[name] = true
 		return l.prepSkipDirectiveEnd("#define NAME")

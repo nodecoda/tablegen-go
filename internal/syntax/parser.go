@@ -160,9 +160,9 @@ type Tokens struct {
 	Toks    []Token
 	Diags   []diag.Diagnostic
 	Sources []string
-	// Includes maps each included file to the site of the include statement
-	// that opened it, for the "Included from" diagnostic prefix.
-	Includes map[string]diag.Pos
+	// Includes is the per-instance include table behind the "Included from"
+	// diagnostic prefix.
+	Includes diag.IncludeSites
 }
 
 // TokenizeFile lexes one file and keeps everything a later Parse needs.
@@ -261,6 +261,12 @@ func (p *Parser) errAtNote(span Span, code, msg string, noteSpan Span, noteMsg s
 
 func (p *Parser) errAt(span Span, code, msg string) {
 	p.diags.Error(code, msg, span)
+}
+
+// note appends a standalone note with no source location, llvm::PrintNote's
+// Twine overload ("note: <msg>" on a line of its own).
+func (p *Parser) note(code, msg string) {
+	p.diags.Note(code, msg, Span{})
 }
 
 func (p *Parser) expect(k Kind, code, msg string) (Token, bool) {
@@ -1343,6 +1349,8 @@ func (p *Parser) parseMultiClass() Object {
 			st := p.cur().Span
 			p.advance()
 			p.errAt(st, "E_PARSE_MC_SEMI_BODY", "A multiclass body should not end with a semicolon")
+			// TGParser.cpp:4546-4550.
+			p.note("E_PARSE_MC_SEMI_NOTE", "Semicolon ignored; remove to eliminate this error")
 		}
 	}
 	p.warnUnusedArgs(rec, name, "::", mc.TemplateArgs)
@@ -1895,6 +1903,8 @@ func (p *Parser) parseBody(rec *recordInfo) ([]BodyItem, bool) {
 		st := p.cur().Span
 		p.advance()
 		p.errAt(st, "E_PARSE_BODY_SEMI", "A class or def body should not end with a semicolon")
+		// TGParser.cpp:3877-3882.
+		p.note("E_PARSE_BODY_SEMI_NOTE", "Semicolon ignored; remove to eliminate this error")
 	}
 	return items, true
 }

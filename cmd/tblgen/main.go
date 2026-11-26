@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -53,7 +54,17 @@ func main() {
 	// LLVM's cl parser accepts both `-D name` and `-Dname`; Go's flag package
 	// only accepts the first form. Every RUN line in the test suite uses the
 	// joined form, so normalize it before parsing.
-	os.Args = append([]string{os.Args[0]}, reorderArgs(normalizeArgs(os.Args[1:]))...)
+	opts, files, missing := reorderArgs(normalizeArgs(os.Args[1:]))
+	if missing != "" {
+		// cl::Option::error prints "<program name>: for the -D option:
+		// requires a value!" and fails the parse before TableGen runs
+		// (CommandLine.cpp:719-726, 1890-1899).
+		fmt.Fprintf(os.Stderr, "%s: for the %s option: requires a value!\n",
+			filepath.Base(os.Args[0]), missing)
+		os.Exit(1)
+	}
+	os.Args = append([]string{os.Args[0]}, opts...)
+	os.Args = append(os.Args, files...)
 	flag.Parse()
 
 	for _, m := range macros {
@@ -73,7 +84,7 @@ func main() {
 		return
 	}
 
-	files := flag.Args()
+	files = flag.Args()
 	if *dumpTokens {
 		if len(files) != 1 {
 			fmt.Fprintln(os.Stderr, "tblgen: --dump-tokens needs exactly one input file")
@@ -82,10 +93,12 @@ func main() {
 		os.Exit(dumpTokensTo(files[0], macros, includes))
 	}
 	if len(files) > 1 {
-		// LLVM's cl parser wording and exit code; 64 would diverge on every
-		// file whose RUN line we mis-split.
-		fmt.Fprintf(os.Stderr, "tblgen: Too many positional arguments specified!\n"+
-			"Can specify at most 1 positional argument: See tblgen --help.\n")
+		// cl::ParseCommandLineOptions prints the basename on the first line
+		// and the full argv[0] on the second (CommandLine.cpp:1781-1786,
+		// 1559).
+		fmt.Fprintf(os.Stderr, "%s: Too many positional arguments specified!\n"+
+			"Can specify at most 1 positional arguments: See: %s --help\n",
+			filepath.Base(os.Args[0]), os.Args[0])
 		os.Exit(1)
 	}
 	// Like llvm-tblgen, no file and `-` both mean standard input.
@@ -453,10 +466,11 @@ func diagExit(diags []diag.Diagnostic) int {
 
 // reorderArgs moves options ahead of positional arguments. Go's flag package
 // stops at the first non-flag, while LLVM's cl parser accepts `file.td -DNAME`.
-// Value-taking options are moved together with their value.
-func reorderArgs(args []string) []string {
+// A value-taking option steals the next argument whatever it looks like, and
+// errors when there is none (CommandLine.cpp:717-727); missing names the first
+// option that ran off the end.
+func reorderArgs(args []string) (opts, files []string, missing string) {
 	takesValue := map[string]bool{"-D": true, "-I": true, "-o": true, "-d": true}
-	var opts, files []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if a == "-" || a == "" || a[0] != '-' {
@@ -464,12 +478,18 @@ func reorderArgs(args []string) []string {
 			continue
 		}
 		opts = append(opts, a)
-		if takesValue[a] && i+1 < len(args) {
+		if takesValue[a] {
+			if i+1 >= len(args) {
+				if missing == "" {
+					missing = a
+				}
+				continue
+			}
 			i++
 			opts = append(opts, args[i])
 		}
 	}
-	return append(opts, files...)
+	return opts, files, missing
 }
 
 // normalizeArgs rewrites -XYYY into -X YYY for the joined flags LLVM's cl
@@ -517,7 +537,7 @@ func dumpTokensTo(path string, macros, includes []string) int {
 		fmt.Printf("%d:%d\t%s\t%s\n", t.Span.Start.Line, t.Span.Start.Col, t.Kind, text)
 	}
 	for _, d := range diags {
-		fmt.Fprint(os.Stderr, renderDiag(d, string(src), path, nil))
+		fmt.Fprint(os.Stderr, renderDiag(d, string(src), path, diag.IncludeSites{}))
 	}
 	return diagExit(diags)
 }
@@ -545,7 +565,7 @@ func validMacroName(s string) bool {
 // renderDiag gives the diagnostic renderer access to included files: a
 // diagnostic can point into an include, and printing the main file's line there
 // would show the wrong source text.
-func renderDiag(d diag.Diagnostic, src, inputName string, includes map[string]diag.Pos) string {
+func renderDiag(d diag.Diagnostic, src, inputName string, includes diag.IncludeSites) string {
 	cache := map[string]string{}
 	return d.RenderAll(src, func(file string) (string, bool) {
 		if file == inputName || file == "-" || file == "" {
@@ -560,8 +580,5 @@ func renderDiag(d diag.Diagnostic, src, inputName string, includes map[string]di
 		}
 		cache[file] = string(b)
 		return string(b), true
-	}, func(file string) (diag.Pos, bool) {
-		p, ok := includes[file]
-		return p, ok
-	})
+	}, includes.Parent)
 }

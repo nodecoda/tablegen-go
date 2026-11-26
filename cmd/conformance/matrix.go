@@ -109,8 +109,8 @@ func runMatrix(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 			oOut, oErr, oExit := captureInput(timeout, oracle, j.inv.Argv, stdin)
 			sOut, sErr, sExit := captureInput(timeout, bin, j.inv.Argv, stdin)
 			c := mcase{File: j.file, Argv: j.inv.Argv, Negate: j.inv.Negate, Stdin: j.inv.Stdin}
-			c.Oracle = mkMR(oOut, oErr, oExit, abs(j.file))
-			c.Ours = mkMR(sOut, sErr, sExit, abs(j.file))
+			c.Oracle = mkMR(oOut, oErr, oExit, abs(j.file), oracle)
+			c.Ours = mkMR(sOut, sErr, sExit, abs(j.file), bin)
 			c.Status = classifyMatrix(c.Oracle, c.Ours)
 			if c.Status == "out-diff" && c.Oracle.Err == c.Ours.Err &&
 				detailedReportPrefix(j.inv.Argv, oOut, sOut) {
@@ -118,7 +118,7 @@ func runMatrix(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 			}
 			c.OutLen = c.Oracle.Len
 			if c.Status != "same" {
-				c.ErrText = truncate(strings.TrimSpace(normalizeStderr(sErr, abs(j.file))), 600)
+				c.ErrText = truncate(strings.TrimSpace(normalizeStderr(sErr, abs(j.file), bin)), 600)
 			}
 			cases[i] = c
 		}()
@@ -177,8 +177,8 @@ func runMatrix(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 	}
 }
 
-func mkMR(stdout, stderr string, exit int, file string) mr {
-	norm := normalizeStderr(stderr, file)
+func mkMR(stdout, stderr string, exit int, file, prog string) mr {
+	norm := normalizeStderr(stderr, file, prog)
 	outSum := sha256.Sum256([]byte(stdout))
 	errSum := sha256.Sum256([]byte(norm))
 	return mr{

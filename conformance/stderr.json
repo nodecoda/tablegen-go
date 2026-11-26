@@ -4,8 +4,7 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:msg-match": 1,
-    "status:same": 384,
+    "status:same": 385,
     "status:skipped": 7
   },
   "cases": [
@@ -5213,20 +5212,20 @@
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "c3dc1b03dbb9fec74251dc954f90a9ac91878d28e82d04c932e5981224748b0b",
-        "full_len": 269,
-        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-1348923540/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-1348923540/a.td:2:\n/tmp/tblgen-split-1348923540/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "ff6ce4603ec6a25535a000eb753e7fb68a0831e15a6c5b31a5336d3429364560",
+        "full_len": 263,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-71767931/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-71767931/a.td:2:\n/tmp/tblgen-split-71767931/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
       "ours": {
         "exit": 1,
         "msgs": [
           "error: def already exists: b"
         ],
-        "full_sha256": "e1f85f2216d468f1ea0bb7c060009bb82b343549440e60b7d9fdb17bfc323782",
-        "full_len": 320,
-        "full": "Included from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1348923540/a.td:2:\n/tmp/tblgen-split-1348923540/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:7:\nIncluded from /tmp/tblgen-split-1348923540/a.td:2:\n/tmp/tblgen-split-1348923540/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
+        "full_sha256": "ff6ce4603ec6a25535a000eb753e7fb68a0831e15a6c5b31a5336d3429364560",
+        "full_len": 263,
+        "full": "Included from \u003cfile\u003e:3:\n/tmp/tblgen-split-71767931/b.td:5:5: error: def already exists: b\ndef b;\n    ^\nIncluded from \u003cfile\u003e:1:\nIncluded from /tmp/tblgen-split-71767931/a.td:2:\n/tmp/tblgen-split-71767931/b.td:5:5: note: location of previous definition\ndef b;\n    ^"
       },
-      "status": "msg-match"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-macros.td",

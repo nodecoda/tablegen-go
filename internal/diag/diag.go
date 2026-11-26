@@ -14,6 +14,12 @@ type Pos struct {
 	File string
 	Line int
 	Col  int
+	// Inc identifies the include instance the position came from: 0 for the
+	// main input, and a positive buffer id for a file opened by `include`.
+	// The same file included twice yields identical File:Line:Col from two
+	// different instances; SourceMgr keeps one buffer (and therefore one
+	// IncludeLoc chain) per instance (SourceMgr.cpp:58-67).
+	Inc int
 }
 
 func (p Pos) String() string { return fmt.Sprintf("%s:%d:%d", p.File, p.Line, p.Col) }
@@ -85,22 +91,22 @@ func (d Diagnostic) RenderWith(src string, load func(string) (string, bool)) str
 	return d.RenderAll(src, load, nil)
 }
 
-// IncludeChain reports where a file was included from, mirroring
+// IncludeChain reports where an include instance was opened from, mirroring
 // SourceMgr::BufferInfo::IncludeLoc. RenderAll prints one
 // "Included from <file>:<line>:" line per level above the location, outermost
 // first, exactly like SourceMgr::PrintIncludeStack (SourceMgr.cpp:288-299).
-type IncludeChain func(file string) (Pos, bool)
+type IncludeChain func(pos Pos) (Pos, bool)
 
 func (d Diagnostic) RenderAll(src string, load func(string) (string, bool), parent IncludeChain) string {
 	var b strings.Builder
-	writeIncludeStack(&b, d.Span.Start.File, parent)
+	writeIncludeStack(&b, d.Span.Start, parent)
 	b.WriteString(d.String())
 	b.WriteByte('\n')
 	if line, ok := renderAt(src, d.Span.Start, load); ok {
 		b.WriteString(line)
 	}
 	for _, n := range d.Notes {
-		writeIncludeStack(&b, n.Pos.File, parent)
+		writeIncludeStack(&b, n.Pos, parent)
 		b.WriteString(n.Pos.String())
 		b.WriteString(": note: ")
 		b.WriteString(n.Message)
@@ -112,20 +118,32 @@ func (d Diagnostic) RenderAll(src string, load func(string) (string, bool), pare
 	return b.String()
 }
 
-// writeIncludeStack emits the include chain that leads to file, if any.
-func writeIncludeStack(b *strings.Builder, file string, parent IncludeChain) {
-	if parent == nil || file == "" {
+// IncludeSites is the include table: Parents[i] is the location that opened
+// include instance i. Zero is the main input and has no parent.
+type IncludeSites struct{ Parents []Pos }
+
+// Parent implements IncludeChain.
+func (s IncludeSites) Parent(pos Pos) (Pos, bool) {
+	if pos.Inc <= 0 || pos.Inc >= len(s.Parents) {
+		return Pos{}, false
+	}
+	return s.Parents[pos.Inc], true
+}
+
+// writeIncludeStack emits the include chain that leads to pos, if any.
+func writeIncludeStack(b *strings.Builder, pos Pos, parent IncludeChain) {
+	if parent == nil || pos.File == "" {
 		return
 	}
-	pos, ok := parent(file)
+	site, ok := parent(pos)
 	if !ok {
 		return
 	}
-	writeIncludeStack(b, pos.File, parent)
+	writeIncludeStack(b, site, parent)
 	b.WriteString("Included from ")
-	b.WriteString(pos.File)
+	b.WriteString(site.File)
 	b.WriteString(":")
-	b.WriteString(strconv.Itoa(pos.Line))
+	b.WriteString(strconv.Itoa(site.Line))
 	b.WriteString(":\n")
 }
 

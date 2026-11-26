@@ -1,6 +1,7 @@
 package record_test
 
 import (
+	"fmt"
 	"testing"
 
 	"tblgen/internal/backend"
@@ -81,6 +82,67 @@ def op {
 `
 	if got := printRecords(t, src); got != want {
 		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// A `Class<arg>` application inside a class body prints as written when the
+// argument is the body's own template parameter: LLVM never resolves a class
+// body, and only AddParentClass resolves the copy it installs on the child,
+// with the child's arguments (TGParser.cpp:346-374). The copy therefore folds
+// to a DefInit while the parent's own body keeps `Leaf<0: Body:n>`. A child
+// that inherits with the defaulted argument folds it too, since
+// resolveArgumentsOfClass binds defaults (TGParser.cpp:656-667). Expected text
+// is llvm-tblgen 24.0.0git's.
+func TestPrintRecordsClassBodyApplicationStaysUnresolved(t *testing.T) {
+	const classes = `class Leaf<int i> { int v = i; }
+class Body<int n = 2> {
+  list<Leaf> L = [Leaf<n>];
+}
+class Child : Body<%s>;
+def D : Child;
+`
+	cases := []struct{ arg, want string }{
+		{"0", `------------- Classes -----------------
+class Body<int Body:n = 2> {
+  list<Leaf> L = [Leaf<0: Body:n>];
+}
+class Child {	// Body
+  list<Leaf> L = [anonymous_0];
+}
+class Leaf<int Leaf:i = ?> {
+  int v = Leaf:i;
+}
+------------- Defs -----------------
+def D {	// Body Child
+  list<Leaf> L = [anonymous_0];
+}
+def anonymous_0 {	// Leaf
+  int v = 0;
+}
+`},
+		{"", `------------- Classes -----------------
+class Body<int Body:n = 2> {
+  list<Leaf> L = [Leaf<0: Body:n>];
+}
+class Child {	// Body
+  list<Leaf> L = [anonymous_0];
+}
+class Leaf<int Leaf:i = ?> {
+  int v = Leaf:i;
+}
+------------- Defs -----------------
+def D {	// Body Child
+  list<Leaf> L = [anonymous_0];
+}
+def anonymous_0 {	// Leaf
+  int v = 2;
+}
+`},
+	}
+	for _, c := range cases {
+		if got := printRecords(t, fmt.Sprintf(classes, c.arg)); got != c.want {
+			t.Errorf("arg=%q: print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", c.arg, got, c.want)
+		}
 	}
 }
 

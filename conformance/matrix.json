@@ -4,8 +4,7 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-wording": 19,
-    "status:same": 295,
+    "status:same": 314,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -5497,19 +5496,18 @@
       "oracle": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a395878810e1bce871a1386513be5342bff259a1657ded1eb2ae20fb5ac0c317",
+        "err_sha256": "6b72bf9b17e5355db8334a3485bb776ffd3a0476d6e4566af94a2488419863f7",
         "Msgs": null,
         "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "8dcbab47aab6091d7c5989c36af32cf6ddca06a3ec362a10d8cd5cd6952bf5a1",
+        "err_sha256": "6b72bf9b17e5355db8334a3485bb776ffd3a0476d6e4566af94a2488419863f7",
         "Msgs": null,
         "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
-      "status": "err-wording",
-      "err_text": "\u003cprog\u003e: Too many positional arguments specified!\nCan specify at most 1 positional argument: See tblgen --help."
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/defmclass.td",
@@ -5991,19 +5989,18 @@
       "oracle": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a395878810e1bce871a1386513be5342bff259a1657ded1eb2ae20fb5ac0c317",
+        "err_sha256": "6b72bf9b17e5355db8334a3485bb776ffd3a0476d6e4566af94a2488419863f7",
         "Msgs": null,
         "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "8dcbab47aab6091d7c5989c36af32cf6ddca06a3ec362a10d8cd5cd6952bf5a1",
+        "err_sha256": "6b72bf9b17e5355db8334a3485bb776ffd3a0476d6e4566af94a2488419863f7",
         "Msgs": null,
         "err_head": "\u003cprog\u003e: Too many positional arguments specified!"
       },
-      "status": "err-wording",
-      "err_text": "\u003cprog\u003e: Too many positional arguments specified!\nCan specify at most 1 positional argument: See tblgen --help."
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/duplicate-include.td",
@@ -7041,14 +7038,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "18dbece247a7f9a5b6fb985b8d2123da6db142e1b63968b75464ccb1083a81de",
+        "err_sha256": "296c5008a7a629da957f83ed54b5b11562d9ed67d6ce03dcd95a22e67309ab4e",
         "Msgs": [
           "error: !getdagarg index -1 is negative"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: !getdagarg index -1 is negative"
+        "err_head": "\u003cfile\u003e:25:5: error: !getdagarg index -1 is negative"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:25:1: error: !getdagarg index -1 is negative\ndef test {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7069,14 +7065,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "2d1bc2b3610dbfb29f659224fb98748dd50af21e9a92fe2da88aefa43d6ac2c9",
+        "err_sha256": "25a916d172903360a397cce3cd0c919ede8ae9bae6faf41b91ed8f8a465ff264",
         "Msgs": [
           "error: !getdagarg index 3 is out of range (dag has 3 arguments)"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: !getdagarg index 3 is out of range (dag has 3 arguments)"
+        "err_head": "\u003cfile\u003e:25:5: error: !getdagarg index 3 is out of range (dag has 3 arguments)"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:25:1: error: !getdagarg index 3 is out of range (dag has 3 arguments)\ndef test {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7097,14 +7092,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "1eec8f2e8662e3775957c78c54991ec61d5fc42be8df9b8b2c108757c0bb0946",
+        "err_sha256": "ae13a3df2401398ec28371c8721fcac111ded3bee6692210af8d5708927b52b1",
         "Msgs": [
           "error: !getdagarg key 'x' is not found"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: !getdagarg key 'x' is not found"
+        "err_head": "\u003cfile\u003e:25:5: error: !getdagarg key 'x' is not found"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:25:1: error: !getdagarg key 'x' is not found\ndef test {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7125,14 +7119,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "4d1ed477058b7aaf5bd17ac67bc7f129e79cb663fe9d76161e0c3d6e9986dd23",
+        "err_sha256": "196d4b008bc051b2f05eee32b6554db586f4e1399d941684ade6f45d13b5c700",
         "Msgs": [
           "error: !setdagarg index -1 is negative"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: !setdagarg index -1 is negative"
+        "err_head": "\u003cfile\u003e:25:5: error: !setdagarg index -1 is negative"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:25:1: error: !setdagarg index -1 is negative\ndef test {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7153,14 +7146,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6aa94bec17acba06133656befcf623f35d79a4e03096c150e69d3ed4b03a4815",
+        "err_sha256": "a7e7c501591d8eac2b802bcc8a97b904ccd821218442efd0997657de2976e60f",
         "Msgs": [
           "error: !setdagarg index 3 is out of range (dag has 3 arguments)"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: !setdagarg index 3 is out of range (dag has 3 arguments)"
+        "err_head": "\u003cfile\u003e:25:5: error: !setdagarg index 3 is out of range (dag has 3 arguments)"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:25:1: error: !setdagarg index 3 is out of range (dag has 3 arguments)\ndef test {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7181,14 +7173,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "250b7190f917d7f261ea8952e0d4f21ff95bf96779ddcf9bfb8eacb0f5aba35c",
+        "err_sha256": "951e668043c6865ad8b8c6352999be1e6d749c55a172ab84874492e5e4db1876",
         "Msgs": [
           "error: expected integer index or string name, got type 'Base'"
         ],
-        "err_head": "\u003cfile\u003e:25:1: error: expected integer index or string name, got type 'Base'"
+        "err_head": "\u003cfile\u003e:160:44: error: expected integer index or string name, got type 'Base'"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:25:1: error: expected integer index or string name, got type 'Base'\ndef test {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/getsetdagop.td",
@@ -7980,12 +7971,11 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "d4bfa4e8945a74dd777536448a234aac9500faaab16d8f38ae9d10c86dead980",
+        "err_sha256": "6562a83ff5a91d43eabba3a36e093ea75dde58ae34147c612c2a5f52db727507",
         "Msgs": null,
-        "err_head": "error: invalid macro name `\u003cfile\u003e` specified on command line"
+        "err_head": "\u003cprog\u003e: for the -D option: requires a value!"
       },
-      "status": "err-wording",
-      "err_text": "error: invalid macro name `\u003cfile\u003e` specified on command line"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/invalid-type-cast-patfrags.td",
@@ -8578,14 +8568,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "d54eab83efafca1fd7970be7e231a9d1774cedc79a5517d23abb2b359764e028",
+        "err_sha256": "261b0b27da5cbbbaf99ead19f9fce38a202cf1634a1fb477aeab7d7b8926d481",
         "Msgs": [
           "error: Illegal operation: division by zero"
         ],
-        "err_head": "\u003cfile\u003e:78:1: error: Illegal operation: division by zero"
+        "err_head": "\u003cfile\u003e:78:5: error: Illegal operation: division by zero"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:78:1: error: Illegal operation: division by zero\ndef v18 : Int\u003c!div(4, 0)\u003e;\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/math.td",
@@ -8606,14 +8595,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "6db7000e5b51701073617aff0021b7f73018e2e26c7bbaf9e64aa63f146a2c98",
+        "err_sha256": "201d802aa4a1e1467987b17c056739e142b876fdee1f8beb5ce48b1c94e6b3f3",
         "Msgs": [
           "error: Illegal operation: INT64_MIN / -1"
         ],
-        "err_head": "\u003cfile\u003e:83:1: error: Illegal operation: INT64_MIN / -1"
+        "err_head": "\u003cfile\u003e:83:5: error: Illegal operation: INT64_MIN / -1"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:83:1: error: Illegal operation: INT64_MIN / -1\ndef v19 : Int\u003c!div(-9223372036854775808, -1)\u003e;\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/math.td",
@@ -8634,14 +8622,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "5aa86fdea587ade1f346191ec32f93d1aa5ee88393a4edfd596007df2663daca",
+        "err_sha256": "562d1fa0a88d201e4c4b478efa24c2c7ef29b221d0ecd02b80de4f45955b7ec0",
         "Msgs": [
           "error: Illegal operation: logtwo is undefined on arguments less than or equal to 0"
         ],
-        "err_head": "\u003cfile\u003e:137:16: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0"
+        "err_head": "\u003cfile\u003e:137:5: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:137:16: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0\ndef v953 : Int\u003c!logtwo(0)\u003e;\n               ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/math.td",
@@ -8662,14 +8649,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "ac6e3900edb1eea66ea07e89954582108d62fe0914ffb61eda250597d5229d78",
+        "err_sha256": "37235bc8aa279bdcd327fe42202ad846978046a535d706b15e6121f0d2e95529",
         "Msgs": [
           "error: Illegal operation: logtwo is undefined on arguments less than or equal to 0"
         ],
-        "err_head": "\u003cfile\u003e:142:16: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0"
+        "err_head": "\u003cfile\u003e:142:5: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:142:16: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0\ndef v954 : Int\u003c!logtwo(-1)\u003e;\n               ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/math.td",
@@ -8690,14 +8676,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "9870ce6b04df8a0cff8c60b3a761213e8498053d8bf3fb3c6e70a0cfa8d20376",
+        "err_sha256": "bcaf4ead6b898c23f27d0a098dd23af358572c0dd3e14dce6a5b7c4e0a0ff423",
         "Msgs": [
           "error: Illegal operation: out of bounds shift"
         ],
-        "err_head": "\u003cfile\u003e:151:1: error: Illegal operation: out of bounds shift"
+        "err_head": "\u003cfile\u003e:151:5: error: Illegal operation: out of bounds shift"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:151:1: error: Illegal operation: out of bounds shift\ndef vshl_neg : Int\u003c!shl(1, -1)\u003e;\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/math.td",
@@ -8718,14 +8703,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "cb0d34aec15cc64e0a23470381a6197943942bda9d04556e7ef46fc013096ce4",
+        "err_sha256": "e5a525d6db5403538b50e85fd39ea9411d35f01f38e015e54fe0fd26d543c91e",
         "Msgs": [
           "error: Illegal operation: out of bounds shift"
         ],
-        "err_head": "\u003cfile\u003e:156:1: error: Illegal operation: out of bounds shift"
+        "err_head": "\u003cfile\u003e:156:5: error: Illegal operation: out of bounds shift"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:156:1: error: Illegal operation: out of bounds shift\ndef vsra_large : Int\u003c!sra(1, 64)\u003e;\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/math.td",
@@ -8746,14 +8730,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "70aec9236a6dc28bb32f6de4bedbddb8d3a381c9c69eff75a5e9c9202dc33681",
+        "err_sha256": "4761285d418ea2a8254a0e735fe9b6bb8124e6d11659ad3f3cf0bdb9f88b5aab",
         "Msgs": [
           "error: Illegal operation: out of bounds shift"
         ],
-        "err_head": "\u003cfile\u003e:161:1: error: Illegal operation: out of bounds shift"
+        "err_head": "\u003cfile\u003e:161:5: error: Illegal operation: out of bounds shift"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:161:1: error: Illegal operation: out of bounds shift\ndef vsrl_large : Int\u003c!srl(1, 100)\u003e;\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/multiple-type-casts-patfrags.td",
@@ -9242,15 +9225,14 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "a6882002cf279d7299ee00761c4e867dc593c83b0af154666eaac375dfaab675",
+        "err_sha256": "ffffd5dfa3225fa2b638a75582b3ceee8e8fab7b3d668624f9ca10fb719950a6",
         "Msgs": [
           "warning: duplicate definition of macro: ENABLED1",
           "error: only comments are supported after #ifdef NAME"
         ],
-        "err_head": "\u003cfile\u003e:15:1: warning: duplicate definition of macro: ENABLED1"
+        "err_head": "\u003cfile\u003e:15:9: warning: duplicate definition of macro: ENABLED1"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:15:1: warning: duplicate definition of macro: ENABLED1\n#define ENABLED1\n^\n\u003cfile\u003e:24:3: error: only comments are supported after #ifdef NAME\n*/class C;\n  ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/prep-diag1.td",
@@ -9884,12 +9866,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-410624281/inc",
-        "/tmp/tblgen-split-410624281/main.td",
+        "/tmp/tblgen-split-2773146661/inc",
+        "/tmp/tblgen-split-2773146661/main.td",
         "-o",
-        "/tmp/tblgen-split-410624281/out.td",
+        "/tmp/tblgen-split-2773146661/out.td",
         "-d",
-        "/tmp/tblgen-split-410624281/out.d"
+        "/tmp/tblgen-split-2773146661/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9909,12 +9891,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-410624281/inc",
-        "/tmp/tblgen-split-410624281/main.td",
+        "/tmp/tblgen-split-2773146661/inc",
+        "/tmp/tblgen-split-2773146661/main.td",
         "-o",
-        "/tmp/tblgen-split-410624281/out.td",
+        "/tmp/tblgen-split-2773146661/out.td",
         "-d",
-        "/tmp/tblgen-split-410624281/out2.d"
+        "/tmp/tblgen-split-2773146661/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9935,10 +9917,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-410624281/inc",
-        "/tmp/tblgen-split-410624281/main.td",
+        "/tmp/tblgen-split-2773146661/inc",
+        "/tmp/tblgen-split-2773146661/main.td",
         "-d",
-        "/tmp/tblgen-split-410624281/out.d"
+        "/tmp/tblgen-split-2773146661/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10024,8 +10006,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-106316137",
-        "/tmp/tblgen-split-106316137/main.td"
+        "/tmp/tblgen-split-4275809551",
+        "/tmp/tblgen-split-4275809551/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10049,8 +10031,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-106316137",
-        "/tmp/tblgen-split-106316137/multi.td"
+        "/tmp/tblgen-split-4275809551",
+        "/tmp/tblgen-split-4275809551/multi.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10730,7 +10712,7 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "e87fd8fa37ce5a3760ce7fda28457d8d671b74dbaf09141850eba1ccdd534357",
+        "err_sha256": "f8acc52bf92209a80eb8f4c6437061a4d318bdd4a7f690bb98bbf2eed8837339",
         "Msgs": [
           "error: A class or def body should not end with a semicolon",
           "error: A class or def body should not end with a semicolon",
@@ -10738,8 +10720,7 @@
         ],
         "err_head": "\u003cfile\u003e:30:2: error: A class or def body should not end with a semicolon"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:30:2: error: A class or def body should not end with a semicolon\n};\n ^\n\u003cfile\u003e:33:2: error: A class or def body should not end with a semicolon\n};\n ^\n\u003cfile\u003e:37:2: error: A multiclass body should not end with a semicolon\n};\n ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/strconcat.td",
@@ -11030,14 +11011,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "f4d93835d33813eafd44738b6b9082cc7d78dcd88ca7a13db8e4a7f11298affa",
+        "err_sha256": "6485e98abcb37f1f6f33fa3efbdeaaad7a9812bfc5ca206750ade32b14dc1263",
         "Msgs": [
           "error: there should be at least 1 'case: value' in the !switch operator"
         ],
-        "err_head": "\u003cfile\u003e:124:13: error: there should be at least 1 'case: value' in the !switch operator"
+        "err_head": "\u003cfile\u003e:124:27: error: there should be at least 1 'case: value' in the !switch operator"
       },
-      "status": "err-wording",
-      "err_text": "\u003cfile\u003e:124:13: error: there should be at least 1 'case: value' in the !switch operator\n  int bad = !switch(1, 99);\n            ^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/switch.td",

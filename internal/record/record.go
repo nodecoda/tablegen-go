@@ -95,6 +95,10 @@ type Env struct {
 	// VarInit("Parent:NAME") to the inheriting record via MapResolver
 	// (TGParser.cpp:382), so the copied field prints `Child:NAME`.
 	implicitTo string
+	// printing is the record whose Init tree the printer is rendering. A
+	// class body is printed unresolved, so a class application inside it must
+	// not fold using that class's own argument bindings (classApplyName).
+	printing *Record
 }
 
 // hasVal reports whether the record declares a field with this name.
@@ -126,6 +130,7 @@ func (e *Env) With(vars map[string]Binding) *Env {
 		out.owner = e.owner
 		out.ownerSep = e.ownerSep
 		out.implicitTo = e.implicitTo
+		out.printing = e.printing
 		// Sub-environments must keep the printer's record graph: a helper that
 		// narrows the bindings (bindNames, WithBinding) still prints the same
 		// Init tree, and folding a Def.Field needs the keeper.
@@ -166,6 +171,12 @@ func (e *Env) StackOn(base *Env) *Env {
 	out.owner = base.owner
 	out.ownerSep = base.ownerSep
 	out.implicitTo = base.implicitTo
+	// The render context belongs to the printer's current environment, not to
+	// the lexical one the substituted Init was written in.
+	out.printing = e.printing
+	if out.printing == nil {
+		out.printing = base.printing
+	}
 	// The record graph travels with the bindings: a printer that stacks a
 	// resolved binding on top of the current environment must keep it.
 	if e.keeper != nil {
@@ -875,5 +886,35 @@ func (e *Env) WithImplicitName(name string) *Env {
 	}
 	out := *e
 	out.implicitTo = name
+	return &out
+}
+
+// HideOwnArgs hides this record's own template-argument bindings. LLVM never
+// resolves a class body: AddParentClass copies its field unresolved into the
+// inheriting record and runs resolveReferences there with the caller's
+// arguments (TGParser.cpp:346-374). An application such as `Foo<T>` therefore
+// keeps printing as written inside Foo's own body even when T has a default;
+// only the copy made for a child can fold to a DefInit.
+func (e *Env) HideOwnArgs(r *Record) *Env {
+	var hidden map[string]bool
+	for _, f := range e.frames {
+		for k, b := range f {
+			if b.Owner != r || b.Self == "" {
+				continue
+			}
+			if hidden == nil {
+				hidden = make(map[string]bool, len(e.hidden)+4)
+				for hk, hv := range e.hidden {
+					hidden[hk] = hv
+				}
+			}
+			hidden[k] = true
+		}
+	}
+	if hidden == nil {
+		return e
+	}
+	out := *e
+	out.hidden = hidden
 	return &out
 }

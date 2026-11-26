@@ -68,10 +68,16 @@ var (
 
 // normalizeStderr removes the parts that are artefacts of *how* the binary was
 // invoked rather than of what it found: the absolute test path (so the same
-// diagnostic from two binaries compares equal) and the trailing error count.
-func normalizeStderr(text, file string) string {
+// diagnostic from two binaries compares equal), the program path cl embeds in
+// messages like "See: <argv0> --help", and the trailing error count.
+func normalizeStderr(text, file string, prog ...string) string {
 	if file != "" {
 		text = strings.ReplaceAll(text, file, "<file>")
+	}
+	for _, p := range prog {
+		if p != "" {
+			text = strings.ReplaceAll(text, p, "<prog>")
+		}
 	}
 	text = errSummaryRe.ReplaceAllString(text, "")
 	text = progPrefixRe.ReplaceAllString(text, "<prog>: ")
@@ -150,8 +156,8 @@ func runStderr(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 			sOut, sErr, sExit := capture(timeout, bin, args)
 			_ = sOut
 			oc := scase{File: f, Run: run}
-			oc.Oracle = mkSdiag(oErr, plan.Input, oExit)
-			oc.Ours = mkSdiag(sErr, plan.Input, sExit)
+			oc.Oracle = mkSdiag(oErr, plan.Input, oExit, oracle)
+			oc.Ours = mkSdiag(sErr, plan.Input, sExit, bin)
 			oc.Status = classifyStderr(oc.Oracle, oc.Ours)
 			if oc.Status != "same" {
 				oc.Oracle.Full = truncate(oc.Oracle.Full, 4000)
@@ -237,8 +243,8 @@ func runStderr(corpus, oracle, bin string, jobs int, timeout time.Duration, out,
 	}
 }
 
-func mkSdiag(text, file string, exit int) sdiag {
-	norm := normalizeStderr(text, file)
+func mkSdiag(text, file string, exit int, prog string) sdiag {
+	norm := normalizeStderr(text, file, prog)
 	sum := sha256.Sum256([]byte(norm))
 	return sdiag{
 		Exit:    exit,

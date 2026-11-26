@@ -128,7 +128,10 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			return nil, err
 		}
 		if n <= 0 {
-			return nil, &EvalError{Msg: "Illegal operation: logtwo is undefined on arguments less than or equal to 0", Span: b.Span()}
+			// IntOpInit::Fold(LOG2) passes CurRec->getLoc() to PrintFatalError
+			// (Record.cpp:930-936): a single SMLoc, the record name, with no
+			// multiclass note chain.
+			return nil, &EvalError{Msg: "Illegal operation: logtwo is undefined on arguments less than or equal to 0", Span: b.Span(), AtRecord: true, Fatal: true}
 		}
 		return &Int{N: int64(63 - leadingZeros(uint64(n)))}, nil
 
@@ -743,7 +746,7 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 	}
 }
 
-func intBinOp(op syntax.Kind, a, b Value, _ diag.Span) (Value, error) {
+func intBinOp(op syntax.Kind, a, b Value, span diag.Span) (Value, error) {
 	ai, err := valueInt(a)
 	if err != nil {
 		return nil, err
@@ -761,11 +764,11 @@ func intBinOp(op syntax.Kind, a, b Value, _ diag.Span) (Value, error) {
 		return &Int{N: ai * bi}, nil
 	case syntax.XDiv:
 		if bi == 0 {
-			return nil, &EvalError{Msg: "Illegal operation: division by zero"}
+			return nil, &EvalError{Msg: "Illegal operation: division by zero", Span: span, AtRecord: true, Fatal: true}
 		}
 		// Go returns INT64_MIN here instead of trapping; llvm-tblgen refuses.
 		if ai == math.MinInt64 && bi == -1 {
-			return nil, &EvalError{Msg: "Illegal operation: INT64_MIN / -1"}
+			return nil, &EvalError{Msg: "Illegal operation: INT64_MIN / -1", Span: span, AtRecord: true, Fatal: true}
 		}
 		return &Int{N: ai / bi}, nil
 	case syntax.XAnd:
@@ -776,17 +779,17 @@ func intBinOp(op syntax.Kind, a, b Value, _ diag.Span) (Value, error) {
 		return &Int{N: ai ^ bi}, nil
 	case syntax.XShl:
 		if bi < 0 || bi >= 64 {
-			return nil, &EvalError{Msg: "Illegal operation: out of bounds shift"}
+			return nil, &EvalError{Msg: "Illegal operation: out of bounds shift", Span: span, AtRecord: true, Fatal: true}
 		}
 		return &Int{N: int64(uint64(ai) << uint64(bi))}, nil
 	case syntax.XSra:
 		if bi < 0 || bi >= 64 {
-			return nil, &EvalError{Msg: "Illegal operation: out of bounds shift"}
+			return nil, &EvalError{Msg: "Illegal operation: out of bounds shift", Span: span, AtRecord: true, Fatal: true}
 		}
 		return &Int{N: ai >> uint64(bi)}, nil
 	case syntax.XSrl:
 		if bi < 0 || bi >= 64 {
-			return nil, &EvalError{Msg: "Illegal operation: out of bounds shift"}
+			return nil, &EvalError{Msg: "Illegal operation: out of bounds shift", Span: span, AtRecord: true, Fatal: true}
 		}
 		return &Int{N: int64(uint64(ai) >> uint64(bi))}, nil
 	}
@@ -1194,15 +1197,18 @@ func (k *Keeper) evalDagCtor(b *syntax.BangValue, env *Env, rec *Record) (Value,
 // dagArgIndex mirrors getDagArgNoByKey (Record.cpp:1187-1220) together with
 // the "!getdagarg "/"!setdagarg "/"!setdagname " prefix each caller adds
 // (Record.cpp:1410, 1914, 1932).
-func dagArgIndex(d *Dag, key Value, op string) (int, error) {
+func dagArgIndex(d *Dag, key Value, op string, keySpan diag.Span) (int, error) {
 	switch x := key.(type) {
 	case *Int:
 		if x.N < 0 {
-			return 0, &EvalError{Msg: op + " index " + itoa(int(x.N)) + " is negative"}
+			// The GETDAGARG/SETDAGARG callers pass CurRec->getLoc() to
+			// PrintFatalError (Record.cpp:1410, 1914), which takes a single
+			// SMLoc: the record name, with no multiclass note chain.
+			return 0, &EvalError{Msg: op + " index " + itoa(int(x.N)) + " is negative", AtRecord: true, Fatal: true}
 		}
 		if int(x.N) >= len(d.Args) {
 			return 0, &EvalError{Msg: op + " index " + itoa(int(x.N)) + " is out of range (dag has " +
-				itoa(len(d.Args)) + " arguments)"}
+				itoa(len(d.Args)) + " arguments)", AtRecord: true, Fatal: true}
 		}
 		return int(x.N), nil
 	case *Str:
@@ -1211,10 +1217,11 @@ func dagArgIndex(d *Dag, key Value, op string) (int, error) {
 				return i, nil
 			}
 		}
-		return 0, &EvalError{Msg: op + " key '" + x.S + "' is not found"}
+		return 0, &EvalError{Msg: op + " key '" + x.S + "' is not found", AtRecord: true, Fatal: true}
 	}
-	// TGParser rejects a non int/string key while parsing (TGParser.cpp:2195).
-	return 0, &EvalError{Msg: "expected integer index or string name, got type '" + key.Type().String() + "'"}
+	// TGParser rejects a non int/string key while parsing, at the middle
+	// argument's own location (TGParser.cpp:2192-2199).
+	return 0, &EvalError{Msg: "expected integer index or string name, got type '" + key.Type().String() + "'", Span: keySpan}
 }
 
 // softError records a diagnostic that llvm-tblgen prints without failing the
@@ -1248,7 +1255,7 @@ func (k *Keeper) evalGetDagArg(b *syntax.BangValue, env *Env, rec *Record) (Valu
 	if !ok {
 		return nil, &EvalError{Msg: "!getdagarg expects a dag", Span: b.Span()}
 	}
-	idx, err := dagArgIndex(d, key, "!getdagarg")
+	idx, err := dagArgIndex(d, key, "!getdagarg", b.Args[1].Span())
 	if err != nil {
 		return nil, err
 	}
@@ -1284,7 +1291,7 @@ func (k *Keeper) evalSetDagArgName(b *syntax.BangValue, env *Env, rec *Record) (
 	if b.Op == syntax.XSetDagName {
 		op = "!setdagname"
 	}
-	idx, err := dagArgIndex(d, key, op)
+	idx, err := dagArgIndex(d, key, op, b.Args[1].Span())
 	if err != nil {
 		return nil, err
 	}
