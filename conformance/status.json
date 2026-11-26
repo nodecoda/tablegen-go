@@ -7399,22 +7399,22 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t/inc %t/main.td -o %t/out.td -d %t/out.d ; FileCheck %s --input-file=%t/out.d --match-full-lines -DDIR=%t ; llvm-tblgen -I %t/inc %t/main.td -o %t/out.td -d %t/out2.d ; cmp %t/out.d %t/out2.d ; not llvm-tblgen -E -I %t/inc %t/main.td -d %t/out.d 2\u003e\u00261 | FileCheck %s --check-prefix=NO-OUTPUT",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-861558397/out.td",
+      "input": "/tmp/tblgen-split-397262982/out.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-861558397/inc"
+        "/tmp/tblgen-split-397262982/inc"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-861558397/out.td': No such file or directory"
+        "err_head": "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen: Could not open input file '/tmp/tblgen-split-397262982/out.td': No such file or directory"
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "./tblgen: Could not open input file '/tmp/tblgen-split-861558397/out.td': No such file or directory"
+        "err_head": "./tblgen: Could not open input file '/tmp/tblgen-split-397262982/out.td': No such file or directory"
       },
       "status": "reject-match"
     },
@@ -7460,23 +7460,23 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-include.td",
       "run": "rm -rf %t \u0026\u0026 split-file %s %t ; llvm-tblgen -E -I %t %t/main.td | FileCheck %s --match-full-lines --strict-whitespace ; llvm-tblgen -E -I %t %t/multi.td | FileCheck %s --check-prefix=MULTI --match-full-lines --strict-whitespace",
       "scope": "in-scope",
-      "input": "/tmp/tblgen-split-3843186136/main.td",
+      "input": "/tmp/tblgen-split-1524053969/main.td",
       "args": [
         "-I",
-        "/tmp/tblgen-split-3843186136"
+        "/tmp/tblgen-split-1524053969"
       ],
       "oracle": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "Included from /tmp/tblgen-split-3843186136/main.td:3:",
+        "err_head": "Included from /tmp/tblgen-split-1524053969/main.td:3:",
         "err_line": 5
       },
       "ours": {
         "exit": 1,
         "class": "invalid",
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_head": "/tmp/tblgen-split-3843186136/b.td:5:5: error: def already exists: b",
+        "err_head": "/tmp/tblgen-split-1524053969/b.td:5:5: error: def already exists: b",
         "err_line": 5
       },
       "status": "reject-match"

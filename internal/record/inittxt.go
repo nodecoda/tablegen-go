@@ -523,9 +523,13 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 			if x.Op == syntax.XEq || x.Op == syntax.XNe {
 				// CompareInit's record case (Record.cpp:1173-1181): two
 				// DefInits compare by identity, and a template argument that
-				// names a def is one after AddParentClass substituted it.
-				if ln, lok := defRefName(x.Args[0], env); lok {
-					if rn, rok := defRefName(x.Args[1], env); rok {
+				// names a def is one after AddParentClass substituted it. A
+				// `!if`/`!cond`/identity `!cast` operand is folded to its
+				// branch first: TernOpInit::Fold returns the taken branch
+				// (Record.cpp:1806-1816), so `!eq(iit_vt, !if(x, y, vt))`
+				// compares against the branch itself, not the operator.
+				if ln, lok := defRefName(derefBang(x.Args[0], env, depth+1), env); lok {
+					if rn, rok := defRefName(derefBang(x.Args[1], env, depth+1), env); rok {
 						if (ln == rn) == (x.Op == syntax.XEq) {
 							return 1, true
 						}
@@ -1216,6 +1220,39 @@ func condArm(b *syntax.BangValue, env *Env, depth int) (syntax.Value, bool) {
 	return nil, false
 }
 
+// derefBang unfolds the operators whose Fold returns a subexpression
+// unchanged: `!if`/`!cond` pick an arm (TernOpInit::Fold, Record.cpp:1806-1816;
+// CondOpInit::Fold, Record.cpp:2580-2597) and a `!cast` to the operand's own
+// type is a no-op (UnOpInit::Fold). Callers that compare records need the arm
+// itself, not the operator, because the arm can be a def reference.
+func derefBang(v syntax.Value, env *Env, depth int) syntax.Value {
+	for i := 0; i < 32; i++ {
+		b, ok := v.(*syntax.BangValue)
+		if !ok || depth > 32 {
+			return v
+		}
+		switch {
+		case b.Op == syntax.XIf && len(b.Args) == 3:
+			c, ok := foldIntV(b.Args[0], env, depth+1)
+			if !ok {
+				return v
+			}
+			v = b.Args[boolIdx(c)]
+		case b.Op == syntax.XCond:
+			arm, ok := condArm(b, env, depth+1)
+			if !ok {
+				return v
+			}
+			v = arm
+		case b.Op == syntax.XCast && len(b.Args) == 1 && castIsIdentity(b.Args[0], b.TypeArg):
+			v = b.Args[0]
+		default:
+			return v
+		}
+	}
+	return v
+}
+
 // substValue replaces a lexical loop variable with a value, the substitution
 // ForeachHelper performs per element while folding (Record.cpp:1958).
 func substValue(v syntax.Value, name string, repl syntax.Value, depth int) syntax.Value {
@@ -1764,6 +1801,14 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 		if x.GlobalRef && x.Lit != nil {
 			// A defvar reference is its value (see resolveVar).
 			return constList(x.Lit, env, depth+1)
+		}
+		if x.GlobalRef && x.GlobalVar {
+			// A defset/defvar reference stands for the Init its name denotes
+			// (TGParser::ParseIDValue yields the value, not a VarInit), so a
+			// class body that was never evaluated still folds over the list.
+			if lit, ok := globalLit(env, x.Name); ok {
+				return constList(lit, env, depth+1)
+			}
 		}
 		if _, sub, subEnv := resolveVar(x, env); sub != nil && sub != v {
 			return constList(sub, subEnv, depth+1)
