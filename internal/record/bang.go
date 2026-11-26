@@ -973,7 +973,14 @@ func (k *Keeper) evalCast(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			return nil, ee
 		}
 	}
-	return k.coerce(v, target)
+	out, err := k.coerce(v, target)
+	if err != nil {
+		// UnOpInit::Fold keeps an explicit !cast node it cannot fold
+		// (Record.cpp:884-905): the value stays non-concrete, and
+		// checkConcrete reports it for a def.
+		return &Unresolved{Text: "!cast<" + target.String() + ">(" + v.String() + ")", Ty: target}, nil
+	}
+	return out, nil
 }
 
 func (k *Keeper) evalTypeTest(b *syntax.BangValue, env *Env, rec *Record) (Value, error) {

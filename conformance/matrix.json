@@ -4,9 +4,9 @@
   "oracle_version": "LLVM version 24.0.0git",
   "corpus": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen",
   "counts": {
-    "status:err-diff": 21,
+    "status:err-diff": 20,
     "status:err-wording": 19,
-    "status:same": 274,
+    "status:same": 275,
     "status:same-report": 2,
     "status:skipped": 291
   },
@@ -4898,14 +4898,13 @@
       "ours": {
         "exit": 1,
         "out_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "err_sha256": "0f88a9128469b6d1f89d661d3e54b4f390265ff791788501c84be6f47c81f1c6",
+        "err_sha256": "827ce05d9f4c80fdcb298e5f7f1542ecb620f19853364f83005433ede02396c4",
         "Msgs": [
-          "error: value of type 'list\u003cint\u003e' is incompatible with 'string'"
+          "error: Initializer of 'str' in 'Rec5' could not be fully resolved: !cast\u003cstring\u003e([0, 1, 2, 3, 4, 5, 6])"
         ],
-        "err_head": "\u003cfile\u003e:55:1: error: value of type 'list\u003cint\u003e' is incompatible with 'string'"
+        "err_head": "\u003cfile\u003e:55:5: error: Initializer of 'str' in 'Rec5' could not be fully resolved: !cast\u003cstring\u003e([0, 1, 2, 3, 4, 5, 6])"
       },
-      "status": "err-diff",
-      "err_text": "\u003cfile\u003e:55:1: error: value of type 'list\u003cint\u003e' is incompatible with 'string'\ndef Rec5 {\n^"
+      "status": "same"
     },
     {
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/cast-typeerror.td",
@@ -9899,12 +9898,12 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3806831008/inc",
-        "/tmp/tblgen-split-3806831008/main.td",
+        "/tmp/tblgen-split-704605600/inc",
+        "/tmp/tblgen-split-704605600/main.td",
         "-o",
-        "/tmp/tblgen-split-3806831008/out.td",
+        "/tmp/tblgen-split-704605600/out.td",
         "-d",
-        "/tmp/tblgen-split-3806831008/out.d"
+        "/tmp/tblgen-split-704605600/out.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9924,12 +9923,12 @@
       "file": "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/preprocess-depfile.td",
       "argv": [
         "-I",
-        "/tmp/tblgen-split-3806831008/inc",
-        "/tmp/tblgen-split-3806831008/main.td",
+        "/tmp/tblgen-split-704605600/inc",
+        "/tmp/tblgen-split-704605600/main.td",
         "-o",
-        "/tmp/tblgen-split-3806831008/out.td",
+        "/tmp/tblgen-split-704605600/out.td",
         "-d",
-        "/tmp/tblgen-split-3806831008/out2.d"
+        "/tmp/tblgen-split-704605600/out2.d"
       ],
       "oracle": {
         "exit": 0,
@@ -9950,10 +9949,10 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-3806831008/inc",
-        "/tmp/tblgen-split-3806831008/main.td",
+        "/tmp/tblgen-split-704605600/inc",
+        "/tmp/tblgen-split-704605600/main.td",
         "-d",
-        "/tmp/tblgen-split-3806831008/out.d"
+        "/tmp/tblgen-split-704605600/out.d"
       ],
       "negate": true,
       "oracle": {
@@ -10039,8 +10038,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-203534203",
-        "/tmp/tblgen-split-203534203/main.td"
+        "/tmp/tblgen-split-1964297590",
+        "/tmp/tblgen-split-1964297590/main.td"
       ],
       "oracle": {
         "exit": 0,
@@ -10064,8 +10063,8 @@
       "argv": [
         "-E",
         "-I",
-        "/tmp/tblgen-split-203534203",
-        "/tmp/tblgen-split-203534203/multi.td"
+        "/tmp/tblgen-split-1964297590",
+        "/tmp/tblgen-split-1964297590/multi.td"
       ],
       "oracle": {
         "exit": 0,
