@@ -193,7 +193,6 @@ func TestAppendJSONStringMatchesEncodingJSON(t *testing.T) {
 		"tab\tnewline\nreturn\r nul\x00 bell\x07 del\x7f",
 		"high \u00e9 \u4e2d\u6587 \U0001f600",
 		"line\u2028sep\u2029par",
-		"invalid \xff\xfe bytes",
 	}
 	for _, c := range cases {
 		var buf bytes.Buffer
@@ -207,5 +206,15 @@ func TestAppendJSONStringMatchesEncodingJSON(t *testing.T) {
 		if !bytes.Equal(got, want) {
 			t.Fatalf("escape(%q)\n got: %s\nwant: %s", c, got, want)
 		}
+	}
+
+	// Invalid UTF-8 has no encoding/json reference: LLVM's JSON value
+	// constructor asserts on it (JSON.h:333) and the oracle aborts, so a
+	// --dump-json run cannot produce reference bytes. Escape each invalid
+	// byte as U+FFFD: the output stays valid JSON and deterministic.
+	got := appendJSONString(nil, "invalid \xff\xfe bytes")
+	want := []byte(`"invalid \ufffd\ufffd bytes"`)
+	if !bytes.Equal(got, want) {
+		t.Fatalf("invalid UTF-8: got %s, want %s", got, want)
 	}
 }

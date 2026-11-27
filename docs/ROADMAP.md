@@ -46,6 +46,8 @@ implemented.
   different diagnostics and, before LLVM 24, no `!locs` in JSON.
 - Real-target checks are a manual workflow, not part of `make ci`.
 - Diagnostics are byte-identical for the corpus, not guaranteed outside it.
+- Invalid UTF-8 in a string value has no oracle reference (the assertions
+  build aborts at `JSON.h:333`); we emit U+FFFD escapes.
 
 ## 7. Performance
 

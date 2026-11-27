@@ -17,11 +17,13 @@ jobs:
       matrix:
         go: ['1.22.x', 'stable']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
-          cache: true
+          # There is no go.sum (zero dependencies); the module cache has
+          # nothing to restore.
+          cache: false
       - name: gofmt and vet
         run: make fmt-check vet
       - name: unit tests

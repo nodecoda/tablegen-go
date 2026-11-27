@@ -71,7 +71,12 @@ Current numbers (LLVM 24.0.0git):
    (`TGParser.cpp:415`), so its records take the `defm` location; we keep the
    loop deferred and the loop path does not carry `Loc` (`TGParser.cpp:530-531`).
    `--print-records` is byte-identical.
-2. **`--print-detailed-records` tail.** The C++ backend ends with
+2. **Invalid UTF-8 in string values.** The oracle's JSON value constructor
+   asserts on invalid UTF-8 (`JSON.h:333`), so an assertions build aborts
+   instead of producing reference bytes. We escape each invalid byte as
+   U+FFFD instead: valid JSON and deterministic, with no oracle output to
+   match. This does not occur in the corpus.
+3. **`--print-detailed-records` tail.** The C++ backend ends with
    `dumpAllocationStats`, which counts LLVM's internal uniquing pools. Those
    numbers do not depend on the TableGen program, so this implementation stops
    before them; every emitted byte is a prefix of the oracle's output. The
