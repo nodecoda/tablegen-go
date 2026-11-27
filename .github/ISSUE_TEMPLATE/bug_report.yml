@@ -1,0 +1,41 @@
+name: Bug report
+description: A crash, a wrong record, or an output difference from llvm-tblgen
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please reduce the input as far as possible. A wrong record and a
+        diagnostic difference are different classes of bug; both are useful.
+  - type: input
+    id: version
+    attributes:
+      label: tablegen-go version
+      description: Output of `./tblgen --version`, or the commit hash.
+    validations:
+      required: true
+  - type: input
+    id: llvm
+    attributes:
+      label: Oracle
+      description: The `llvm-tblgen --version` you compared against (if any).
+  - type: textarea
+    id: input
+    attributes:
+      label: Minimal input
+      description: The smallest `.td` file that reproduces the problem.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and observed output
+      description: Include the exact command, exit code, and the difference from the oracle.
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour

@@ -1,0 +1,11 @@
+tablegen-go
+Copyright 2026 The tablegen-go Authors
+
+This is an independent Go implementation of the TableGen language. It was
+written by studying LLVM's TableGen sources; it contains no LLVM source code.
+Comments cite LLVM C++ files and line numbers so that every non-obvious rule
+can be checked against the reference implementation.
+
+LLVM is licensed under the Apache License v2.0 with LLVM Exceptions, and this
+project uses the same license. LLVM is a trademark of the LLVM Foundation.
+This project is not affiliated with or endorsed by the LLVM project.

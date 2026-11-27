@@ -1,5 +1,16 @@
+# Build artifacts
 /tblgen
 *.test
 *.prof
-conformance/*.local.json
 coverage.out
+/dist/
+
+# Conformance scoreboards are generated against a specific oracle/corpus
+# checkout; regenerate them with `make baseline` / `make score`.
+/conformance/*.json
+
+# Editors and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp

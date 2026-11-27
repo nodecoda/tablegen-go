@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.go text eol=lf
+*.td text eol=lf
+*.json text eol=lf
+LICENSE text

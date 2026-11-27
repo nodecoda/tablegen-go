@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose a language feature, backend, or tooling improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is missing or painful today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should change? If this is a TableGen construct, cite the LLVM behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Oracle evidence
+      description: If this changes output, include the `llvm-tblgen` version and the expected bytes.
