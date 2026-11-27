@@ -23,7 +23,7 @@ import (
 // version is the release line. The oracle pin is the llvm-tblgen build every
 // conformance scoreboard in README.md was measured against; bump both together.
 const (
-	version       = "1.0.0"
+	version       = "1.0.1"
 	oracleVersion = "llvm-tblgen 24.0.0git"
 )
 

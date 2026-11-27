@@ -20,7 +20,7 @@ Correctness is defined by differential testing against the real
 
 ## Status
 
-v1.0.0: the language core and the record-level backends are complete.
+v1.0.1: the language core and the record-level backends are complete.
 
 Differential state against `llvm-tblgen 24.0.0git` on `llvm/test/TableGen`
 (392 top-level tests, 385 in scope, 7 need `split-file`):

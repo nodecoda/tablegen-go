@@ -6,6 +6,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-27
+
+### Fixed
+
+- The JSON escaper parity test no longer depends on `encoding/json`'s
+  treatment of invalid UTF-8, which changed on newer Go toolchains. The
+  oracle asserts on such values (`JSON.h:333`), so there is no reference
+  output; the test now pins the documented U+FFFD escaping instead.
+
+### Changed
+
+- CI runs on `actions/checkout@v7` and `actions/setup-go@v7` and no longer
+  attempts to restore a module cache for a module with no `go.sum`.
+
 ## [1.0.0] - 2026-11-27
 
 First public release: the TableGen language core and the record-level
@@ -50,5 +64,6 @@ Measured against `llvm-tblgen 24.0.0git` on `llvm/test/TableGen`:
 - `--print-detailed-records`: the trailing LLVM-internal allocator statistics
   are not emitted; the output is a byte prefix of the oracle's.
 
-[Unreleased]: https://github.com/nodecoda/tablegen-go/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nodecoda/tablegen-go/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/nodecoda/tablegen-go/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/nodecoda/tablegen-go/releases/tag/v1.0.0
