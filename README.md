@@ -1,138 +1,124 @@
 # tablegen-go
 
-A Go implementation of LLVM's TableGen **language core**: lexer, parser, record
-graph, and the record-level backends (`--dump-json`, `--print-records`,
-`--print-detailed-records`). Target instruction-selection emitters are out of
-scope.
+[![CI](https://github.com/nodecoda/tablegen-go/actions/workflows/ci.yml/badge.svg)](https://github.com/nodecoda/tablegen-go/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/nodecoda/tablegen-go.svg)](https://pkg.go.dev/github.com/nodecoda/tablegen-go)
+[![License: Apache-2.0 WITH LLVM-exception](https://img.shields.io/badge/license-Apache--2.0%20WITH%20LLVM--exception-blue.svg)](LICENSE)
 
-Why from scratch: there is no usable Go implementation. The only Python one
-(`daeken/PyTableGen`) is Python 2, unmaintained since 2016, and has no license.
-The grammar and semantics are taken from the C++ source, and correctness is
-enforced by **differential testing against the real `llvm-tblgen`**.
+A zero-dependency Go implementation of LLVM TableGen's **language core** and
+**record-level backends**: lexer, preprocessor, parser, record graph, and
+`--dump-json` / `--print-records` / `--print-detailed-records`. Target
+instruction-selection emitters (`-gen-*`) are deliberately out of scope.
+
+Correctness is defined by differential testing against the real
+`llvm-tblgen`, not by hand-written expectations:
 
 ```
 .td ──► lexer ──► parser ──► record graph ──► backend (json / records)
                                 │
-                                └── resolved against the C++ oracle
+                                └── compared byte-for-byte with llvm-tblgen
 ```
 
 ## Status
 
-v1.0.0: the **language core and the record-level backends** are complete.
-Lexing (including `include` expansion and the preprocessor), parsing, `defm`/
-multiclass expansion, `dump`, the record graph, static type checking,
-`--dump-json`, `--print-records`, `--print-detailed-records`, `-o` and `-d` all
-run. Target instruction-selection emitters are out of scope and exit 2 with
-`E_UNSUPPORTED`.
+v1.0.0: the language core and the record-level backends are complete.
 
-Differential state against llvm-tblgen 24.0.0git (392 top-level tests, 385
-in-scope, 7 skipped because they need `split-file`):
+Differential state against `llvm-tblgen 24.0.0git` on `llvm/test/TableGen`
+(392 top-level tests, 385 in scope, 7 need `split-file`):
 
-| | count |
+| check | result |
 |---|---|
-| `--dump-json` outputs byte-identical | 330 (match) |
-| byte differences | 0 |
-| rejected like the oracle | 55 (`reject-match`: same first-error line) |
-| diagnostics with the same message | 62/62 |
-| diagnostics rendered identically (message + caret) | 62/62 |
+| `--dump-json` | 330 byte-identical, 0 differences |
+| error tests | 55 rejected at the oracle's first-error line (`reject-match`) |
+| diagnostics | 62/62 same message, 62/62 same full rendering (caret included) |
+| `RUN:` matrix | 314 identical + 2 identical-report, 0 exit/output/error differences |
 
-`make matrix` replays every `RUN:` line (including `-D` variants). It reports
-314 identical runs, 2 identical diagnostic reports, and 0 output, error, or
-exit differences. `make score` prints all four numbers and a delta against the
-previous run; `make check` is the ratchet.
-
-Real-target evidence, beyond the corpus:
+Beyond the corpus (oracle and this implementation, `cmp` clean):
 
 | input | `--print-records` | `--dump-json` |
 |---|---|---|
-| `lib/Target/AArch64/AArch64.td` | byte-identical (`d973796c…`, 63,660,222 bytes) | byte-identical (`6b71e881…`, 106 MB / 88071 records) |
-| `lib/Target/ARM/ARM.td` | byte-identical (`06bccac5…`, 37,321,559 bytes) | byte-identical (`52a31c5c…`, 49198 records) |
-| `lib/Target/X86/X86.td` | byte-identical (`19343d7d…`, 112,734,356 bytes) | byte-identical (`2d66a922…`, 88536 records) |
-| `lib/Target/RISCV/RISCV.td` | byte-identical (`7fcf89cf…`, 153,870,634 bytes) | 266768 records, same names; only `!locs` differs (below) |
+| AArch64.td | byte-identical | byte-identical (106 MB / 88,071 records) |
+| ARM.td | byte-identical | byte-identical (49,198 records) |
+| X86.td | byte-identical | byte-identical (88,536 records) |
+| RISCV.td | byte-identical | 266,768 records, same names; only `!locs` differs |
 
-The JSON run exercises `dump`, deferred `foreach`/`if` inside multiclasses,
-anonymous instantiation order and the `!locs` chain; the site rules are pinned
-by `internal/record/names_test.go`. Diagnostics carry the include instance in
-`diag.Pos.Inc`, because SourceMgr opens a fresh buffer per `include` and the
-same file included twice has two different `Included from` chains
-(`SourceMgr.cpp:58-67`); `internal/diag/diag_test.go` pins that rendering.
+The only known output deviation is the RISCV `!locs` metadata: 102,352 of
+266,768 records list fewer `defm` instantiation sites than the oracle, while
+every name, field value, type, and superclass matches. `--print-records` is
+byte-identical. The cause is a phase difference in foreach expansion; see
+[docs/CONFORMANCE.md](docs/CONFORMANCE.md#known-deviations).
 
-Known deviations (measured, not guessed):
+## Build and run
 
-1. **RISCV `--dump-json` `!locs` only.** Both outputs describe the same 266,768
-   records with identical names, field values, types, and superclasses; the only
-   byte difference is inside `!locs`: 164,416 lists are identical, 102,352 are
-   not (101,833 miss trailing entries, 519 miss a middle one). The missing
-   entries are `defm` instantiation sites, which the C++ parser appends through
-   `Record::appendLoc` (`Record.h:1771`, from `TGParser::ParseDefm`'s
-   `resolve(..., &ParentClassLoc)`, `TGParser.cpp:4593,4612-4613` →
-   `TGParser.cpp:561`) and the JSON backend prints verbatim
-   (`JSONBackend.cpp:161-165`). Two cases:
-   - **Trailing.** LLVM unrolls a multiclass `foreach` whose list is already a
-     list at parse time (`AddParentMultiClass` → `resolve(..., Final=false)`,
-     `TGParser.cpp:415`), so its records become direct entries and take the
-     `defm` site. We keep that loop deferred, and the loop path of `resolve`
-     deliberately does not carry `Loc` (`TGParser.cpp:530-531`).
-     `ReadVIMovX_MF8` is defined in the `foreach` at `RISCVScheduleV.td:168`
-     and instantiated by `defm "" : LMULSchedReads<"ReadVIMovX">` at `:675`;
-     the oracle lists both, we list only the first.
-   - **Middle.** A `defm` inside a multiclass body gets its own site when that
-     body is parsed; we drop it (`WriteVC_FPR16VV_M1`: `162,14,31` vs
-     `162,31`, where `:14` is the nested `defm` in `RISCVScheduleXSf.td`).
-   Record semantics are unaffected; `--print-records` is byte-identical.
-
-## Commands
-
-```bash
-make build       # go build -o tblgen ./cmd/tblgen
-make test        # go test ./...
-make baseline    # record what llvm-tblgen does on llvm/test/TableGen (deterministic)
-make compare     # replay the corpus through our binary; writes conformance/status.json
-make check       # ratchet: a case that matched before must still match
-make stderr      # diagnostic text + caret rendering
-make matrix      # every RUN: line of every test
-make score       # all four numbers, with a delta against the previous run
-make cover       # coverage; make cover-check is the floor (60% for internal/record)
-make bench       # AArch64 parse / lower / records / JSON benchmarks
-make fuzz        # FuzzParse (FUZZ=FuzzLex, FUZZTIME=2m to vary)
-make show F=path/to.td   # both outputs side by side
+```console
+$ go build -o tblgen ./cmd/tblgen
+$ ./tblgen --print-records file.td
+$ ./tblgen -I llvm/include -I llvm/lib/Target/RISCV \
+      --dump-json llvm/lib/Target/RISCV/RISCV.td
+$ ./tblgen --version
 ```
 
-## Corpus
+Go 1.22 or newer. There are no third-party dependencies.
 
-`/home/ubuntu/llvm/llvm-project/llvm/test/TableGen/*.td` — 392 top-level tests
-(385 in scope): `RUN:` lines are scanned for `-I` and the same search path is
-given to both binaries. 330 are accepted by the oracle under `--dump-json` and
-produce byte-identical output; 55 are deliberate error tests, compared by the
-**line of the first error**, so `reject-match` means "rejected the same
-construct", not merely "rejected something".
+## Conformance testing
 
-Oracle: `/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen` (24.0.0git).
-LLVM 24's JSON includes `!locs`; LLVM 15's does not. The version is recorded in
-`conformance/baseline.json`.
+The oracle and the LLVM test corpus live outside this repository:
+
+```console
+$ export LLVM_SRC=/path/to/llvm-project          # the directory containing llvm/
+$ export ORACLE=/path/to/build/bin/llvm-tblgen   # built from the same tree
+$ make baseline   # record the oracle's behaviour once per oracle version
+$ make compare    # replay the corpus through ./tblgen
+$ make check      # ratchet: a case that matched before must still match
+$ make score      # JSON + diagnostics + RUN matrix, with a delta
+$ make ci         # offline gate: gofmt, vet, tests, coverage floor
+```
+
+Scoreboards are generated and not checked in: they embed the oracle path and
+the machine's corpus path. See [docs/CONFORMANCE.md](docs/CONFORMANCE.md) for
+what each layer covers and how the numbers above were measured.
 
 ## Layout
 
 ```
 cmd/tblgen/          CLI
-cmd/conformance/     differential runner (baseline / compare / check)
+cmd/conformance/     differential runner (baseline / compare / check / stderr / matrix)
 internal/syntax/     token, lexer (include + preprocessor), AST, parser
 internal/record/     types, values, record graph, lowering, bang operators
-internal/backend/    json
-docs/SCOPE.md        feature matrix with milestones and C++ references
-conformance/         baseline.json (oracle truth), status.json (ratchet)
+internal/backend/    json, records, detailed records, sets
+internal/diag/       diagnostics and rendering
+conformance/         generated scoreboards (ignored; see conformance/README.md)
+docs/                architecture, conformance, roadmap
 ```
 
-## Invariants
+## Design principles
 
-1. **Init is a pure data tree** — no closures, no lazy getters; dumpable and
-   comparable.
-2. **One pass, all diagnostics** — no early exit, no exceptions.
-3. **Every node carries a span** — tokens, AST, records, diagnostics.
-4. **Deterministic** — source order, sorted JSON keys, byte-identical reruns.
-5. **Unsupported is loud** — `E_UNSUPPORTED` + span, never a silent wrong record.
+1. **Init is a pure data tree** — no closures, no lazy getters; class bodies
+   stay as expressions until a `def` instantiates them.
+2. **Phase fidelity** — LLVM's resolve order decides anonymous numbering,
+   `!locs`, and folded forms, so the lowering mirrors `TGParser`/`Record`
+   phases rather than "simplifying" them.
+3. **One pass, all diagnostics** — errors are collected, never thrown.
+4. **Every node carries a span** — tokens, AST, records, diagnostics.
+5. **Deterministic** — source order, sorted JSON keys, byte-identical reruns.
+6. **Unsupported is loud** — `E_UNSUPPORTED` plus a span and exit 2, never a
+   silently wrong record.
+
+More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Non-goals
 
-`--gen-*` emitters, C++ plugin ABI, byte-identical diagnostic wording. See
-`docs/SCOPE.md`.
+`-gen-*` target emitters, the C++ backend plugin ABI, and byte-identical
+wording for diagnostics that are not exercised by the corpus. See
+[docs/ROADMAP.md](docs/ROADMAP.md) for the known gaps.
+
+## Contributing
+
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md)
+first; the short version is: no new dependencies, cite the LLVM C++ source for
+every non-obvious rule, and keep the oracle scoreboards green.
+
+## License
+
+Apache License 2.0 with LLVM Exceptions. See [LICENSE](LICENSE) and
+[NOTICE](NOTICE). This project is independent and is not affiliated with the
+LLVM project.
