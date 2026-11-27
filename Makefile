@@ -1,32 +1,48 @@
-GO      ?= go
-BIN     := tblgen
-ORACLE  ?= /home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen
-CORPUS  ?= /home/ubuntu/llvm/llvm-project/llvm/test/TableGen
-JOBS    ?= 12
+GO       ?= go
+BIN      := tblgen
+
+# Conformance inputs. LLVM_SRC is the directory that contains llvm/ (an
+# llvm-project checkout). Point ORACLE at a matching llvm-tblgen; the version
+# recorded by the scoreboard is LLVM 24.0.0git.
+LLVM_SRC ?= ../llvm-project
+ORACLE   ?= llvm-tblgen
+CORPUS   ?= $(LLVM_SRC)/llvm/test/TableGen
+JOBS     ?= 12
 
 COVER_MIN ?= 60
 FUZZ      ?= FuzzParse
 FUZZTIME  ?= 30s
 
-.PHONY: build test baseline compare check stderr matrix show ast fmt ci vet fmt-check score report \
-	cover cover-check bench fuzz
+.PHONY: build install test baseline compare check stderr matrix show ast fmt ci ci-full vet \
+	fmt-check score report cover cover-check bench fuzz clean
 
 build:
 	$(GO) build -o $(BIN) ./cmd/tblgen
 
-test:
-	$(GO) test ./...
+install:
+	$(GO) install ./cmd/tblgen
 
-# One command a reviewer or a hook can run: formatting, vet, unit tests, the
-# coverage floor, and the ratchet against the committed status.json.
-ci: fmt-check vet test cover-check check
+# Offline gate: formatting, vet, unit tests, coverage floor. This is what CI
+# runs; the oracle-based ratchet needs an llvm-project checkout.
+ci: fmt-check vet test cover-check
+
+# Full local gate, including the ratchet against conformance/status.json.
+ci-full: ci check
 
 fmt-check:
 	@out="$$(gofmt -l .)"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
 
+fmt:
+	gofmt -w .
+
 vet:
 	$(GO) vet ./...
 
+test:
+	$(GO) test ./...
+
+# Record the oracle's behaviour on the corpus. Run this once per oracle
+# version; compare/check reuse it instead of re-running the oracle.
 baseline:
 	$(GO) run ./cmd/conformance -mode baseline -oracle $(ORACLE) -corpus $(CORPUS)
 
@@ -43,17 +59,18 @@ stderr: build
 matrix: build
 	$(GO) run ./cmd/conformance -matrix -oracle $(ORACLE) -corpus $(CORPUS)
 
+# Ratchet: a case that matched before must still match.
 check: build
 	$(GO) run ./cmd/conformance -mode check -oracle $(ORACLE) -corpus $(CORPUS)
 
-# One number per question, plus a delta against the previous run.
+# All three scoreboards, plus a delta against the previous run.
 score: build
 	$(GO) run ./cmd/conformance -mode compare -jobs $(JOBS) -oracle $(ORACLE) -corpus $(CORPUS)
 	$(GO) run ./cmd/conformance -stderr -jobs $(JOBS) -oracle $(ORACLE) -corpus $(CORPUS)
 	$(GO) run ./cmd/conformance -matrix -jobs $(JOBS) -oracle $(ORACLE) -corpus $(CORPUS)
 	$(GO) run ./cmd/conformance -summary
 
-# Print the last score table without re-running anything.
+# Print the last combined score table without re-running anything.
 report:
 	$(GO) run ./cmd/conformance -summary
 
@@ -63,11 +80,8 @@ show:
 ast: build
 	./$(BIN) --dump-ast $(F)
 
-fmt:
-	gofmt -w .
-
 # Coverage of the language core. cover-check is the ratchet: it fails when
-# internal/record drops below COVER_MIN (was 31.8% at the start of W6).
+# internal/record drops below COVER_MIN.
 cover:
 	$(GO) test -coverprofile=coverage.out ./...
 	$(GO) tool cover -func=coverage.out | tail -1
@@ -80,11 +94,15 @@ cover-check:
 		if (t + 0 < m + 0) { printf "internal/record coverage %.1f%% < %s%%\n", t, m; exit 1 } \
 		printf "internal/record coverage %.1f%% (floor %s%%)\n", t, m }'
 
-# AArch64 is the largest real input; the benchmarks pin parse, lower, records
-# and JSON throughput on it.
+# Real target benchmarks. They skip unless LLVM_SRC points at an llvm-project
+# checkout (LLVM_SRC is exported so the tests see it).
 bench:
-	$(GO) test -run '^$$' -bench . -benchmem ./internal/backend
+	LLVM_SRC=$(LLVM_SRC) $(GO) test -run '^$$' -bench . -benchmem ./internal/backend
 
 # The parser and lexer fuzz targets. FUZZ=FuzzLex, FUZZTIME=2m to vary.
 fuzz:
 	$(GO) test -run '^$$' -fuzz '^$(FUZZ)$$' -fuzztime $(FUZZTIME) ./internal/syntax
+
+clean:
+	$(GO) clean
+	rm -f $(BIN) coverage.out

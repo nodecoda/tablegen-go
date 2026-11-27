@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // Class-application sites and their locations.

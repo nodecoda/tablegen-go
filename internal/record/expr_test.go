@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 // let append/prepend, bit-range lets, list indexing and slicing, bit ranges,

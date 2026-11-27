@@ -1,8 +1,8 @@
 package record
 
 import (
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // Lower turns a parsed file into a record graph. It is the semantic half of

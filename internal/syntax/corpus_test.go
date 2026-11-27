@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 // This file is the differential ratchet for the parser. It reads the oracle

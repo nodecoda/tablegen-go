@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 // Parser is a single-pass, total recursive-descent parser. It mirrors

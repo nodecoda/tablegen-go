@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"tblgen/internal/backend"
-	"tblgen/internal/diag"
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/backend"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // --print-records prints class bodies as unresolved Init trees (Init::getAsString),

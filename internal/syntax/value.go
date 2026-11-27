@@ -3,7 +3,7 @@ package syntax
 import (
 	"sort"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 // idMode mirrors IDParseMode: a name being introduced (`def Foo`) is not looked

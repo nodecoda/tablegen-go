@@ -3,7 +3,7 @@ package record
 import (
 	"strings"
 
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // TyKind is the record-level type tag. It mirrors RecTyKind in

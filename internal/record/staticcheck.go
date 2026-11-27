@@ -1,7 +1,7 @@
 package record
 
 import (
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // checkValueType mirrors the static half of RecordVal::setValue: when an

@@ -3,9 +3,9 @@ package backend
 import (
 	"testing"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 func setsSrc(t *testing.T, src string) *record.Keeper {

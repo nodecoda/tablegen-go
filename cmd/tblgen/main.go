@@ -14,10 +14,10 @@ import (
 	"sort"
 	"strings"
 
-	"tblgen/internal/backend"
-	"tblgen/internal/diag"
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/backend"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // version is the release line. The oracle pin is the llvm-tblgen build every
@@ -51,6 +51,15 @@ func main() {
 	flag.Var(&macros, "D", "define a preprocessor macro")
 	flag.Var(&includes, "I", "add a directory to the include search path")
 	flag.Usage = usage
+	// Target emitters are out of scope. Recognize them before Go's flag
+	// package rejects them, so the documented E_UNSUPPORTED contract holds
+	// for every -gen-* name instead of a generic "flag provided but not
+	// defined" message.
+	for _, a := range os.Args[1:] {
+		if name := genFlagName(a); name != "" {
+			unsupported(name)
+		}
+	}
 	// LLVM's cl parser accepts both `-D name` and `-Dname`; Go's flag package
 	// only accepts the first form. Every RUN line in the test suite uses the
 	// joined form, so normalize it before parsing.
@@ -556,10 +565,21 @@ func unsupported(action string) {
 	os.Exit(2)
 }
 
+// genFlagName reports the -gen-* action named by arg, or "".
+func genFlagName(arg string) string {
+	for _, prefix := range []string{"-gen-", "--gen-"} {
+		if strings.HasPrefix(arg, prefix) {
+			return strings.TrimLeft(arg, "-")
+		}
+	}
+	return ""
+}
+
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage: tblgen [action] [-D name]... [-I dir]... <file.td>")
-	fmt.Fprintln(os.Stderr, "\nactions: --dump-tokens --dump-ast (development aids)")
-	fmt.Fprintln(os.Stderr, "         --dump-json --print-records --null-backend (M5)")
+	fmt.Fprintln(os.Stderr, "\nactions: --dump-json --print-records --print-detailed-records --print-sets")
+	fmt.Fprintln(os.Stderr, "         --null-backend --version")
+	fmt.Fprintln(os.Stderr, "         --dump-tokens --dump-ast (development aids, not LLVM actions)")
 }
 
 func dumpTokensTo(path string, macros, includes []string) int {

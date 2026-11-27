@@ -1,8 +1,8 @@
 package record
 
 import (
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // Dumps are LLVM's `dump` statement. TGParser::ParseDump (TGParser.cpp:4816)

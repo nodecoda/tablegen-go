@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // parseOnly parses and returns the AST plus the parse diagnostics.

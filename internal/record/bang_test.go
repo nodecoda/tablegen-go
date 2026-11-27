@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // The arithmetic operators must trap where llvm-tblgen traps. Go silently

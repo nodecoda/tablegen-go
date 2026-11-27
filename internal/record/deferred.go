@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // Deferred-value support: llvm-tblgen does not evaluate records eagerly. It

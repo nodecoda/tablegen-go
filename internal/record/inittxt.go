@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // InitText renders a parsed expression the way Init::getAsString does. Class

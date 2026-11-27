@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -25,10 +26,15 @@ import (
 	"time"
 )
 
-const (
-	defaultCorpus = "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen"
-	defaultOracle = "/home/ubuntu/llvm/builds/record-loader/bin/llvm-tblgen"
-)
+// envOr lets the corpus and oracle live outside the repository without
+// baking a developer's home directory into the tool. The Makefile passes the
+// same values through -corpus/-oracle.
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
 
 type runResult struct {
 	Exit    int    `json:"exit"`
@@ -62,8 +68,8 @@ type report struct {
 
 func main() {
 	mode := flag.String("mode", "baseline", "baseline | compare | check")
-	corpus := flag.String("corpus", defaultCorpus, "directory of .td tests")
-	oracle := flag.String("oracle", defaultOracle, "reference llvm-tblgen")
+	corpus := flag.String("corpus", envOr("TBLGEN_CORPUS", ""), "directory of .td tests (env TBLGEN_CORPUS)")
+	oracle := flag.String("oracle", envOr("TBLGEN_ORACLE", "llvm-tblgen"), "reference llvm-tblgen (env TBLGEN_ORACLE)")
 	bin := flag.String("bin", "./tblgen", "our binary")
 	out := flag.String("out", "", "output json (default: conformance/<mode>.json)")
 	jobs := flag.Int("jobs", runtime.NumCPU(), "parallel oracle invocations")
@@ -80,6 +86,9 @@ func main() {
 	if *summary {
 		runSummary(outPath(*out, "score"))
 		return
+	}
+	if *show == "" && *corpus == "" {
+		fatal(errors.New("set -corpus (or TBLGEN_CORPUS) to the llvm/test/TableGen directory"))
 	}
 	if *stderrMode {
 		runStderr(*corpus, *oracle, *bin, *jobs, *timeout, outPath(*out, "stderr"), *filter)

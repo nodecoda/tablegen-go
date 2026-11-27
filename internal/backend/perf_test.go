@@ -2,16 +2,24 @@ package backend
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // a64Root is the LLVM checkout used for the end-to-end performance benchmark.
-// The benchmark skips when it is not present, so `go test ./...` never
-// depends on a local llvm-project.
-const a64Root = "/home/ubuntu/llvm/llvm-project/llvm"
+// It comes from LLVM_SRC (the directory that contains llvm/); the benchmark
+// skips when it is not present, so `go test ./...` never depends on a local
+// llvm-project.
+var a64Root = func() string {
+	src := os.Getenv("LLVM_SRC")
+	if src == "" {
+		return ""
+	}
+	return filepath.Join(src, "llvm")
+}()
 
 func lowerAArch64(b *testing.B) *record.Keeper {
 	b.Helper()

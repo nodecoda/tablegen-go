@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 func msgs(diags []diag.Diagnostic) []string {

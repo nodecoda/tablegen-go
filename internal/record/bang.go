@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // evalBang implements the `!` operators. It follows llvm/lib/TableGen/

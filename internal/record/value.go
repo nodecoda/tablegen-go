@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // Value is a fully evaluated TableGen initializer. The set is deliberately

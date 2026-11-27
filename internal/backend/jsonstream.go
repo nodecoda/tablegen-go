@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"tblgen/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/record"
 )
 
 // jsonBuf is the streaming replacement for the map[string]any tree JSON()

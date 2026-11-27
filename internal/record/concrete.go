@@ -1,6 +1,6 @@
 package record
 
-import "tblgen/internal/diag"
+import "github.com/nodecoda/tablegen-go/internal/diag"
 
 // checkConcrete mirrors TGParser.cpp's checkConcrete: once a def is complete,
 // every value declared without `field` must be fully concrete. An unassigned

@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // printExpanded is llvm-tblgen -E: print the token stream after include

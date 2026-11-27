@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strconv"
 
-	"tblgen/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/record"
 )
 
 // JSON emits the same document as llvm-tblgen --dump-json: a compact object

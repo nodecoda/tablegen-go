@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/record"
 )
 
 // Detailed is the --print-detailed-records action

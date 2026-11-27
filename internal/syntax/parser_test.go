@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 func parseSrc(t *testing.T, src string) (*File, []diag.Diagnostic) {

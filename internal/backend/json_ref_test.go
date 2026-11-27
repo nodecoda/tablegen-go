@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"tblgen/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/record"
 )
 
 // jsonRef is the original implementation: build a map[string]any tree and let

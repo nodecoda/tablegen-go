@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // lowerDiags parses and lowers without failing on errors, returning the full

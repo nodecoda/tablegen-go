@@ -3,7 +3,7 @@ package backend
 import (
 	"strings"
 
-	"tblgen/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/record"
 )
 
 // PrintRecords renders the default llvm-tblgen action: every class (sorted by

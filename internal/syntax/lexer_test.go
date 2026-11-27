@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 func lex(t *testing.T, src string) ([]Token, []diag.Diagnostic) {
@@ -308,15 +308,19 @@ func TestPreprocessorErrors(t *testing.T) {
 // The lexer must swallow every file in LLVM's TableGen test suite without a
 // panic; only files that are *meant* to be broken may report a lexical error.
 func TestCorpusLexes(t *testing.T) {
-	dir := "/home/ubuntu/llvm/llvm-project/llvm/test/TableGen"
-	llvmIncludeDir := "/home/ubuntu/llvm/llvm-project/llvm/include"
+	dir := os.Getenv("TBLGEN_CORPUS")
+	llvmSrc := os.Getenv("LLVM_SRC")
+	if dir == "" || llvmSrc == "" {
+		t.Skip("set TBLGEN_CORPUS and LLVM_SRC to run the corpus lexer test")
+	}
+	llvmIncludeDir := filepath.Join(llvmSrc, "llvm", "include")
 	// Include directories the lit RUN lines use for the corpus: the test
 	// directory itself, shared Inputs, and target .td trees.
 	incDirs := []string{
 		dir,
 		filepath.Join(dir, "Common"),
-		"/home/ubuntu/llvm/llvm-project/llvm/lib/Target/AMDGPU",
-		"/home/ubuntu/llvm/llvm-project/llvm/lib/Target/AArch64",
+		filepath.Join(llvmSrc, "llvm", "lib", "Target", "AMDGPU"),
+		filepath.Join(llvmSrc, "llvm", "lib", "Target", "AArch64"),
 		llvmIncludeDir,
 	}
 	files, err := filepath.Glob(filepath.Join(dir, "*.td"))

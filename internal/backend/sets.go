@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"tblgen/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/record"
 )
 
 // PrintSets is the -print-sets action (utils/TableGen/Basic/TableGen.cpp:45):

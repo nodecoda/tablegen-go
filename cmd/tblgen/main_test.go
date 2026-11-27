@@ -45,3 +45,20 @@ func TestReorderArgs(t *testing.T) {
 		}
 	}
 }
+
+func TestGenFlagName(t *testing.T) {
+	cases := map[string]string{
+		"-gen-asm-writer":     "gen-asm-writer",
+		"--gen-register-info": "gen-register-info",
+		"-gen-dag-isel":       "gen-dag-isel",
+		"-gen":                "",
+		"--general":           "",
+		"gen-asm-writer":      "",
+		"-print-records":      "",
+	}
+	for in, want := range cases {
+		if got := genFlagName(in); got != want {
+			t.Errorf("genFlagName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 // Lexer is a hand-written, total lexer: it never panics, every token carries a

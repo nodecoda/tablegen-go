@@ -3,7 +3,7 @@ package record
 import (
 	"testing"
 
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // bitsFromInt/bitsToInt are the two directions of

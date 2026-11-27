@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // jsonOf is the whole pipeline for one source string: parse, lower, emit.

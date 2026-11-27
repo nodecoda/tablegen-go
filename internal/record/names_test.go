@@ -3,9 +3,9 @@ package record_test
 import (
 	"testing"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/record"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/record"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // A statement-level foreach inside a top-level `let ... in { }` block still

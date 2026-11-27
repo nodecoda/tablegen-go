@@ -8,7 +8,7 @@ package syntax
 import (
 	"fmt"
 
-	"tblgen/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/diag"
 )
 
 // Pos and Span live in diag so that diagnostics do not import the syntax layer.

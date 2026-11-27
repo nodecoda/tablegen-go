@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // Expr is an unevaluated initializer. Class fields stay as expressions until a

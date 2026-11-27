@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"tblgen/internal/diag"
-	"tblgen/internal/syntax"
+	"github.com/nodecoda/tablegen-go/internal/diag"
+	"github.com/nodecoda/tablegen-go/internal/syntax"
 )
 
 // UnsupportedError is a feature the Go implementation has not reached yet. It
