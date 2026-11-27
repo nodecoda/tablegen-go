@@ -106,6 +106,22 @@ type Env struct {
 	// class body is printed unresolved, so a class application inside it must
 	// not fold using that class's own argument bindings (classApplyName).
 	printing *Record
+	// resolved marks Init trees that went through a resolve step. A field
+	// copied by AddParentClass was resolved with CurRec->resolveReferences,
+	// whose folding is stricter than the parse-time Fold: it short-circuits
+	// !and at a zero left operand and !or at all ones even when the right
+	// side is unresolved (Record.cpp:1522-1537). A class's own body was never
+	// resolved, so its fields keep the parse-time Init and must not fold that
+	// way.
+	resolved bool
+}
+
+// WithResolved marks the environment as rendering an Init tree that a resolve
+// step produced.
+func (e *Env) WithResolved() *Env {
+	e2 := *e
+	e2.resolved = true
+	return &e2
 }
 
 // kvBinding is one binding stored outside Env.frames. Successive WithBinding
@@ -507,6 +523,11 @@ type RecordVal struct {
 	Nonconcrete bool
 	Expr        Expr
 	Loc         diag.Pos
+	// Copied marks a field AddParentClass copied from a parent class
+	// (TGParser.cpp:346-380). Its value went through
+	// CurRec->resolveReferences, which folds more than the parse-time Fold
+	// (see BinOpInit::resolveReferences, Record.cpp:1522-1537).
+	Copied bool
 	// Used marks a class template argument its body mentioned
 	// (RecordVal::isUsed, Record.h:1658-1662; TGVarScope::getVar sets it,
 	// TGParser.cpp:150-156). An unused argument is never resolved when the

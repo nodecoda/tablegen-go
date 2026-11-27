@@ -318,3 +318,85 @@ def op2 {
 		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", out, want)
 	}
 }
+
+// Parse-time folding of list comprehensions and bit casts. LLVM folds
+// !range, !foreach and !foldl while parsing whenever their list operand is a
+// ListInit, even if the bodies stay unresolved, and a bits<N> cast of an int
+// becomes a BitsInit, so --print-records shows the folded shape. Expected
+// text is llvm-tblgen 24.0.0git's output for the same source.
+func TestPrintRecordsComprehensionAndBitFolds(t *testing.T) {
+	src := `class FoldRange<int nf> {
+  list<int> R = !foldl([]<int>, !listconcat(!range(8, 12), !range(1, 3)), L, i, !listconcat(L, !if(!lt(i, nf), [i], [])));
+}
+class NestedForeach<list<string> names> {
+  list<string> V = !foldl([]<string>, !foreach(name, names, !foreach(mx, ["a", "b"], !strconcat(name, !strconcat("_", mx)))), all, w, !listconcat(all, w));
+}
+class SubstChain<string Pseudo> {
+  string V = !foldl(Pseudo, [["Pseudo", ""], ["_E64", ""], ["_MASK", ""]], Acc, Sub, !subst(Sub[0], Sub[1], Acc));
+}
+class Pick<string mx> {
+  defvar Cycles = [[0, 0, 0, 3], [0, 0, 3, 5]];
+  int c = !cond(!eq(mx, "MF8"): Cycles[0][!if(!eq(mx, "MF8"), 1, 0)], !eq(mx, "MF4"): Cycles[1][0]);
+}
+class BitsHolder<bits<3> S> {
+  bits<3> L = S;
+}
+class BitsArg<int n> : BitsHolder<!logtwo(8)> {
+  int UsesN = n;
+}
+class ImmLeaf<code pred> {
+  code ImmediateCode = pred;
+}
+class SImmLeafOp<int bitsNum> : ImmLeaf<"return isInt<" # bitsNum # ">(Imm);"> {
+  int UsesN = bitsNum;
+}
+class Simm12 : SImmLeafOp<12> {
+}
+class ConcreteShape {
+  list<int> R = !if(!not(!empty(!foreach(x, [1, 2, 3], !add(x, 1)))), !tail(!foreach(x, [1, 2, 3], !add(x, 1))), !foreach(x, [1, 2, 3], !add(x, 1)));
+}
+`
+	want := `------------- Classes -----------------
+class BitsArg<int BitsArg:n = ?> {	// BitsHolder
+  bits<3> L = { 0, 1, 1 };
+  int UsesN = BitsArg:n;
+}
+class BitsHolder<bits<3> BitsHolder:S = { ?, ?, ? }> {
+  bits<3> L = { BitsHolder:S{2}, BitsHolder:S{1}, BitsHolder:S{0} };
+}
+class ConcreteShape {
+  list<int> R = [3, 4];
+}
+class FoldRange<int FoldRange:nf = ?> {
+  list<int> R = !listconcat(!listconcat(!listconcat(!listconcat(!listconcat(!listconcat([], !if(!lt(8, FoldRange:nf), [8], [])), !if(!lt(9, FoldRange:nf), [9], [])), !if(!lt(10, FoldRange:nf), [10], [])), !if(!lt(11, FoldRange:nf), [11], [])), !if(!lt(1, FoldRange:nf), [1], [])), !if(!lt(2, FoldRange:nf), [2], []));
+}
+class ImmLeaf<string ImmLeaf:pred = ?> {
+  string ImmediateCode = ImmLeaf:pred;
+}
+class NestedForeach<list<string> NestedForeach:names = ?> {
+  list<string> V = !foldl([], !foreach(name, NestedForeach:names, [!strconcat(name, "_a"), !strconcat(name, "_b")]), all, w, !listconcat(all, w));
+}
+class Pick<string Pick:mx = ?> {
+  int c = !cond(!eq(Pick:mx, "MF8"): [0, 0, 0, 3][!if(!eq(Pick:mx, "MF8"), 1, 0)], !eq(Pick:mx, "MF4"): 0);
+}
+class SImmLeafOp<int SImmLeafOp:bitsNum = ?> {	// ImmLeaf
+  string ImmediateCode = !strconcat("return isInt<", !strconcat(!cast<string>(SImmLeafOp:bitsNum), ">(Imm);"));
+  int UsesN = SImmLeafOp:bitsNum;
+}
+class Simm12 {	// ImmLeaf SImmLeafOp
+  string ImmediateCode = "return isInt<12>(Imm);";
+  int UsesN = 12;
+}
+class SubstChain<string SubstChain:Pseudo = ?> {
+  string V = !subst("_MASK", "", !subst("_E64", "", !subst("Pseudo", "", SubstChain:Pseudo)));
+}
+------------- Defs -----------------
+`
+	out, err := backend.PrintRecords(lowerForPrint(t, "fold.td", src))
+	if err != nil {
+		t.Fatalf("print-records: %v", err)
+	}
+	if string(out) != want {
+		t.Errorf("print-records mismatch:\n--- got ---\n%s\n--- want ---\n%s", out, want)
+	}
+}

@@ -252,6 +252,20 @@ func resolveVar(x *syntax.VarValue, env *Env) (string, syntax.Value, *Env) {
 	return x.Name, nil, nil
 }
 
+// bitBaseInt folds a bit-select base to the integer it denotes. A bits<N>
+// cast of an int is a BitsInit (see bitsNode), and IntInit::getBit reads one
+// bit of it (Record.cpp:604-609); VarBitInit::resolveReferences calls getBit
+// on the resolved base (Record.cpp:2321-2327).
+func bitBaseInt(v syntax.Value, env *Env, depth int) (int64, bool) {
+	if n, ok := constIntV(v, env); ok {
+		return n, true
+	}
+	if b, ok := constAny(v, env, depth+1); ok {
+		return constIntV(b, env)
+	}
+	return 0, false
+}
+
 // bitTexts renders v as the BitsInit RecordVal::setValue stores for a bits<w>
 // destination, one text per bit, least significant first. ok=false means the
 // value's width or kind is not statically known here.
@@ -275,6 +289,18 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 				return constBits(n, w), true
 			}
 			return castBits(strconv.FormatInt(n, 10), w), true
+		}
+		// UnOpInit::Fold's CAST to bits<N> converts a concrete integer to a
+		// BitsInit (IntInit::convertInitializerTo, Record.cpp:587-599), so
+		// the destination field prints the literal bits rather than one
+		// VarBitInit per bit of the cast.
+		if x.Op == syntax.XCast && len(x.Args) == 1 && x.TypeArg.Kind == syntax.BitsType && x.TypeArg.Bits == w {
+			if n, ok := foldIntV(x.Args[0], env, depth+1); ok {
+				if fitsBits(n, w) {
+					return constBits(n, w), true
+				}
+				return castBits(strconv.FormatInt(n, 10), w), true
+			}
 		}
 		// An operator that is already bits<N> is a BitsInit-like Init of
 		// width N; its bits are VarBitInits of the operator itself.
@@ -315,7 +341,7 @@ func bitTexts(v syntax.Value, env *Env, w int, depth int) ([]string, bool) {
 		// substitutes the VarInit with the caller's IntInit, and
 		// VarBitInit::resolveReferences returns its element
 		// (Record.cpp:2321-2327, IntInit::getBit at Record.h:679-681).
-		if n, ok := constIntV(x.Base, env); ok {
+		if n, ok := bitBaseInt(x.Base, env, depth); ok {
 			out := make([]string, w)
 			for i := 0; i < w; i++ {
 				out[i] = intBitText(n, int64(x.Bits[w-1-i]))
@@ -421,7 +447,7 @@ func bitListCandidates(x *syntax.BitsValue, env *Env, depth int) ([]string, bool
 	for _, e := range x.Elems {
 		switch el := e.(type) {
 		case *syntax.BitRangeValue:
-			if n, ok := constIntV(el.Base, env); ok {
+			if n, ok := bitBaseInt(el.Base, env, depth); ok {
 				for _, bit := range el.Bits {
 					out = append(out, intBitText(n, int64(bit)))
 				}
@@ -596,6 +622,16 @@ func foldIntV(v syntax.Value, env *Env, depth int) (int64, bool) {
 		switch x.Op {
 		case syntax.XAdd, syntax.XSub, syntax.XMul, syntax.XAnd, syntax.XOr,
 			syntax.XXor, syntax.XDiv, syntax.XShl, syntax.XSra, syntax.XSrl:
+			// A resolved Init tree short-circuits: BinOpInit::resolveReferences
+			// returns the left operand alone when it is a zero !and or an
+			// all-ones !or, before resolving the right side
+			// (Record.cpp:1522-1537). The parse-time Fold has no such rule, so
+			// a class's own body keeps the operator (see Expr.resolve).
+			if env != nil && env.resolved && (x.Op == syntax.XAnd || x.Op == syntax.XOr) {
+				if a, ok := arg(0); ok && ((x.Op == syntax.XAnd && a == 0) || (x.Op == syntax.XOr && a == -1)) {
+					return a, true
+				}
+			}
 			a, ok1 := arg(0)
 			b, ok2 := arg(1)
 			if !ok1 || !ok2 {
@@ -832,7 +868,7 @@ func (r *Record) exprText(v *RecordVal) string {
 	if v.Expr == nil {
 		return unsetText(v.Ty)
 	}
-	return r.renderExpr(v.Expr, v.Ty)
+	return r.renderExpr(v.Expr, v.Ty, v.Copied || !r.IsClass)
 }
 
 // astEnv ties an AstExpr's name bindings to this record: a class body
@@ -851,17 +887,21 @@ func (r *Record) astEnv(x *AstExpr) *Env {
 	return env
 }
 
-func (r *Record) renderExpr(e Expr, want *Ty) string {
+func (r *Record) renderExpr(e Expr, want *Ty, resolved bool) string {
 	switch x := e.(type) {
 	case *AstExpr:
-		return initText(x.V, r.astEnv(x), want)
+		env := r.astEnv(x)
+		if resolved {
+			env = env.WithResolved()
+		}
+		return initText(x.V, env, want)
 	case *BindExpr:
 		if x.Rec != nil {
 			return x.Rec.Name
 		}
 		return unsetText(want)
 	case *AppendExpr:
-		return r.appendText(x)
+		return r.appendText(x, resolved)
 	case *BitsExpr:
 		// ParseLet patches the field's current BitsInit in place, so the
 		// result is the base value with this range's bits replaced, printed
@@ -1291,13 +1331,20 @@ func rawText(v syntax.Value, env *Env) string {
 		}
 		return rawText(x.Base, env) + "." + x.Field
 	case *syntax.SliceValue:
+		// BinOpInit::Fold's LISTELEM returns the element of a concrete list
+		// at a constant index (Record.cpp:1317-1325); the parser already
+		// folded it when the list was concrete (TGParser.cpp:3297-3301), so
+		// a defvar list substituted into a class body folds here.
+		if elem, ok := sliceElemValue(x, env, 0); ok {
+			return rawText(elem, env)
+		}
 		return rawText(x.Base, env) + "[" + sliceText(x, env) + "]"
 	case *syntax.BitRangeValue:
 		// A bit-select on a concrete integer is that bit: AddParentClass
 		// substitutes the VarInit with the caller's IntInit and
 		// VarBitInit::resolveReferences returns its element
 		// (Record.cpp:2321-2327, IntInit::getBit at Record.h:679-681).
-		if n, ok := constIntV(x.Base, env); ok {
+		if n, ok := bitBaseInt(x.Base, env, 0); ok {
 			bits := make([]string, len(x.Bits))
 			for i, bit := range x.Bits {
 				bits[i] = intBitText(n, int64(bit))
@@ -1402,12 +1449,14 @@ func rawText(v syntax.Value, env *Env) string {
 				return stringLiteral(t, c)
 			}
 		}
-		// UnOpInit::Fold's CAST<RecordRecTy> turns a string naming an existing
-		// def into that DefInit (Record.cpp:815-856).
+		// UnOpInit::Fold's CAST<RecordRecTy> turns a StringInit naming an
+		// existing def into that DefInit (Record.cpp:815-856). The name may
+		// come from a parent argument the caller substituted, so it has to be
+		// read through the environment, not only off a literal node.
 		if x.Op == syntax.XCast && x.TypeArg.Kind == syntax.RecordType && len(x.Args) == 1 {
-			if s, ok := derefInit(x.Args[0]).(*syntax.StringValue); ok && !s.Code &&
-				env != nil && env.keeper != nil && env.keeper.Def(s.Text) != nil {
-				return s.Text
+			if name, _, ok := constStrCode(x.Args[0], env, 0); ok &&
+				env != nil && env.keeper != nil && env.keeper.Def(name) != nil {
+				return name
 			}
 		}
 		if (x.Op == syntax.XEq || x.Op == syntax.XNe) && len(x.Args) == 2 {
@@ -1466,6 +1515,30 @@ func rawText(v syntax.Value, env *Env) string {
 		}
 		if str, ok := constStr(x, env, 0); ok {
 			return `"` + str + `"`
+		}
+		// TernOpInit::Fold's FOREACH folds as soon as the list operand is a
+		// ListInit (ForeachHelper, Record.cpp:1958-1980), even when the body
+		// still names an unresolved class argument; the folded Init is a
+		// ListInit of those bodies, so the class body prints the expanded
+		// list instead of the operator.
+		if x.Op == syntax.XForEach && len(x.Args) == 2 && len(x.VarNames) == 1 &&
+			x.Args[0].Type().Kind == syntax.ListType {
+			if elems, ok := constList(x.Args[0], env, 0); ok {
+				out := make([]string, len(elems))
+				for i, e := range elems {
+					out[i] = rawText(substValue(x.Args[1], x.VarNames[0], e, 0), env)
+				}
+				return "[" + strings.Join(out, ", ") + "]"
+			}
+		}
+		// FoldOpInit::Fold evaluates the body once per element whenever the
+		// list operand is a ListInit, even if the accumulator stays
+		// unresolved; the folded Init is the accumulated expression
+		// (Record.cpp:2022-2034).
+		if x.Op == syntax.XFoldl && len(x.Args) == 3 && len(x.VarNames) == 2 {
+			if text, ok := foldlExpandedText(x, env, 0); ok {
+				return text
+			}
 		}
 		if elems, ok := constList(x, env, 0); ok {
 			return listText(elems, env)
@@ -1626,6 +1699,27 @@ func derefBang(v syntax.Value, env *Env, depth int) syntax.Value {
 
 // substValue replaces a lexical loop variable with a value, the substitution
 // ForeachHelper performs per element while folding (Record.cpp:1958).
+// foldlExpandedText renders FoldOpInit::Fold's result: with a concrete list,
+// the body is resolved once per element with the accumulator bound to the
+// previous result and the element variable bound to the current element
+// (Record.cpp:2022-2034). The accumulator is substituted structurally so that
+// later iterations print the whole accumulated expression nested.
+func foldlExpandedText(x *syntax.BangValue, env *Env, depth int) (string, bool) {
+	if depth > 32 {
+		return "", false
+	}
+	list, ok := constList(x.Args[1], env, depth+1)
+	if !ok {
+		return "", false
+	}
+	acc := x.Args[0]
+	for _, elem := range list {
+		body := substValue(x.Args[2], x.VarNames[0], acc, 0)
+		acc = substValue(body, x.VarNames[1], elem, 0)
+	}
+	return rawText(acc, env), true
+}
+
 func substValue(v syntax.Value, name string, repl syntax.Value, depth int) syntax.Value {
 	if v == nil || depth > 32 {
 		return v
@@ -1638,7 +1732,7 @@ func substValue(v syntax.Value, name string, repl syntax.Value, depth int) synta
 		return v
 	case *syntax.BangValue:
 		cp := *x
-		shadowed := false
+		shadowArg := -1
 		switch x.Op {
 		case syntax.XForEach, syntax.XFilter, syntax.XSort:
 			// TernOpInit::resolveReferences resolves a comprehension body with a
@@ -1647,13 +1741,21 @@ func substValue(v syntax.Value, name string, repl syntax.Value, depth int) synta
 			// comprehension binds the same name. The list argument is still
 			// resolved by the outer resolver.
 			if len(x.VarNames) > 0 && x.VarNames[0] == name {
-				shadowed = true
+				shadowArg = 1
+			}
+		case syntax.XFoldl:
+			// FoldOpInit::resolveReferences resolves the start and the list
+			// under the outer resolver and only the body under a
+			// ShadowResolver for the accumulator and element names
+			// (Record.cpp:2036-2049).
+			if len(x.VarNames) == 2 && (x.VarNames[0] == name || x.VarNames[1] == name) {
+				shadowArg = 2
 			}
 		}
 		if x.Args != nil {
 			cp.Args = make([]syntax.Value, len(x.Args))
 			for i, a := range x.Args {
-				if shadowed && i == 1 {
+				if i == shadowArg {
 					cp.Args[i] = a
 					continue
 				}
@@ -1756,6 +1858,13 @@ func constAny(v syntax.Value, env *Env, depth int) (syntax.Value, bool) {
 			return constAny(lit, env, depth+1)
 		}
 		return nil, false
+	case *syntax.SliceValue:
+		// BinOpInit::Fold's LISTELEM on a concrete list is that element
+		// (Record.cpp:1317-1325).
+		if elem, ok := sliceElemValue(x, env, depth); ok {
+			return constAny(elem, env, depth+1)
+		}
+		return nil, false
 	case *syntax.BangValue:
 		switch x.Op {
 		case syntax.XIf:
@@ -1773,6 +1882,21 @@ func constAny(v syntax.Value, env *Env, depth int) (syntax.Value, bool) {
 		case syntax.XCast:
 			if len(x.Args) == 1 && castIsIdentity(x.Args[0], x.TypeArg) {
 				return constAny(x.Args[0], env, depth+1)
+			}
+			if len(x.Args) == 1 && x.TypeArg.Kind == syntax.RecordType {
+				if d, ok := foldCastRecord(x.Args[0], env, depth+1); ok {
+					return d, true
+				}
+			}
+			if len(x.Args) == 1 && x.TypeArg.Kind == syntax.BitsType {
+				// UnOpInit::Fold's CAST ends with
+				// LHS->convertInitializerTo(getType()), and IntInit's
+				// conversion to bits<N> builds one bit per element
+				// (Record.cpp:577-599, :856-860). A cast that names an
+				// unresolved class argument keeps its operator.
+				if n, ok := foldIntV(x.Args[0], env, depth+1); ok && fitsBits(n, x.TypeArg.Bits) {
+					return bitsNode(n, x.TypeArg.Bits, x.Span()), true
+				}
 			}
 		}
 		if n, ok := foldIntV(x, env, depth+1); ok {
@@ -1916,6 +2040,24 @@ func sliceText(x *syntax.SliceValue, env *Env) string {
 	return "[" + strings.Join(parts, ", ") + "]"
 }
 
+// sliceElemValue applies LISTELEM: a concrete list indexed by a constant int
+// yields that element, and an out-of-range index keeps the subscript
+// (Record.cpp:1317-1325).
+func sliceElemValue(x *syntax.SliceValue, env *Env, depth int) (syntax.Value, bool) {
+	if depth > 32 || x.ListResult || len(x.Index) != 1 || x.Index[0].Hi != nil {
+		return nil, false
+	}
+	base, ok := constList(x.Base, env, depth+1)
+	if !ok {
+		return nil, false
+	}
+	idx, ok := foldIntV(x.Index[0].Lo, env, depth+1)
+	if !ok || idx < 0 || idx >= int64(len(base)) {
+		return nil, false
+	}
+	return base[idx], true
+}
+
 func literalRange(el *syntax.SliceElem) bool {
 	_, _, ok := literalBounds(el)
 	return ok
@@ -1992,8 +2134,19 @@ func constStrCode(v syntax.Value, env *Env, depth int) (string, bool, bool) {
 			return constStrCode(d, env, depth+1)
 		}
 	case *syntax.PasteValue:
+		// TGParser casts both `#` operands to string before folding the
+		// paste (TGParser.cpp:3367-3428), and that CAST of an IntInit folds
+		// to a StringInit immediately (UnOpInit::Fold, Record.cpp:798-813).
+		// A substituted class argument arrives as an IntInit, so the paste
+		// must read it through the same cast.
 		lt, lc, ok1 := constStrCode(x.LHS, env, depth+1)
+		if !ok1 {
+			lt, lc, ok1 = foldCastString(x.LHS, env, depth+1)
+		}
 		rt, rc, ok2 := constStrCode(x.RHS, env, depth+1)
+		if !ok2 {
+			rt, rc, ok2 = foldCastString(x.RHS, env, depth+1)
+		}
 		if ok1 && ok2 {
 			return lt + rt, lc || rc, true
 		}
@@ -2014,6 +2167,25 @@ func foldCastString(v syntax.Value, env *Env, depth int) (string, bool, bool) {
 		return strconv.FormatInt(n, 10), false, true
 	}
 	return "", false, false
+}
+
+// foldCastRecord applies UnOpInit::Fold's CAST<RecordRecTy>: a StringInit
+// naming an existing def becomes that DefInit (Record.cpp:815-856). It returns
+// the def as the VarValue a DefInit prints as, so print-time folding can use it
+// anywhere a literal is accepted (a !foreach element, a list element).
+func foldCastRecord(v syntax.Value, env *Env, depth int) (syntax.Value, bool) {
+	if v == nil || depth > 32 || env == nil || env.keeper == nil {
+		return nil, false
+	}
+	name, _, ok := constStrCode(v, env, depth+1)
+	if !ok || env.keeper.Def(name) == nil {
+		return nil, false
+	}
+	return &syntax.VarValue{
+		ValueBase: syntax.ValueBase{Base: syntax.Base{At: v.Span()}, Ty: syntax.Type{Kind: syntax.RecordType}},
+		Name:      name,
+		GlobalRef: true,
+	}, true
 }
 
 // stringOperand renders a paste operand: non-string operands are cast to
@@ -2054,6 +2226,19 @@ func bangNode(op syntax.Kind, a, b syntax.Value) *syntax.BangValue {
 		Op:        op,
 		Args:      []syntax.Value{a, b},
 	}
+}
+
+// bitsNode builds the BitsInit IntInit::convertInitializerTo produces for a
+// bits<N> destination: bit N-1 first, because BitsInit prints most significant
+// bit first (Record.cpp:587-599).
+func bitsNode(n int64, w int, at syntax.Span) *syntax.BitsValue {
+	bv := &syntax.BitsValue{
+		ValueBase: syntax.ValueBase{Base: syntax.Base{At: at}, Ty: syntax.Type{Kind: syntax.BitsType, Bits: w}},
+	}
+	for i := w - 1; i >= 0; i-- {
+		bv.Elems = append(bv.Elems, intNode((n>>uint(i))&1, at))
+	}
+	return bv
 }
 
 func intNode(n int64, at syntax.Span) *syntax.IntValue {
@@ -2229,11 +2414,22 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 			return constList(lit, env, depth+1)
 		}
 		return nil, false
+	case *syntax.SliceValue:
+		// LISTELEM on a concrete list is that element (Record.cpp:1317-1325);
+		// `Cycles[1][0]` is two nested subscripts, so fold the first one and
+		// keep reading the result.
+		if elem, ok := sliceElemValue(x, env, depth); ok {
+			return constList(elem, env, depth+1)
+		}
+		return nil, false
 	case *syntax.BangValue:
 		switch x.Op {
 		case syntax.XForEach:
-			// ForeachHelper evaluates the expression once per element
-			// (Record.cpp:1958), so both the list and every result must fold.
+			// ForeachHelper only needs the list operand to be a ListInit
+			// (Record.cpp:1958-1980); the per-element bodies are substituted
+			// in and may stay unresolved. The result is a ListInit of those
+			// bodies, so its shape is known even when no element folds further,
+			// which lets !empty/!size/!tail/!if fold on it.
 			if len(x.Args) == 2 && len(x.VarNames) == 1 {
 				l, ok := constList(x.Args[0], env, depth+1)
 				if !ok {
@@ -2241,11 +2437,7 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 				}
 				out := make([]syntax.Value, 0, len(l))
 				for _, e := range l {
-					cv, ok := constAny(substValue(x.Args[1], x.VarNames[0], e, 0), env, depth+1)
-					if !ok {
-						return nil, false
-					}
-					out = append(out, cv)
+					out = append(out, substValue(x.Args[1], x.VarNames[0], e, 0))
 				}
 				return out, true
 			}
@@ -2307,6 +2499,29 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 					strs[i], strs[j] = strs[j], strs[i]
 				})
 				return out, true
+			}
+		case syntax.XRange:
+			// TernOpInit::Fold's RANGE builds a ListInit as soon as all three
+			// bounds are IntInits (Record.cpp:1839-1864). The parser already
+			// filled the default step and rewrote !range(list) to
+			// (0, !size(list), 1) (TGParser.cpp:2032-2056), so folding the
+			// three operands covers every spelling.
+			if lo, ok1 := rangeBound(x, 0, env, depth); ok1 {
+				if hi, ok2 := rangeBound(x, 1, env, depth); ok2 {
+					if step, ok3 := rangeBound(x, 2, env, depth); ok3 {
+						out := make([]syntax.Value, 0)
+						if step > 0 {
+							for i := lo; i < hi; i += step {
+								out = append(out, intNode(i, x.Span()))
+							}
+						} else if step < 0 {
+							for i := lo; i > hi; i += step {
+								out = append(out, intNode(i, x.Span()))
+							}
+						}
+						return out, true
+					}
+				}
 			}
 		case syntax.XListConcat:
 			if len(x.Args) == 2 {
@@ -2415,6 +2630,15 @@ func constList(v syntax.Value, env *Env, depth int) ([]syntax.Value, bool) {
 		}
 	}
 	return nil, false
+}
+
+// rangeBound folds one !range bound. A missing operand keeps the operator
+// (see constList's XRange case).
+func rangeBound(x *syntax.BangValue, i int, env *Env, depth int) (int64, bool) {
+	if i >= len(x.Args) {
+		return 0, false
+	}
+	return foldIntV(x.Args[i], env, depth+1)
 }
 
 // constStr folds !strconcat/!if chains over string literals.
@@ -2575,7 +2799,7 @@ func (g *Global) Text() string {
 		}
 		return "?"
 	}
-	return (&Record{}).renderExpr(g.Expr, nil)
+	return (&Record{}).renderExpr(g.Expr, nil, false)
 }
 
 // appendText renders `let append/prepend`: TGParser::SetValue builds
@@ -2584,17 +2808,17 @@ func (g *Global) Text() string {
 // ListInits and two DagInits even when their elements are still VarInits, so
 // those keep a single list/dag literal; STRING concat only folds two
 // StringInits and otherwise survives as !strconcat.
-func (r *Record) appendText(x *AppendExpr) string {
+func (r *Record) appendText(x *AppendExpr, resolved bool) string {
 	left, right := x.Base, x.Add
 	if x.Prepend {
 		left, right = right, left
 	}
 	// SetValue stores the operand directly when the current value is unset.
 	if isUnsetExpr(left) {
-		return r.renderExpr(right, nil)
+		return r.renderExpr(right, nil, resolved)
 	}
 	if isUnsetExpr(right) {
-		return r.renderExpr(left, nil)
+		return r.renderExpr(left, nil, resolved)
 	}
 	switch x.Kind {
 	case StringTy, CodeTy:
@@ -2603,23 +2827,23 @@ func (r *Record) appendText(x *AppendExpr) string {
 				return stringLiteral(lt+rt, lc || rc)
 			}
 		}
-		return "!strconcat(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
+		return "!strconcat(" + r.renderExpr(left, nil, resolved) + ", " + r.renderExpr(right, nil, resolved) + ")"
 	case ListTy:
 		if le, ok := r.listParts(left); ok {
 			if re, ok := r.listParts(right); ok {
 				return "[" + strings.Join(append(le, re...), ", ") + "]"
 			}
 		}
-		return "!listconcat(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
+		return "!listconcat(" + r.renderExpr(left, nil, resolved) + ", " + r.renderExpr(right, nil, resolved) + ")"
 	case DagTy:
 		if lp, ok := r.dagParts(left); ok {
 			if rp, ok := r.dagParts(right); ok {
 				return dagPartsText(lp, rp)
 			}
 		}
-		return "!con(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
+		return "!con(" + r.renderExpr(left, nil, resolved) + ", " + r.renderExpr(right, nil, resolved) + ")"
 	}
-	return "!con(" + r.renderExpr(left, nil) + ", " + r.renderExpr(right, nil) + ")"
+	return "!con(" + r.renderExpr(left, nil, resolved) + ", " + r.renderExpr(right, nil, resolved) + ")"
 }
 
 func isUnsetExpr(e Expr) bool {

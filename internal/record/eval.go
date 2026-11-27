@@ -833,7 +833,7 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 	rec.Super = append(rec.Super, class)
 	defaults := classDefaultBindings(class, provided)
 	for _, f := range class.Vals {
-		nv := &RecordVal{Name: f.Name, Ty: f.Ty, Nonconcrete: f.Nonconcrete, Loc: f.Loc}
+		nv := &RecordVal{Name: f.Name, Ty: f.Ty, Nonconcrete: f.Nonconcrete, Loc: f.Loc, Copied: true}
 		nv.Expr = rebindFrames(f.Expr, defaults, provided)
 		rec.addVal(nv)
 	}
@@ -944,7 +944,7 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 		})
 	}
 	for _, f := range class.Vals {
-		nv := &RecordVal{Name: f.Name, Ty: f.Ty, Nonconcrete: f.Nonconcrete, Loc: f.Loc}
+		nv := &RecordVal{Name: f.Name, Ty: f.Ty, Nonconcrete: f.Nonconcrete, Loc: f.Loc, Copied: true}
 		nv.Expr = rebind(f.Expr, provided)
 		target.addVal(nv)
 	}
