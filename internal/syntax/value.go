@@ -217,7 +217,7 @@ func (p *Parser) parseIdentValue(rec *recordInfo, mode idMode, start int) Value 
 		return &ClassApplyValue{ValueBase: ValueBase{Base: Base{At: p.span(start)}, Ty: ty}, Class: nt.Text, ClassSpan: nt.Span, Args: args}
 	}
 	if b, ok := p.lookupLocal(nt.Text); ok {
-		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: b.ty}, Name: nt.Text, Lit: b.lit, Subst: b.isDefvar && b.lit != nil, Lexical: b.lexical, ArgRef: b.arg, ArgQual: b.qual}
+		return &VarValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: b.ty}, Name: nt.Text, Lit: b.lit, Subst: b.isDefvar && b.lit != nil, Lexical: b.lexical, ArgRef: b.arg, ArgQual: b.qual, FieldRef: b.fieldRef}
 	}
 	if mode == parseNameMode {
 		return &StringValue{ValueBase: ValueBase{Base: Base{At: nt.Span}, Ty: StringTy}, Text: nt.Text}

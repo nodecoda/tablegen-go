@@ -34,6 +34,7 @@ func lowerWith(file *syntax.File, filename string, namesOnly bool) (*Keeper, []d
 		mcLets:       map[string][]*syntax.LetBind{},
 		anonName:     map[*syntax.DefStmt]string{},
 		anonDefmName: map[*syntax.DefmStmt]string{},
+		preUnrolled:  map[syntax.Object]*syntax.MultiClassStmt{},
 		loopSeq:      -1,
 		defmSeq:      -1,
 		namesOnly:    namesOnly,
@@ -57,7 +58,23 @@ type Lowerer struct {
 	mcLets       map[string][]*syntax.LetBind
 	anonName     map[*syntax.DefStmt]string
 	anonDefmName map[*syntax.DefmStmt]string
-	loopSeq      int // Seq of the statement-level loop being expanded, or -1
+	// preUnrolled records the loops and ifs that the definition-time walk
+	// unrolled, together with the multiclass whose definition was being
+	// parsed. TGParser unrolls a foreach whose list is concrete while the
+	// enclosing multiclass body is parsed (addEntry -> resolve,
+	// TGParser.cpp:426-430), so the records inside it become plain body
+	// entries of that multiclass and keep its defm locations; a loop that
+	// stays unresolved at definition time is expanded by resolve() later,
+	// which never appends the site (TGParser.cpp:511). mcObjects uses this
+	// to pick which location chain a record built inside a loop carries.
+	preUnrolled map[syntax.Object]*syntax.MultiClassStmt
+	// preMC is the multiclass whose body the definition-time walk is
+	// parsing, or nil outside one. preExpandMC does not change it: a loop
+	// inside a nested multiclass body that only unrolls with the caller's
+	// arguments still belongs to the definition of the multiclass that
+	// contains the nested defm.
+	preMC   *syntax.MultiClassStmt
+	loopSeq int // Seq of the statement-level loop being expanded, or -1
 	// defmSeq is the Seq of the statement-level defm whose expansion is in
 	// progress, or -1. Every record finished under it is published so the
 	// driver can re-parse with those names installed.
@@ -121,6 +138,12 @@ type Lowerer struct {
 	// while parsing it (ApplyLetStack), so a field they overwrite is no longer
 	// resolved when the entry is resolved with the loop substitutions.
 	preLets []*syntax.LetBind
+	// preLetVals is the same stack with the environment each binding was
+	// written in. TGParser's ApplyLetStack stores a let's Init in the field
+	// and resolves it later with the record, so the definition-time walk must
+	// not fold it where the `let` keyword is parsed; it resolves the value in
+	// the field's declaration slot instead (see prePhaseValues).
+	preLetVals []preLetVal
 }
 
 func (l *Lowerer) errorAt(err error, fallback diag.Span) {
@@ -204,7 +227,7 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 		// (VarDefInit::get, Record.cpp:2374).
 		for _, p := range t.Parents {
 			if pm := l.mcs[p.Name]; pm != nil {
-				l.preExpandMC(pm, p.Args)
+				l.preExpandMC(pm, p.Args, nil)
 			}
 		}
 		// TGParser parses a multiclass body statement by statement: a `def`
@@ -214,10 +237,13 @@ func (l *Lowerer) object(o syntax.Object, env *Env, lets []*syntax.LetBind) {
 		// copied records with the loop substitutions and instantiating the
 		// class applications they contain. Doing both in source order keeps
 		// those instantiations ahead of the names the later statements take.
+		prevPreMC := l.preMC
+		l.preMC = t
 		for _, o := range t.Body {
 			l.reserveAnonNames([]syntax.Object{o})
 			l.preExpandBody([]syntax.Object{o}, nil)
 		}
+		l.preMC = prevPreMC
 	case *syntax.DefvarStmt:
 		if l.scope == 0 {
 			l.k.defineGlobal(t.Name, &AstExpr{V: t.Value, Env: env})
@@ -657,6 +683,13 @@ type scopedLet struct {
 	env *Env
 }
 
+// preLetVal is one binding of a `let` the definition-time walk has entered.
+type preLetVal struct {
+	field string
+	value syntax.Value
+	env   *Env
+}
+
 // deferredDef is a defm entry that has been through TGParser's resolve phase
 // but not yet through addDefOne. See expandDefm.
 type deferredDef struct {
@@ -685,6 +718,23 @@ func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []sco
 		// loop (addEntry pushes to Loops.back()->Entries), and the loop then
 		// resolves and adds each one before touching the next, so there the
 		// per-def order is already correct.
+		if !l.namesOnly {
+			// TGParser::resolve resolves each copied entry's values before
+			// ParseDefm runs addDefOne on any of them (TGParser.cpp:531-552):
+			// Rec->resolveReferences (Record.cpp:2855-2882) instantiates the
+			// anonymous class applications the defm's substitutions made
+			// concrete (Record.cpp:2423-2452), so they take their
+			// anonymous_N before addDefOne can rename a colliding def
+			// (TGParser.cpp:585-591). The resolver there is a MapResolver
+			// holding only those substitutions, so a value over a record field
+			// stays unresolved until addDefOne; valueSafe enforces that
+			// boundary. Trailing classes and the defm's own let stack are
+			// applied after the pass, so their values also still resolve
+			// during addDefOne. The folded values are dropped on purpose:
+			// addDefOne resolves the fields again with the final name, which
+			// is what a self-reference has to see.
+			l.prePhaseFields(rec)
+		}
 		*l.pending = append(*l.pending, &deferredDef{
 			rec: rec, anonymous: anonymous, env: env, loopSeq: l.loopSeq,
 		})
@@ -958,7 +1008,7 @@ func (l *Lowerer) reserveAnonNames(items []syntax.Object) {
 				}
 			}
 			l.preFoldParents(t.Parents)
-			l.preExpandInnerDefm(t)
+			l.preExpandInnerDefm(t, nil)
 		case *syntax.LetStmt:
 			for _, b := range t.Binds {
 				l.preFold(b.Value, nil)
@@ -995,7 +1045,7 @@ func (l *Lowerer) reserveAnonNames(items []syntax.Object) {
 // already concrete - notably the elements of a foreach list such as
 // `VTPair<AccumType, v4f32>` - is instantiated then and keeps the anonymous
 // number it was given (VarDefInit::resolveReferences, Record.cpp:2423-2452).
-func (l *Lowerer) preExpandInnerDefm(st *syntax.DefmStmt) {
+func (l *Lowerer) preExpandInnerDefm(st *syntax.DefmStmt, env *Env) {
 	if l.preDepth > 16 {
 		return
 	}
@@ -1009,14 +1059,14 @@ func (l *Lowerer) preExpandInnerDefm(st *syntax.DefmStmt) {
 	defer func() { l.k.preInstantiate = prevPre }()
 	for _, ref := range st.Parents[:st.ClassStart] {
 		if mc := l.mcs[ref.Name]; mc != nil {
-			l.preExpandMC(mc, ref.Args)
+			l.preExpandMC(mc, ref.Args, env)
 		}
 	}
 }
 
 // preExpandMC walks one multiclass the parser would instantiate at this point,
 // binding its template arguments to the call site's values.
-func (l *Lowerer) preExpandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg) {
+func (l *Lowerer) preExpandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg, env *Env) {
 	if l.preDepth > 16 {
 		return
 	}
@@ -1034,22 +1084,22 @@ func (l *Lowerer) preExpandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg) {
 			}
 			name = mc.TemplateArgs[i].Name
 		}
-		binds[mc.Name+"::"+name] = Binding{V: a.Value, ParseTime: l.parseTimeKnown(a.Value, nil)}
+		binds[mc.Name+"::"+name] = Binding{V: a.Value, Env: env, ParseTime: l.parseTimeKnown(a.Value, env)}
 	}
 	for _, d := range mc.TemplateArgs {
 		key := mc.Name + "::" + d.Name
 		if _, ok := binds[key]; ok || d.Value == nil {
 			continue
 		}
-		binds[key] = Binding{V: d.Value, ParseTime: l.parseTimeKnown(d.Value, nil)}
+		binds[key] = Binding{V: d.Value, Env: env, ParseTime: l.parseTimeKnown(d.Value, env)}
 	}
-	env := (&Env{}).With(binds)
+	bodyEnv := env.With(binds)
 	for _, p := range mc.Parents {
 		if pm := l.mcs[p.Name]; pm != nil {
-			l.preExpandMC(pm, p.Args)
+			l.preExpandMC(pm, p.Args, env)
 		}
 	}
-	l.preExpandBody(mc.Body, env)
+	l.preExpandBody(mc.Body, bodyEnv)
 }
 
 // preExpandBody walks a multiclass body the way it is parsed, unrolling every
@@ -1070,6 +1120,7 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 			if t.Range != nil {
 				// `foreach i = 1...4` has no list value; TGParser unrolls it
 				// while parsing, so the body sees a concrete iterator.
+				l.markPreUnrolled(t)
 				for _, n := range t.Range {
 					l.preLoopDepth++
 					l.preExpandBody(t.Body, env.WithBinding(t.Var, Binding{Val: &Int{N: int64(n)}, ParseTime: true}))
@@ -1081,13 +1132,35 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 				continue
 			}
 			l.preFold(t.List, env)
+			// Only a list the parser could resolve on its own counts as a
+			// definition-time unroll: a template argument with a default is
+			// still a VarInit here even though its Lit is filled in
+			// (TGParser.cpp:426-430 resolves Loop.ListValue with the parse
+			// resolver, which has no template arguments). A structural
+			// ListInit is unrolled even when its elements are unresolved
+			// class applications, so the eval below may fail and still leave
+			// the loop unrolled at definition time.
+			structural := l.parseTimeList(t.List, env)
+			// A structural ListInit is unrolled even when its elements are
+			// unresolved; a fully parse-time expression (a defvar, a loop
+			// variable, a field of a global def) is resolved by the parser
+			// too, even when the list only appears behind a class field.
+			if !structural {
+				structural = l.parseTimeKnown(t.List, env)
+			}
 			v, err := l.k.evalSyntax(t.List, env, nil)
 			if err != nil {
+				if structural {
+					l.markPreUnrolled(t)
+				}
 				continue
 			}
 			ls, ok := v.(*List)
 			if !ok {
 				continue
+			}
+			if structural {
+				l.markPreUnrolled(t)
 			}
 			known := l.parseTimeList(t.List, env)
 			for i, e := range ls.Elems {
@@ -1105,28 +1178,39 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 			if err != nil {
 				continue
 			}
-			n, ok := v.(*Int)
-			if !ok {
+			n, err := l.k.asInt(v)
+			if err != nil {
 				continue
 			}
-			if n.N != 0 {
+			// Same rule as the foreach above: a condition that only folds
+			// through a template argument's default is not resolved while
+			// the multiclass is parsed, so its records belong to the
+			// instantiation that supplies the argument.
+			if l.parseTimeKnown(t.Cond, env) {
+				l.markPreUnrolled(t)
+			}
+			if n != 0 {
 				l.preExpandBody(t.Then, env)
 			} else {
 				l.preExpandBody(t.Else, env)
 			}
 		case *syntax.LetStmt:
-			// ApplyLetStack at parse time evaluates each binding against the
-			// active loop substitution; the fields they assign are already
-			// final when the entry is resolved.
-			for _, b := range t.Binds {
-				l.preFold(b.Value, env)
-			}
+			// ApplyLetStack stores each binding's Init in the field it names
+			// and leaves resolution to the record (TGParser.cpp:3895-3899):
+			// the value is not folded where the `let` keyword is parsed, but
+			// in the field's declaration slot when the entry resolves
+			// (Record::resolveReferences, Record.cpp:2855-2882).
 			n := len(l.preLets)
 			l.preLets = append(l.preLets, t.Binds...)
+			nv := len(l.preLetVals)
+			for _, b := range t.Binds {
+				l.preLetVals = append(l.preLetVals, preLetVal{field: b.Field, value: b.Value, env: env})
+			}
 			l.preExpandBody(t.Body, env)
+			l.preLetVals = l.preLetVals[:nv]
 			l.preLets = l.preLets[:n]
 		case *syntax.DefmStmt:
-			l.preExpandInnerDefm(t)
+			l.preExpandInnerDefm(t, env)
 		case *syntax.DefStmt:
 			l.preFold(t.Name, env)
 			// TGParser::resolve copies a multiclass-body def and resolves
@@ -1181,20 +1265,27 @@ func (l *Lowerer) prePhaseValues(st *syntax.DefStmt, env *Env) {
 			break
 		}
 	}
-	// A field the entry's own `let` bindings overwrite is not resolved at
-	// this point (ApplyLetStack replaced it while the body was parsed), so a
-	// class application behind it must not take a number here.
-	overridden := make(map[string]bool, len(l.preLets))
-	for _, b := range l.preLets {
-		overridden[b.Field] = true
-	}
+	// A field the entry's own body `let` overwrites carries a value that is
+	// not copied onto this throwaway record, so it must not take a number
+	// here. A `let` from an enclosing multiclass instead replaced the field
+	// through ApplyLetStack; its value resolves in the field's declaration
+	// slot like any other (TGParser.cpp:3895-3899).
+	ownLet := make(map[string]bool)
 	for _, it := range st.Body {
 		if li, ok := it.(*syntax.LetItem); ok {
-			overridden[li.Bind.Field] = true
+			ownLet[li.Bind.Field] = true
 		}
 	}
+	topLet := make(map[string]preLetVal, len(l.preLetVals))
+	for _, lv := range l.preLetVals {
+		topLet[lv.field] = lv
+	}
 	for _, v := range rec.Vals {
-		if v.state != unresolved || v.Expr == nil || overridden[v.Name] {
+		if v.state != unresolved || v.Expr == nil || ownLet[v.Name] {
+			continue
+		}
+		if lv, ok := topLet[v.Name]; ok {
+			l.preResolveValue(lv.value, lv.env, rec)
 			continue
 		}
 		l.preResolveExpr(v.Expr, rec)
@@ -1455,7 +1546,7 @@ func (l *Lowerer) expandMC(mc *syntax.MultiClassStmt, args []*syntax.Arg, defmNa
 		}
 	}
 	preLets := scopedLets(l.mcLets[mc.Name], env)
-	return l.mcObjects(mc.Body, env, preLets, defmName, locs, postLets, extraParents)
+	return l.mcObjects(mc.Body, mc, env, preLets, defmName, locs, postLets, extraParents)
 }
 
 func firstLoc(locs []diag.Pos) *diag.Pos {
@@ -1505,7 +1596,7 @@ func (l *Lowerer) bindMCArgs(mc *syntax.MultiClassStmt, args []*syntax.Arg, call
 	return out, nil
 }
 
-func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
+func (l *Lowerer) mcObjects(objs []syntax.Object, mc *syntax.MultiClassStmt, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
 	for _, o := range objs {
 		switch t := o.(type) {
 		case *syntax.DefStmt:
@@ -1526,7 +1617,7 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 			}
 		case *syntax.LetStmt:
 			nl := append(append([]scopedLet(nil), preLets...), scopedLets(t.Binds, env)...)
-			if err := l.mcObjects(t.Body, env, nl, defmName, outerLocs, postLets, extraParents); err != nil {
+			if err := l.mcObjects(t.Body, mc, env, nl, defmName, outerLocs, postLets, extraParents); err != nil {
 				return err
 			}
 		case *syntax.IfStmt:
@@ -1544,8 +1635,8 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 			}
 			// LLVM lowers `if` to a foreach over !if(cond, [0], []), so it
 			// expands a statement loop exactly like the foreach case.
-			locs := loopLocs(l, t.Cond, env, outerLocs, false)
-			if err := l.mcObjects(body, env, preLets, defmName, locs, postLets, extraParents); err != nil {
+			locs := l.loopEntryLocs(t, mc, t.Cond, env, outerLocs, false)
+			if err := l.mcObjects(body, mc, env, preLets, defmName, locs, postLets, extraParents); err != nil {
 				return err
 			}
 		case *syntax.ForeachStmt:
@@ -1558,9 +1649,9 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, env *Env, preLets []scopedLet,
 			// as entries, which appends that level's location there.
 			locs := outerLocs
 			if t.Range == nil {
-				locs = loopLocs(l, t.List, env, outerLocs, true)
+				locs = l.loopEntryLocs(t, mc, t.List, env, outerLocs, true)
 			}
-			if err := l.mcForeach(t, env, preLets, defmName, locs, postLets, extraParents); err != nil {
+			if err := l.mcForeach(t, mc, env, preLets, defmName, locs, postLets, extraParents); err != nil {
 				return err
 			}
 		case *syntax.DefvarStmt:
@@ -1641,6 +1732,34 @@ func loopLocs(l *Lowerer, v syntax.Value, env *Env, outerLocs []diag.Pos, list b
 		return outerLocsAbove(outerLocs)
 	}
 	return nil
+}
+
+// markPreUnrolled records the definition-time unroll of a loop. The first
+// walk wins: a nested defm is revisited while an enclosing multiclass is
+// defined, and that later walk must not move the loop out of the multiclass
+// whose own definition already unrolled it.
+func (l *Lowerer) markPreUnrolled(st syntax.Object) {
+	if _, ok := l.preUnrolled[st]; ok {
+		return
+	}
+	l.preUnrolled[st] = l.preMC
+}
+
+// loopEntryLocs picks the location chain for a record expanded inside a
+// foreach or if entry of a multiclass body. A loop the definition-time walk
+// already unrolled became a plain body entry of the multiclass whose
+// definition was being parsed, so it keeps that multiclass's defm sites; a
+// loop that only resolved inside a nested defm lost that defm's own site when
+// resolve() expanded it (TGParser.cpp:511). Anything the walk could not
+// resolve falls back to loopLocs.
+func (l *Lowerer) loopEntryLocs(st syntax.Object, mc *syntax.MultiClassStmt, v syntax.Value, env *Env, outerLocs []diag.Pos, list bool) []diag.Pos {
+	if owner, ok := l.preUnrolled[st]; ok {
+		if owner == mc {
+			return outerLocs
+		}
+		return outerLocsAbove(outerLocs)
+	}
+	return loopLocs(l, v, env, outerLocs, list)
 }
 
 // levelKnown reports whether v is foldable once this defm call's arguments are
@@ -1745,7 +1864,7 @@ func levelValueKnown(v syntax.Value) bool {
 	return false
 }
 
-func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
+func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, mc *syntax.MultiClassStmt, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
 	var elems []Value
 	if st.Range != nil {
 		for _, n := range st.Range {
@@ -1773,7 +1892,7 @@ func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, env *Env, preLets []scopedLe
 			known = known && i < len(lit.Elems) && l.parseTimeKnown(lit.Elems[i], env)
 		}
 		sub := env.WithBinding(st.Var, Binding{Val: e, ParseTime: known})
-		if err := l.mcObjects(st.Body, sub, preLets, defmName, outerLocs, postLets, extraParents); err != nil {
+		if err := l.mcObjects(st.Body, mc, sub, preLets, defmName, outerLocs, postLets, extraParents); err != nil {
 			return err
 		}
 	}
@@ -1882,7 +2001,20 @@ func (l *Lowerer) parseTimeKnown(v syntax.Value, env *Env) bool {
 			// initializer, so a field reference is not parse-time known.
 			return false
 		}
-		// A name with no binding at all is a global defvar or record.
+		// A name with no binding at all is a global defvar or record - unless
+		// the definition-time walk is inside a multiclass, whose template
+		// arguments are not in env yet. `foreach i = BoolToList<AStr>.ret`
+		// must stay unresolved there (cast-multiclass.td: `P<"A0">`).
+		if l.preMC != nil {
+			if t.Name == "NAME" {
+				return false
+			}
+			for _, d := range l.preMC.TemplateArgs {
+				if d.Name == t.Name {
+					return false
+				}
+			}
+		}
 		return true
 	case *syntax.FieldValue:
 		return l.parseTimeKnown(t.Base, env)
@@ -2367,6 +2499,30 @@ func (l *Lowerer) preResolveFields(rec *Record) {
 	}
 }
 
+// prePhaseFields mirrors the value half of resolve() for a defm entry that
+// ParseDefm resolved into NewEntries. The resolver knows only the defm's
+// substitutions, so an application over a record field still stays a
+// VarDefInit and takes its name in addDefOne instead.
+func (l *Lowerer) prePhaseFields(rec *Record) {
+	prevPhase := l.prePhase
+	prevResolve := l.preResolve
+	prevPre := l.k.preInstantiate
+	l.prePhase = true
+	l.preResolve = true
+	l.k.preInstantiate = true
+	defer func() {
+		l.prePhase = prevPhase
+		l.preResolve = prevResolve
+		l.k.preInstantiate = prevPre
+	}()
+	for _, v := range rec.Vals {
+		if v.state != unresolved || v.Expr == nil {
+			continue
+		}
+		l.preResolveExpr(v.Expr, rec)
+	}
+}
+
 func (l *Lowerer) preResolveExpr(e Expr, rec *Record) {
 	switch x := e.(type) {
 	case *AstExpr:
@@ -2419,6 +2575,14 @@ func (l *Lowerer) preResolveValue(v syntax.Value, env *Env, rec *Record) {
 		}
 	case *syntax.VarValue:
 		if l.prePhase {
+			// A defvar is substituted textually by the parser, so
+			// `defvar ivti = GetInt<fvti>.Vti;` puts the application itself in
+			// every use; resolve() therefore instantiates it here, with the
+			// loop substitution supplying fvti.
+			if t.Subst && t.Lit != nil {
+				l.preResolveValue(t.Lit, env, rec)
+				return
+			}
 			// A field written as `list<LLVMType> ParamTypes = param_types;`
 			// resolves the bound value; its elements were folded at parse
 			// time, in the order written (ParseTemplateArgValueList):
@@ -2427,7 +2591,7 @@ func (l *Lowerer) preResolveValue(v syntax.Value, env *Env, rec *Record) {
 			if b, ok := l.varBinding(t, env, rec); ok && b.V != nil {
 				if l.preWalk < 64 {
 					l.preWalk++
-					l.preResolveValue(b.V, b.Env, rec)
+					l.preResolveValue(b.V, b.Env.StackOn(env), rec)
 					l.preWalk--
 				}
 				return
@@ -2584,6 +2748,12 @@ func (l *Lowerer) varBinding(t *syntax.VarValue, env *Env, rec *Record) (Binding
 func (l *Lowerer) varSafe(t *syntax.VarValue, env *Env, depth int) bool {
 	if t.Subst && t.Lit != nil {
 		return l.valueSafe(t.Lit, env, depth+1)
+	}
+	if t.FieldRef {
+		// resolve()'s MapResolver knows only the loop/defm substitutions; a
+		// record field stays a VarInit there, so an application over it is
+		// not instantiated until addDefOne (Record.cpp:2855-2882).
+		return false
 	}
 	if t.Lit != nil && !t.ArgRef {
 		return true

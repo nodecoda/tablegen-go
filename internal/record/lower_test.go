@@ -702,3 +702,181 @@ defm y : M;
 		t.Fatal("no defs")
 	}
 }
+
+// anonymousClasses maps every anonymous record to its first direct superclass,
+// which is what llvm-tblgen's --print-records comment names. The expected maps
+// are llvm-tblgen 24.0.0git's numbering for the same source.
+func anonymousClasses(t *testing.T, src string) map[string]string {
+	t.Helper()
+	f, diags := syntax.Parse("t.td", src, nil, nil)
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("parse: %v", errs)
+	}
+	k, diags := record.Lower(f, "t.td")
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("lower: %v", errs)
+	}
+	out := map[string]string{}
+	for _, r := range k.Defs() {
+		if r.IsAnonymous {
+			if len(r.Super) == 0 {
+				out[r.Name] = ""
+			} else {
+				out[r.Name] = r.Super[0].Name
+			}
+		}
+	}
+	return out
+}
+
+func checkAnonymousClasses(t *testing.T, src string, want map[string]string) {
+	t.Helper()
+	got := anonymousClasses(t, src)
+	if len(got) != len(want) {
+		t.Fatalf("anonymous records: got %d want %d\ngot: %v\nwant: %v", len(got), len(want), got, want)
+	}
+	for name, class := range want {
+		if got[name] != class {
+			t.Fatalf("%s: got %q want %q\nall: %v", name, got[name], class, got)
+		}
+	}
+}
+
+// A multiclass-body foreach over a concrete list is unrolled while the
+// multiclass is parsed, and the `let` around its defm is applied to the
+// generated entries there (TGParser.cpp:4638-4662). The loop then resolves
+// every entry's values in field-declaration order before addDefOne
+// (TGParser.cpp:525-564), so which statement comes first in the inner
+// multiclass changes nothing about the enclosing loop's A/B/C/D numbering.
+// llvm-tblgen 24.0.0git numbers the two WR entries first, then one C/D pair
+// per loop iteration, then the second iteration's WR.
+func TestMulticlassBodyLoopNumbering(t *testing.T) {
+	const outer = `class C<string mx> { int c = 1; }
+class D<string mx, list<string> L> { bit c = !eq(mx, "M1"); }
+class WR<string n, int lat> { string N = n; int Lat = lat; }
+defvar L = ["M1", "M2"];
+multiclass MC<string name, string mx, bit IsWorstCase> {
+%s}
+multiclass Outer {
+  foreach mx = L in {
+    defvar A = C<mx>.c;
+    defvar B = D<mx, L>.c;
+    let Lat = A in defm : MC<"W", mx, B>;
+  }
+}
+defm x : Outer;
+`
+	defFirst := `  def : WR<name # "_" # mx, 0>;
+  if IsWorstCase then
+    def : WR<name # "_WorstCase", 0>;
+`
+	ifFirst := `  if IsWorstCase then
+    def : WR<name # "_WorstCase", 0>;
+  def : WR<name # "_" # mx, 0>;
+`
+	wrM1 := map[string]string{
+		"anonymous_0": "WR", "anonymous_1": "WR",
+		"anonymous_3": "C", "anonymous_4": "D",
+		"anonymous_5": "C", "anonymous_6": "D",
+		"anonymous_7": "WR",
+	}
+	// The `if` first makes the condition's D<mx, L> instantiate before the
+	// body's C<mx>, so each iteration's pair is D then C.
+	wrIf := map[string]string{
+		"anonymous_0": "WR", "anonymous_1": "WR",
+		"anonymous_3": "D", "anonymous_4": "C",
+		"anonymous_5": "D", "anonymous_6": "C",
+		"anonymous_7": "WR",
+	}
+	checkAnonymousClasses(t, strings.Replace(outer, "%s", defFirst, 1), wrM1)
+	checkAnonymousClasses(t, strings.Replace(outer, "%s", ifFirst, 1), wrIf)
+}
+
+// `defvar vreg = lmul.vrclass;` is substituted textually, and the class
+// application behind it is reached through a parent's argument
+// (`P<vreg>` -> `Base<(G<vreg>.R:$r)>`). resolve() instantiates it with the
+// loop substitution, so both G instances take their anonymous numbers before
+// the `late` def that follows the multiclass (RISCVInstrInfoVPseudos.td's
+// VTypeInfo chains).
+func TestDefvarChainThroughParentArgument(t *testing.T) {
+	const src = `class VR;
+def VRNoV0 : VR;
+def VRNoV1 : VR;
+class MInfo { string MX = "M1"; VR vrclass = VRNoV0; }
+def V_M1 : MInfo;
+class MxSet<int n> { list<MInfo> m = [V_M1]; }
+class G<VR v> { VR R = v; }
+class Base<dag I> { dag Ins = I; int SEW = 0; }
+class P<VR v> : Base<(G<v>.R:$r)> { }
+multiclass M {
+  foreach i = [8] in {
+    defvar vreg = V_M1.vrclass;
+    def "E" : P<vreg>;
+  }
+}
+def late : P<VRNoV1>;
+defm a : M;
+`
+	checkAnonymousClasses(t, src, map[string]string{
+		"anonymous_0": "G",
+		"anonymous_1": "G",
+	})
+	// The loop's G sees the defvar chain reaching V_M1.vrclass, and the late
+	// def's G sees its own literal argument; swapping them was the bug.
+	f, diags := syntax.Parse("t.td", src, nil, nil)
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("parse: %v", errs)
+	}
+	k, diags := record.Lower(f, "t.td")
+	if errs := errorDiags(diags); len(errs) > 0 {
+		t.Fatalf("lower: %v", errs)
+	}
+	want := map[string]string{"anonymous_0": "VRNoV0", "anonymous_1": "VRNoV1"}
+	for _, r := range k.Defs() {
+		name, ok := want[r.Name]
+		if !ok {
+			continue
+		}
+		txt, err := r.ValueText(r.Val("R"))
+		if err != nil {
+			t.Fatalf("%s.R: %v", r.Name, err)
+		}
+		if !strings.HasSuffix(txt, " = "+name) {
+			t.Errorf("%s.R = %q, want it to end in %q", r.Name, txt, name)
+		}
+	}
+}
+
+// A `let` around a defm is applied by ParseDefm (ApplyLetStack) before the
+// enclosing loop resolves the entries, so its class applications take their
+// numbers in the field's declaration slot, not where the `let` is written.
+// The entry's Vec/Rc fields resolve before Predicates, giving GetInt before
+// GetPred in every iteration (RISCVInstrInfoVPseudos.td:5814-5822).
+func TestDefmLetResolvesInFieldSlot(t *testing.T) {
+	const src = `class VR;
+def VRx : VR;
+class VTInfo { int SEW = 8; VR Vector = VRx; VR Mask = VRx; VR RegClass = VRx; }
+def VF16MF4 : VTInfo;
+def VF32MF4 : VTInfo;
+class GetInt<VTInfo v> { VTInfo Vti = v; }
+class GetPred<VTInfo v> { list<int> P = [1]; }
+class VPat<VTInfo vec, VTInfo rc> { VTInfo Vec = vec; VTInfo Rc = rc; list<int> Predicates = []; }
+multiclass VPatConversion<string i, VTInfo vec, VTInfo rc> { def : VPat<vec, rc>; }
+multiclass ConvVI_VF<string i> {
+  foreach fvti = [VF16MF4, VF32MF4] in {
+    defvar ivti = GetInt<fvti>.Vti;
+    let Predicates = !listconcat(GetPred<fvti>.P, GetPred<ivti>.P) in
+    defm : VPatConversion<i, ivti, ivti>;
+  }
+}
+defm : ConvVI_VF<"x">;
+`
+	checkAnonymousClasses(t, src, map[string]string{
+		"anonymous_0": "VPat",
+		"anonymous_2": "GetInt",
+		"anonymous_3": "GetPred",
+		"anonymous_4": "GetInt",
+		"anonymous_5": "GetPred",
+		"anonymous_7": "VPat",
+	})
+}

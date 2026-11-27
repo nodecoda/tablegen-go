@@ -534,6 +534,12 @@ type VarValue struct {
 	// It shadows a class template argument of the same name, so the record
 	// phase must not qualify it with the class name.
 	Lexical bool
+	// FieldRef marks a name the parser resolved to a record field. The field's
+	// initializer rides in Lit for parse-time range checks, but LLVM keeps the
+	// reference itself: resolve()'s MapResolver only supplies the loop/defm
+	// substitutions, so a value over a field stays unresolved until addDefOne
+	// resolves it with a RecordResolver (Record.cpp:2855-2882).
+	FieldRef bool
 }
 
 // FieldValue is `base.field`.

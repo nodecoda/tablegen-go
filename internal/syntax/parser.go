@@ -26,6 +26,12 @@ type binding struct {
 	arg      bool   // a class/multiclass template argument
 	qual     string // qualified name of a template argument ("C:a", "MC::a")
 	isDefvar bool   // defvar is substituted at parse scope, shadowing args
+	// fieldRef marks a reference to a record field (own or inherited). The
+	// parser carries the field's initializer in lit so integer ranges see it,
+	// but LLVM keeps the reference as a VarInit: resolve()'s MapResolver only
+	// knows substitutions, so a class application over a field stays a
+	// VarDefInit until addDefOne installs its RecordResolver.
+	fieldRef bool
 	// lexical marks a binding introduced by a loop or a local variable, which
 	// shadows a class/multiclass template argument of the same name. A
 	// reference to it must not be qualified with the class name.
@@ -350,11 +356,13 @@ func (p *Parser) lookupLocal(name string) (binding, bool) {
 		}
 		if s.rec != nil {
 			if b, ok := s.rec.fields[name]; ok && !b.arg {
+				b.fieldRef = true
 				return b, true
 			}
 			for _, pn := range s.rec.parents {
 				if pr := s.rec.classes[pn]; pr != nil {
 					if b, ok := pr.field(name, map[string]bool{}); ok && !b.arg {
+						b.fieldRef = true
 						return b, true
 					}
 				}
@@ -2093,7 +2101,7 @@ func (p *Parser) parseDeclaration(rec *recordInfo, isArg bool) (*Decl, bool) {
 					rec.fields[nt.Text] = b
 				}
 				if isLiteral(v) {
-					p.defineLocal(nt.Text, binding{ty: ty, lit: v})
+					p.defineLocal(nt.Text, binding{ty: ty, lit: v, fieldRef: true})
 				}
 			}
 		}

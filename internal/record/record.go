@@ -331,6 +331,9 @@ func (e *Env) StackOn(base *Env) *Env {
 	if base == nil {
 		return e
 	}
+	if e == nil {
+		return base
+	}
 	out := &Env{}
 	baseFrames := base.kv.fold()
 	out.frames = make([]Frame, 0, len(base.frames)+len(e.frames)+len(baseFrames))
