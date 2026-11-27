@@ -398,6 +398,15 @@ type Decl struct {
 	Name     string
 	NameSpan Span
 	Value    Value // template-arg default, or field initializer
+	// Used is set on a class/multiclass template argument the body mentioned.
+	// TGParser marks it in TGVarScope::getVar (TGParser.cpp:150-156) and
+	// Record::checkUnusedTemplateArgs reads it (Record.h:1658-1662,
+	// Record.cpp:3136-3142). Lowering uses it to leave an unused argument
+	// unresolved, which is what keeps a class application inside it from
+	// instantiating (Record::resolveReferences resolves template arguments
+	// first, but VarDefInit::instantiate only copies the class's field
+	// values, Record.cpp:2377-2381).
+	Used bool
 }
 
 // LetItem ::= LET [append|prepend] ID OptionalRangeList '=' Value ';'

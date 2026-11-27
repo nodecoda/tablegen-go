@@ -293,6 +293,12 @@ func (k *Keeper) evalVar(t *syntax.VarValue, env *Env, rec *Record) (Value, erro
 		}
 	}
 	if b, ok := env.Lookup(t.Name); ok {
+		if _, masked := k.foldMask[t.Name]; masked {
+			// A statement-level foreach iterator is not in the MapResolver
+			// ParseDefm resolves a defm entry with, so the VarInit stays
+			// unresolved there (MapResolver::resolve, Record.cpp:3288-3306).
+			return &Unresolved{Text: t.Name, Kind: "var", Var: t.Name, Ty: k.tyFromSyntax(t.Ty)}, nil
+		}
 		return k.evalBinding(b, env, rec)
 	}
 	if rec != nil {
@@ -865,6 +871,23 @@ func (k *Keeper) instantiate(class *Record, args []*syntax.Arg, env *Env, caller
 	return rec, nil
 }
 
+// concreteApp reports whether every argument of ca evaluates without a
+// remaining reference, i.e. whether VarDefInit::Fold would instantiate it now
+// (Record.cpp:2454-2465: TrackUnresolvedResolver marks an unmapped VarInit and
+// foundUnresolved keeps the VarDefInit).
+func (k *Keeper) concreteApp(ca *syntax.ClassApplyValue, env *Env, rec *Record) bool {
+	for _, a := range ca.Args {
+		if a.Value == nil {
+			return false
+		}
+		v, err := k.evalSyntax(a.Value, env, rec)
+		if err != nil || hasReference(v) {
+			return false
+		}
+	}
+	return true
+}
+
 // classDefaultBindings collects the class's own defaulted template arguments
 // so an instance resolves them through the class frame. A field copied from a
 // parent class keeps the environment it was written in, which does not contain
@@ -904,7 +927,7 @@ func classDefaultBindings(class *Record, provided *Frame) *Frame {
 
 // applyClass copies a class's fields into an existing def or class and records
 // the direct superclass.
-func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, env *Env, caller *Record, loc diag.Pos) error {
+func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, env *Env, caller *Record, loc diag.Pos, overwritten map[string]bool) error {
 	provided, err := k.bindArgs(class, args, env, caller, loc, target.IsClass)
 	if err != nil {
 		return err
@@ -947,14 +970,28 @@ func (k *Keeper) applyClass(target *Record, class *Record, args []*syntax.Arg, e
 	// valueSafe, so it turns this fold off for the call.
 	if !k.skipClassFold {
 		stand := k.preFoldArgs(target.Name, class, provided, target.IsClass, k.nameUnresolved)
+		// k.foldMask is the set of statement-loop iterators the enclosing
+		// defm cannot substitute yet (see applyParent). It may only gate the
+		// fold of a field a later let replaces: for any other field LLVM
+		// resolves the copied value at loop-unroll time, so folding it here
+		// keeps the anonymous numbering in step; for a replaced field LLVM
+		// never resolves it, and folding its application would create a
+		// record that the output never mentions (t6.td).
+		mask := k.foldMask
 		for _, f := range class.Vals {
 			// Unconditional: the class application we care about may sit inside
 			// a binding this field only names (e.g. Intrinsic's IntrProperties
 			// is `intr_properties`, whose argument expression mentions
 			// AMDGPUImageDimIntrinsicEval), so a syntactic check on the field
 			// expression itself is not enough.
+			if mask != nil && overwritten[f.Name] {
+				k.foldMask = mask
+			} else {
+				k.foldMask = nil
+			}
 			k.preFoldExprBound(rebind(f.Expr, provided), stand, false)
 		}
+		k.foldMask = mask
 	}
 	target.Super = append(target.Super, class)
 	return nil
@@ -1179,8 +1216,13 @@ func (k *Keeper) bindArgs(class *Record, args []*syntax.Arg, env *Env, caller *R
 		// A class application passed as a template argument is a VarDefInit:
 		// CheckTemplateArgValues casts it to the declared type, which
 		// instantiates the anonymous record right here (and gives it its
-		// anonymous_N name) rather than on first use.
-		if ca, ok := a.Value.(*syntax.ClassApplyValue); ok && !dynamic {
+		// anonymous_N name) rather than on first use. VarDefInit::Fold only
+		// instantiates when every argument already resolves (Record.cpp:2454-2465),
+		// so an application over a reference the current resolver cannot
+		// supply stays lazy - resolving it eagerly would copy a field value
+		// that is still a VarInit (e.g. a foreach iterator of the enclosing
+		// statement loop) into the anonymous record.
+		if ca, ok := a.Value.(*syntax.ClassApplyValue); ok && !dynamic && k.concreteApp(ca, env, caller) {
 			if cl := k.Class(ca.Class); cl != nil {
 				val, err := k.evalSyntax(ca, env, caller)
 				if err != nil {

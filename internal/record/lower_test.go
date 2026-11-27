@@ -1003,3 +1003,60 @@ func lineWith(t *testing.T, src, sub string) int {
 	t.Fatalf("no line contains %q", sub)
 	return 0
 }
+
+// An unused template argument is never resolved: Record::resolveReferences
+// only walks the template arguments the class body mentioned (RecordVal::Used
+// is set by TGVarScope::getVar, TGParser.cpp:150-156), and
+// VarDefInit::instantiate copies field values only (Record.cpp:2368-2404).
+// The class application inside that argument is therefore a VarDefInit that
+// never folds. It report a pr8330.td-shaped bug: folding the argument with the
+// record's frame instantiated GetVRegNoV0 over the loop value as well, and the
+// extra anonymous record shifted every later name.
+func TestUnusedTemplateArgApplicationStaysLazy(t *testing.T) {
+	src := `class VRc { int id = 1; }
+def VR : VRc;
+def VRM2 : VRc;
+class LInfo<VRc v> { VRc vrclass = v; string MX = "M1"; }
+def LI : LInfo<VR>;
+class GetVRegNoV0<VRc VRegClass> { VRc R = VRegClass; }
+class Use<VRc x> { list<int> l = [1]; }
+multiclass MC {
+  foreach m = [LI] in {
+    def "D" : Use<GetVRegNoV0<m.vrclass>.R>;
+  }
+}
+def : GetVRegNoV0<VR>;
+defm "" : MC;
+`
+	want := `{"!instanceof":{"GetVRegNoV0":["anonymous_0"],"LInfo":["LI"],"Use":["D"],"VRc":["VR","VRM2"]},"!tablegen_json_version":1,"D":{"!anonymous":false,"!fields":[],"!locs":["t.td:10","t.td:14"],"!name":"D","!superclasses":["Use"],"l":[1]},"LI":{"!anonymous":false,"!fields":[],"!locs":["t.td:5"],"!name":"LI","!superclasses":["LInfo"],"MX":"M1","vrclass":{"def":"VR","kind":"def","printable":"VR"}},"VR":{"!anonymous":false,"!fields":[],"!locs":["t.td:2"],"!name":"VR","!superclasses":["VRc"],"id":1},"VRM2":{"!anonymous":false,"!fields":[],"!locs":["t.td:3"],"!name":"VRM2","!superclasses":["VRc"],"id":1},"anonymous_0":{"!anonymous":true,"!fields":[],"!locs":["t.td:13"],"!name":"anonymous_0","!superclasses":["GetVRegNoV0"],"R":{"def":"VR","kind":"def","printable":"VR"}}}`
+	if got := lowerJSON(t, src); got != want {
+		t.Errorf("dump-json mismatch\n got: %s\nwant: %s", got, want)
+	}
+}
+
+// ParseDefm resolves its entries while an enclosing statement-level foreach is
+// still only parsed, so the loop iterator is not in its MapResolver
+// (TGParser.cpp:4588-4598); the iterator arrives when resolve() copies the
+// records at loop-unroll time (TGParser.cpp:525-566). A `let` at the defm site
+// is applied by ApplyLetStack before that copy (TGParser.cpp:4638-4659), so the
+// value AddParentClass copied for the let's field is never resolved with the
+// iterator bound: the class application inside it must not fold. It did, and
+// the two D instances it created shifted C to anonymous_1 and anonymous_3.
+func TestDefmInStatementLoopSkipsLetOverwrittenField(t *testing.T) {
+	src := `class C<string mx> { int c = 1; }
+class D<string mx, list<string> L> { bit c = !eq(mx, "M1"); }
+defvar L = ["M1", "M2"];
+class W<int lat> { int L2 = lat; }
+multiclass MC<string p, int lat> { def NAME#p : W<lat>; }
+foreach mx = L in {
+  defvar A = C<mx>.c;
+  defvar B = D<mx, L>.c;
+  let L2 = A in
+  defm : MC<mx, B>;
+}
+`
+	want := `{"!instanceof":{"C":["anonymous_1","anonymous_2"],"D":[],"W":["anonymous_0M1","anonymous_0M2"]},"!tablegen_json_version":1,"anonymous_0M1":{"!anonymous":false,"!fields":[],"!locs":["t.td:5","t.td:10"],"!name":"anonymous_0M1","!superclasses":["W"],"L2":1},"anonymous_0M2":{"!anonymous":false,"!fields":[],"!locs":["t.td:5","t.td:10"],"!name":"anonymous_0M2","!superclasses":["W"],"L2":1},"anonymous_1":{"!anonymous":true,"!fields":[],"!locs":["t.td:7"],"!name":"anonymous_1","!superclasses":["C"],"c":1},"anonymous_2":{"!anonymous":true,"!fields":[],"!locs":["t.td:7"],"!name":"anonymous_2","!superclasses":["C"],"c":1}}`
+	if got := lowerJSON(t, src); got != want {
+		t.Errorf("dump-json mismatch\n got: %s\nwant: %s", got, want)
+	}
+}

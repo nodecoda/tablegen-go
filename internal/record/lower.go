@@ -115,6 +115,20 @@ type Lowerer struct {
 	eager bool
 	// preDepth guards preExpandMC against a multiclass that reaches itself.
 	preDepth int
+	// stmtLoopVars is the stack of iterator names of the enclosing
+	// *statement-level* foreach loops. TGParser parses such a body (and any
+	// defm inside it) before the loop is unrolled, so a defm entry is
+	// resolved by ParseDefm with only its multiclass substitutions in the
+	// MapResolver (TGParser.cpp:4588-4598); the loop iterator arrives later,
+	// when resolve() copies and resolves the generated records
+	// (TGParser.cpp:525-566). A fold that models the ParseDefm-time resolve
+	// therefore has to treat these names as unsubstituted VarInits.
+	stmtLoopVars []string
+	// foldMask is stmtLoopVars as a set while a defm is being expanded; only
+	// the AddParentClass copy fold consults it (applyParent -> applyClass),
+	// never ordinary evaluation, and there only for the fields a let at the
+	// defm site or around the def replaces (see applyClass).
+	foldMask map[string]bool
 	// loopVars is the stack of iterator names of the enclosing foreach loops.
 	// TGParser parses a loop body once with these as VarInit and substitutes
 	// them only into record entries; a defvar value is never re-resolved, so a
@@ -371,10 +385,12 @@ func (l *Lowerer) foreach(st *syntax.ForeachStmt, env *Env, lets []*syntax.LetBi
 	}
 	l.preFoldParseItems(st.Body)
 	l.loopVars = append(l.loopVars, st.Var)
+	l.stmtLoopVars = append(l.stmtLoopVars, st.Var)
 	for _, e := range elems {
 		sub := env.WithBinding(st.Var, Binding{Val: e})
 		l.objects(st.Body, sub, lets)
 	}
+	l.stmtLoopVars = l.stmtLoopVars[:len(l.stmtLoopVars)-1]
 	l.loopVars = l.loopVars[:len(l.loopVars)-1]
 	l.scope--
 	l.loopSeq = prev
@@ -465,7 +481,7 @@ func (l *Lowerer) class(st *syntax.ClassStmt, lets []*syntax.LetBind) error {
 	env := &Env{}
 	frame := map[string]Binding{}
 	for _, d := range st.TemplateArgs {
-		rv := &RecordVal{Name: d.Name, Qual: st.Name + ":" + d.Name, Ty: l.k.tyFromSyntax(d.Type), Loc: d.Span().Start}
+		rv := &RecordVal{Name: d.Name, Qual: st.Name + ":" + d.Name, Ty: l.k.tyFromSyntax(d.Type), Loc: d.Span().Start, Used: d.Used}
 		if d.Value != nil {
 			rv.Expr = &AstExpr{V: d.Value, Env: env}
 			l.preFold(d.Value, env)
@@ -494,7 +510,7 @@ func (l *Lowerer) class(st *syntax.ClassStmt, lets []*syntax.LetBind) error {
 	}
 
 	for _, p := range st.Parents {
-		if err := l.applyParent(rec, p, env); err != nil {
+		if err := l.applyParent(rec, p, env, nil); err != nil {
 			return err
 		}
 	}
@@ -520,7 +536,7 @@ func (l *Lowerer) class(st *syntax.ClassStmt, lets []*syntax.LetBind) error {
 	return nil
 }
 
-func (l *Lowerer) applyParent(target *Record, p *syntax.ParentRef, env *Env) error {
+func (l *Lowerer) applyParent(target *Record, p *syntax.ParentRef, env *Env, overwritten map[string]bool) error {
 	// Argument values are folded where they were parsed, never with the
 	// record's frame: `Whatev<Or4<BaseOpc>.V>` stays a VarDefInit until a
 	// field actually reads it (pr8330.td: the unused argument must not
@@ -542,7 +558,11 @@ func (l *Lowerer) applyParent(target *Record, p *syntax.ParentRef, env *Env) err
 		l.k.noteShapeSites(a.Value, env)
 		l.preFold(a.Value, nil)
 	}
-	return l.k.applyClass(target, cl, p.Args, env, target, p.Span().Start)
+	prevMask := l.k.foldMask
+	l.k.foldMask = l.foldMask
+	err := l.k.applyClass(target, cl, p.Args, env, target, p.Span().Start, overwritten)
+	l.k.foldMask = prevMask
+	return err
 }
 
 func (l *Lowerer) bodyItem(rec *Record, item syntax.BodyItem, env *Env) error {
@@ -680,6 +700,27 @@ func scopedLets(bs []*syntax.LetBind, env *Env) []scopedLet {
 	return out
 }
 
+// letFieldSet collects the fields the given let stacks assign. A let is
+// applied by ApplyLetStack after AddParentClass has already copied and resolved
+// the parent's field (TGParser.cpp:3951), so a class application inside that
+// copied value is never resolved with a foreach iterator bound: resolve()
+// only visits the value the let installed (TGParser.cpp:525-566).
+func letFieldSet(stacks ...[]scopedLet) map[string]bool {
+	var out map[string]bool
+	for _, st := range stacks {
+		for _, sl := range st {
+			if sl.b == nil {
+				continue
+			}
+			if out == nil {
+				out = map[string]bool{}
+			}
+			out[sl.b.Field] = true
+		}
+	}
+	return out
+}
+
 // scopedLet is a let binding together with the environment it was written in.
 // A let inside a multiclass body is substituted with that body's template
 // arguments, even when it is applied after the def has been built.
@@ -709,7 +750,22 @@ type deferredDef struct {
 // trailing classes and the defm's own let stack are applied after the body,
 // and every entry of the defm is finalised only once all of them are built.
 func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []scopedLet, extraParents []*syntax.ParentRef, extraLocs []diag.Pos, fixedName string) (*Record, error) {
-	rec, anonymous, err := l.makeDef(st, env, preLets, extraLocs, fixedName)
+	// A field a let assigns is replaced before the record is resolved, so the
+	// value AddParentClass copied for it is only folded if it was already
+	// concrete at parse time; a foreach iterator of an enclosing statement
+	// loop is not (TGParser.cpp:3951, 525-566). The body's own let items are
+	// in the same position: ParseObjectBody runs ApplyLetStack after the
+	// parents.
+	overwritten := letFieldSet(preLets, postLets)
+	for _, item := range st.Body {
+		if li, ok := item.(*syntax.LetItem); ok {
+			if overwritten == nil {
+				overwritten = map[string]bool{}
+			}
+			overwritten[li.Bind.Field] = true
+		}
+	}
+	rec, anonymous, err := l.makeDef(st, env, preLets, overwritten, extraLocs, fixedName)
 	if err != nil {
 		return nil, err
 	}
@@ -745,7 +801,7 @@ func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []sco
 		})
 		return rec, nil
 	}
-	if err := l.applyParents(rec, extraParents, env); err != nil {
+	if err := l.applyParents(rec, extraParents, env, overwritten); err != nil {
 		return nil, err
 	}
 	if !l.namesOnly {
@@ -777,9 +833,9 @@ func (l *Lowerer) buildDef(st *syntax.DefStmt, env *Env, preLets, postLets []sco
 
 // applyParents is the AddParentClass loop: TGParser applies a defm's trailing
 // regular classes to every generated entry before any addDefOne runs.
-func (l *Lowerer) applyParents(rec *Record, parents []*syntax.ParentRef, env *Env) error {
+func (l *Lowerer) applyParents(rec *Record, parents []*syntax.ParentRef, env *Env, overwritten map[string]bool) error {
 	for _, p := range parents {
-		if err := l.applyParent(rec, p, env); err != nil {
+		if err := l.applyParent(rec, p, env, overwritten); err != nil {
 			return err
 		}
 	}
@@ -872,7 +928,7 @@ func (l *Lowerer) recordLoopDef(rec *Record) error {
 
 // makeDef parses one def up to (but excluding) the trailing classes, the defm
 // let stack, and addDefOne.
-func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, extraLocs []diag.Pos, fixedName string) (*Record, bool, error) {
+func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, overwritten map[string]bool, extraLocs []diag.Pos, fixedName string) (*Record, bool, error) {
 	loc := st.Span().Start
 	name := fixedName
 	anonymous := false
@@ -922,7 +978,7 @@ func (l *Lowerer) makeDef(st *syntax.DefStmt, env *Env, preLets []scopedLet, ext
 	prevUnresolved := l.k.nameUnresolved
 	l.k.nameUnresolved = st.Name != nil && !l.parseTimeKnown(st.Name, env)
 	for _, p := range st.Parents {
-		err := l.applyParent(rec, p, env)
+		err := l.applyParent(rec, p, env, overwritten)
 		if err != nil {
 			l.k.nameUnresolved = prevUnresolved
 			return nil, false, err
@@ -1273,7 +1329,7 @@ func (l *Lowerer) prePhaseValues(st *syntax.DefStmt, env *Env) {
 	prevPre := l.k.preInstantiate
 	l.k.preInstantiate = true
 	for _, p := range st.Parents {
-		if err := l.applyParent(rec, p, env); err != nil {
+		if err := l.applyParent(rec, p, env, nil); err != nil {
 			break
 		}
 	}
@@ -1336,12 +1392,40 @@ func (l *Lowerer) preFoldParents(parents []*syntax.ParentRef) {
 // A multiclass body is resolved with the loop substitutions applied, so the
 // arguments see the iterator bindings (unlike a class body, which is resolved
 // when a def inherits it).
+//
+// An argument whose template parameter the class body never mentions is the
+// exception: TGParser's ParseValue still runs VarDefInit::Fold on the value
+// while it is parsed (TGParser.cpp:3030-3041), but AddParentClass only puts
+// it in a MapResolver (TGParser.cpp:346-380), and the resolver's values are
+// resolved only when a copied field reads them (MapResolver::resolve,
+// Record.cpp:3288-3306). So such an argument sees the parse-time
+// environment only - a foreach iterator is still a VarInit there - and
+// nothing resolves it afterwards (Record.cpp:2368-2404).
 func (l *Lowerer) preFoldParentArgs(parents []*syntax.ParentRef, env *Env) {
 	for _, p := range parents {
-		for _, a := range p.Args {
+		cl := l.k.Class(p.Name)
+		for i, a := range p.Args {
+			if cl != nil && !argUsed(cl, a, i) {
+				l.preFold(a.Value, nil)
+				continue
+			}
 			l.preFold(a.Value, env)
 		}
 	}
+}
+
+// argUsed reports whether a parent's argument binds a template parameter the
+// class body mentioned. A positional argument is matched by index
+// (ArgumentInit::get(Value, ArgIndex), TGParser.cpp:3567); a named one by
+// name (ArgumentInit::get(Value, QualifiedName), TGParser.cpp:3541).
+func argUsed(cl *Record, a *syntax.Arg, i int) bool {
+	if a.Name == "" {
+		return i >= len(cl.TArgs) || cl.TArgs[i].Used
+	}
+	if ta := findTArg(cl, a.Name); ta != nil {
+		return ta.Used
+	}
+	return true
 }
 
 func (l *Lowerer) preFoldItems(items []syntax.BodyItem) {
@@ -1439,6 +1523,24 @@ func (l *Lowerer) defm(st *syntax.DefmStmt, env *Env, lets []*syntax.LetBind) er
 // final prefix for the generated defs; outerLocs are the defm locations of
 // enclosing multiclass instantiations, innermost first.
 func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, siteLets, outerLets []scopedLet, outerLocs []diag.Pos, extraParents []*syntax.ParentRef) error {
+	// ParseDefm runs while the enclosing statement loops are only parsed, so
+	// its MapResolver has the multiclass substitutions and nothing else
+	// (TGParser.cpp:4588-4598, resolveArgumentsOfMultiClass at :684-693). The
+	// class values AddParentClass copies are resolved against that map
+	// (TGParser.cpp:346-380), which is why an iterator of an enclosing
+	// statement loop stays a VarInit there and only resolves when the loop
+	// finally unrolls the record (TGParser.cpp:525-566).
+	prevFoldMask := l.foldMask
+	if len(l.stmtLoopVars) > 0 {
+		m := make(map[string]bool, len(l.stmtLoopVars))
+		for _, n := range l.stmtLoopVars {
+			m[n] = true
+		}
+		l.foldMask = m
+	} else {
+		l.foldMask = nil
+	}
+	defer func() { l.foldMask = prevFoldMask }()
 	// siteLets are the lets lexically around this defm statement; outerLets
 	// come from the enclosing defm levels and are only needed on the path
 	// where a statement-level loop finishes a record before phase 3.
@@ -1476,8 +1578,9 @@ func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, sit
 	}
 	// Phase 2: this level's trailing regular classes, applied to every entry
 	// up front (TGParser::ParseDefm's AddParentClass loop).
+	overwritten := letFieldSet(mergedLets)
 	for _, d := range pool {
-		if err := l.applyParents(d.rec, ownTrailing, d.env); err != nil {
+		if err := l.applyParents(d.rec, ownTrailing, d.env, overwritten); err != nil {
 			return err
 		}
 		// This defm sits inside a multiclass body, so its own ParseDefm ran
@@ -2635,6 +2738,23 @@ func (l *Lowerer) preResolveValue(v syntax.Value, env *Env, rec *Record) {
 			return
 		}
 		l.preResolveValue(t.Lit, env, rec)
+		if t.Lit != nil {
+			return
+		}
+		// A copied class field still names the parent's template argument.
+		// AddParentClass resolved it with the defm substitutions and stored
+		// the substituted Init (Record::resolveReferences writes each
+		// RecordVal back, Record.cpp:2855-2882), so at loop-unroll time the
+		// value is the argument expression itself and resolve() instantiates
+		// an application in it when the iterator makes it concrete. Walking
+		// the binding here reproduces that (TGParser.cpp:525-566).
+		if b, ok := l.varBinding(t, env, rec); ok && b.V != nil {
+			if l.preWalk < 64 {
+				l.preWalk++
+				l.preResolveValue(b.V, b.Env.StackOn(env), rec)
+				l.preWalk--
+			}
+		}
 	case *syntax.FieldValue:
 		l.preResolveValue(t.Base, env, rec)
 	case *syntax.SliceValue:

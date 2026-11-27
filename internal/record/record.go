@@ -507,6 +507,12 @@ type RecordVal struct {
 	Nonconcrete bool
 	Expr        Expr
 	Loc         diag.Pos
+	// Used marks a class template argument its body mentioned
+	// (RecordVal::isUsed, Record.h:1658-1662; TGVarScope::getVar sets it,
+	// TGParser.cpp:150-156). An unused argument is never resolved when the
+	// class is instantiated, so a class application inside it must stay a
+	// VarDefInit (Record.cpp:2368-2404 copies only field values).
+	Used bool
 
 	state    valState
 	val      Value
@@ -882,6 +888,12 @@ type Keeper struct {
 	// VarDefInit::instantiate assigns the next anonymous number.
 	readOnly bool
 	anonLoc  diag.Pos
+	// foldMask holds the iterator names of the *statement-level* foreach
+	// loops enclosing the defm being expanded. The evaluator treats such a
+	// name as an unsubstituted VarInit while the mask is set; applyParent sets
+	// it only around AddParentClass's copy fold, never for ordinary evaluation
+	// (see Lowerer.stmtLoopVars).
+	foldMask map[string]bool
 	// nameUnresolved is set while a def's parent classes are applied for a
 	// def whose name expression is not concrete at parse time. AddParentClass
 	// then sees NAME as a VarInit, so a class application that mentions it

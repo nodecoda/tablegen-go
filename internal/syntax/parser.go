@@ -401,6 +401,20 @@ func (p *Parser) markArgUsed(rec *recordInfo, name string) {
 	m[name] = true
 }
 
+// markUsedDecls copies the usage TGVarScope recorded during parsing onto the
+// template argument declarations, so lowering can leave an argument the body
+// never reads unresolved (Record.cpp:2368-2404 copies only the class's field
+// values into a VarDefInit instance, so the argument is resolved only when a
+// copied field mentions it).
+func (p *Parser) markUsedDecls(rec *recordInfo, args []*Decl) {
+	used := p.usedArgs[rec]
+	for _, a := range args {
+		if used[a.Name] {
+			a.Used = true
+		}
+	}
+}
+
 // warnUnusedArgs mirrors Record::checkUnusedTemplateArgs: every argument of the
 // class or multiclass that its body never mentioned is reported once, at the
 // argument's own location, after the body has been parsed.
@@ -653,6 +667,7 @@ func (p *Parser) parseClass() Object {
 		p.recoverBlock()
 		return nil
 	}
+	p.markUsedDecls(rec, p.classArgs[name])
 	p.warnUnusedArgs(rec, name, ":", p.classArgs[name])
 	p.popScope()
 	return &ClassStmt{
@@ -1440,6 +1455,7 @@ func (p *Parser) parseMultiClass() Object {
 			p.note("E_PARSE_MC_SEMI_NOTE", "Semicolon ignored; remove to eliminate this error")
 		}
 	}
+	p.markUsedDecls(rec, mc.TemplateArgs)
 	p.warnUnusedArgs(rec, name, "::", mc.TemplateArgs)
 	p.popScope()
 	p.curMulti = nil
