@@ -881,6 +881,39 @@ defm : ConvVI_VF<"x">;
 	})
 }
 
+// A `let` around a defm that sits in a multiclass body is applied while that
+// body is parsed (TGParser.cpp:4656-4662), so the enclosing defm's resolve()
+// sees it. That resolve scans every entry before any of them reaches
+// addDefOne (TGParser.cpp:4638-4653), so the class application in the let
+// takes its anonymous name in the scan, not in addDefOne where the record is
+// renamed (TGParser.cpp:585-591). Here each iteration's TI/GT pair therefore
+// precedes the second and third W; interleaving them was the bug.
+func TestNestedDefmLetSeenByEnclosingResolve(t *testing.T) {
+	const src = `class TI<int n> { int v = n; }
+class GT<TI t> { int x = t.v; }
+class W<int n> { int w = n; }
+multiclass Inner<int n> { def : W<n>; }
+multiclass Outer<list<int> L> {
+  foreach v = L in {
+    defvar iv = GT<TI<v>>.x;
+    let w = iv in defm : Inner<v>;
+  }
+}
+defm : Outer<[1, 2, 3]>;
+`
+	checkAnonymousClasses(t, src, map[string]string{
+		"anonymous_0":  "W",
+		"anonymous_3":  "TI",
+		"anonymous_4":  "GT",
+		"anonymous_5":  "TI",
+		"anonymous_6":  "GT",
+		"anonymous_7":  "TI",
+		"anonymous_8":  "GT",
+		"anonymous_9":  "W",
+		"anonymous_10": "W",
+	})
+}
+
 // A foreach whose list the parser can already resolve - a literal, or a
 // defvar it is in the middle of parsing - is unrolled while the multiclass
 // body is parsed, so its records become plain body entries and take the

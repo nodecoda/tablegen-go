@@ -115,3 +115,37 @@ func TestSetDagArgKeyTypeAnchoredAtArgument(t *testing.T) {
 	}
 	t.Fatalf("no %q diagnostic: %v", want, diags)
 }
+
+// !instances returns derived definitions in RecordKeeper order, which sorts
+// with LessRecord -> StringRef::compare_numeric (Record.h:2185,
+// StringRef.cpp:57): a digit run compares by length before byte value, so
+// VLE8 precedes VLE16. Plain byte order would reverse them.
+func TestInstancesOrderIsNumeric(t *testing.T) {
+	k, diags := lowerSrc(t, `class B;
+def VLE16 : B;
+def VLE8 : B;
+def VLE2 : B;
+def X { list<B> L = !instances<B>("VLE.*"); }
+`)
+	for _, d := range diags {
+		if !d.Soft {
+			t.Fatalf("lower: %v", diags)
+		}
+	}
+	var rec *Record
+	for _, r := range k.Defs() {
+		if r.Name == "X" {
+			rec = r
+		}
+	}
+	if rec == nil {
+		t.Fatal("def X not found")
+	}
+	txt, err := rec.ValueText(rec.Val("L"))
+	if err != nil {
+		t.Fatalf("X.L: %v", err)
+	}
+	if !strings.HasSuffix(txt, "= [VLE2, VLE8, VLE16]") {
+		t.Fatalf("X.L = %q, want [VLE2, VLE8, VLE16]", txt)
+	}
+}

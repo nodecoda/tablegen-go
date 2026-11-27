@@ -1491,6 +1491,14 @@ func (l *Lowerer) expandDefm(st *syntax.DefmStmt, defmName string, env *Env, sit
 					return err
 				}
 			}
+			// Those lets are already in the entry when the enclosing level
+			// resolves it, so a class application they mention takes its
+			// anonymous name in that resolve and not in addDefOne
+			// (TGParser.cpp:4638-4662): the enclosing resolve scans every
+			// entry before any of them reaches addDefOne. prePhaseFields is
+			// that scan; an application over a record field still stays
+			// unresolved there (valueSafe), which is what addDefOne resolves.
+			l.prePhaseFields(d.rec)
 		}
 	}
 	// addEntry appends the entries of a defm that sits inside a multiclass body

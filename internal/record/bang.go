@@ -733,7 +733,7 @@ func (k *Keeper) evalBang(b *syntax.BangValue, env *Env, rec *Record) (Value, er
 			}
 			names = append(names, name)
 		}
-		sort.Strings(names)
+		sort.Slice(names, func(i, j int) bool { return compareNumeric(names[i], names[j]) < 0 })
 		out := &List{Elem: target}
 		for _, name := range names {
 			out.Elems = append(out.Elems, &DefVal{Rec: k.defs[name]})
@@ -1316,3 +1316,55 @@ func (k *Keeper) evalSetDagArgName(b *syntax.BangValue, env *Env, rec *Record) (
 	}
 	return out, nil
 }
+
+// compareNumeric is StringRef::compare_numeric (StringRef.cpp:57): a run of
+// digits compares by length first and then bytewise, so "VLE8" sorts before
+// "VLE16". RecordKeeper sorts derived definitions with LessRecord
+// (Record.h:2185, Record.cpp:3272), and !instances returns them in that order
+// (Record.cpp:2205-2207).
+func compareNumeric(a, b string) int {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	for i := 0; i < n; {
+		if isASCIIDigit(a[i]) && isASCIIDigit(b[i]) {
+			j := i + 1
+			for {
+				ld := j < len(a) && isASCIIDigit(a[j])
+				rd := j < len(b) && isASCIIDigit(b[j])
+				if ld != rd {
+					if rd {
+						return -1
+					}
+					return 1
+				}
+				if !rd {
+					break
+				}
+				j++
+			}
+			if c := strings.Compare(a[i:j], b[i:j]); c != 0 {
+				return c
+			}
+			i = j
+			continue
+		}
+		if a[i] != b[i] {
+			if a[i] < b[i] {
+				return -1
+			}
+			return 1
+		}
+		i++
+	}
+	switch {
+	case len(a) == len(b):
+		return 0
+	case len(a) < len(b):
+		return -1
+	}
+	return 1
+}
+
+func isASCIIDigit(c byte) bool { return c >= '0' && c <= '9' }
