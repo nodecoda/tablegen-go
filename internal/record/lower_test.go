@@ -880,3 +880,93 @@ defm : ConvVI_VF<"x">;
 		"anonymous_7": "VPat",
 	})
 }
+
+// A foreach whose list the parser can already resolve - a literal, or a
+// defvar it is in the middle of parsing - is unrolled while the multiclass
+// body is parsed, so its records become plain body entries and take the
+// enclosing defm's site (TGParser.cpp:426-430, 563-565). A list that only
+// becomes a ListInit once this defm's own arguments are substituted is
+// expanded by resolve(), which passes no site down (TGParser.cpp:511).
+// llvm-tblgen 24.0.0git reports exactly that difference in !locs.
+func TestDefmLoopSiteFollowsListResolver(t *testing.T) {
+	cases := []struct {
+		name     string
+		src      string
+		defName  string
+		wantSite bool
+	}{
+		{"literal", `multiclass P {
+  foreach i = [1, 2] in
+    def SubDef # i;
+}
+defm Y : P;
+`, "YSubDef1", true},
+		{"defvar", `defvar L = [1, 2];
+multiclass P {
+  foreach i = L in
+    def SubDef # i;
+}
+defm Y : P;
+`, "YSubDef1", true},
+		{"defm argument", `class AClass<bit C> { bit Cond = C; }
+def A1: AClass<1>;
+class BoolToList<bit Value> { list<int> ret = !if(Value, [1]<int>, []<int>); }
+multiclass P<string AStr> {
+  foreach i = BoolToList<!cast<AClass>(AStr).Cond>.ret in
+    def SubDef;
+}
+defm Y : P<"A1">;
+`, "YSubDef", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f, diags := syntax.Parse("t.td", c.src, nil, nil)
+			if errs := errorDiags(diags); len(errs) > 0 {
+				t.Fatalf("parse: %v", errs)
+			}
+			k, diags := record.Lower(f, "t.td")
+			if errs := errorDiags(diags); len(errs) > 0 {
+				t.Fatalf("lower: %v", errs)
+			}
+			var rec *record.Record
+			for _, r := range k.Defs() {
+				if r.Name == c.defName {
+					rec = r
+				}
+			}
+			if rec == nil {
+				t.Fatalf("def %s not found", c.defName)
+			}
+			defLine := lineWith(t, c.src, "def SubDef")
+			siteLine := lineWith(t, c.src, "defm Y")
+			want := []int{defLine}
+			if c.wantSite {
+				want = append(want, siteLine)
+			}
+			var got []int
+			for _, p := range rec.Locs {
+				got = append(got, p.Line)
+			}
+			if len(got) != len(want) {
+				t.Fatalf("locs: got lines %v want %v (def %d, defm %d)", got, want, defLine, siteLine)
+			}
+			for i := range want {
+				if got[i] != want[i] {
+					t.Fatalf("locs: got lines %v want %v (def %d, defm %d)", got, want, defLine, siteLine)
+				}
+			}
+		})
+	}
+}
+
+// lineWith returns the 1-based line number of the first line containing sub.
+func lineWith(t *testing.T, src, sub string) int {
+	t.Helper()
+	for i, line := range strings.Split(src, "\n") {
+		if strings.Contains(line, sub) {
+			return i + 1
+		}
+	}
+	t.Fatalf("no line contains %q", sub)
+	return 0
+}

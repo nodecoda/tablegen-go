@@ -87,6 +87,11 @@ type Lowerer struct {
 	// VarInit, so such values are not concrete at parse time and fold only
 	// when the surviving branch executes.
 	skipLoopFold bool
+	// sawArgBinding is set by bindingSafe when the value it walked depended on
+	// a defm call's argument. Such a value only becomes concrete when that
+	// defm expands, so a foreach over it is unrolled by resolve(), which
+	// passes no site down (TGParser.cpp:511, 531-552).
+	sawArgBinding bool
 	// preResolve is set while modelling the resolve() pass that runs before
 	// addDefOne for a loop entry. A class application instantiated there is
 	// not folded into the value: the class body it came from still prints as
@@ -1148,20 +1153,27 @@ func (l *Lowerer) preExpandBody(objs []syntax.Object, env *Env) {
 			if !structural {
 				structural = l.parseTimeKnown(t.List, env)
 			}
+			if !structural {
+				// LLVM's parse resolver only has the enclosing loop
+				// substitutions. A list that merely folds through a template
+				// argument's default stays a VarInit and is unrolled by the
+				// defm's resolve() later, so its records must not be built
+				// here (they would take anonymous names too early).
+				continue
+			}
 			v, err := l.k.evalSyntax(t.List, env, nil)
 			if err != nil {
-				if structural {
-					l.markPreUnrolled(t)
-				}
+				// A structural ListInit is unrolled even when an element is
+				// an unresolved class application; only the location chain
+				// matters then.
+				l.markPreUnrolled(t)
 				continue
 			}
 			ls, ok := v.(*List)
 			if !ok {
 				continue
 			}
-			if structural {
-				l.markPreUnrolled(t)
-			}
+			l.markPreUnrolled(t)
 			known := l.parseTimeList(t.List, env)
 			for i, e := range ls.Elems {
 				kt := known
@@ -1648,10 +1660,14 @@ func (l *Lowerer) mcObjects(objs []syntax.Object, mc *syntax.MultiClassStmt, env
 			// (TGParser.cpp:511); the records then join the enclosing level
 			// as entries, which appends that level's location there.
 			locs := outerLocs
+			// parseTime is the signal for "the loop variable is a literal at
+			// parse time"; it must not depend on how many locations the
+			// record chain keeps, or dropping the site would change folding.
+			parseTime := outerLocs != nil
 			if t.Range == nil {
 				locs = l.loopEntryLocs(t, mc, t.List, env, outerLocs, true)
 			}
-			if err := l.mcForeach(t, mc, env, preLets, defmName, locs, postLets, extraParents); err != nil {
+			if err := l.mcForeach(t, mc, env, preLets, defmName, locs, postLets, extraParents, parseTime); err != nil {
 				return err
 			}
 		case *syntax.DefvarStmt:
@@ -1725,10 +1741,13 @@ func loopLocs(l *Lowerer, v syntax.Value, env *Env, outerLocs []diag.Pos, list b
 		// still unresolved class applications.
 		known = l.parseTimeList
 	}
+	l.sawArgBinding = false
+	ok := known(v, env)
+	viaArgs := l.sawArgBinding
 	switch {
-	case known(v, env):
+	case ok && !viaArgs:
 		return outerLocs
-	case l.levelKnown(v, env):
+	case ok || l.levelKnown(v, env):
 		return outerLocsAbove(outerLocs)
 	}
 	return nil
@@ -1864,7 +1883,7 @@ func levelValueKnown(v syntax.Value) bool {
 	return false
 }
 
-func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, mc *syntax.MultiClassStmt, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef) error {
+func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, mc *syntax.MultiClassStmt, env *Env, preLets []scopedLet, defmName string, outerLocs []diag.Pos, postLets []scopedLet, extraParents []*syntax.ParentRef, loopParseTime bool) error {
 	var elems []Value
 	if st.Range != nil {
 		for _, n := range st.Range {
@@ -1887,7 +1906,7 @@ func (l *Lowerer) mcForeach(st *syntax.ForeachStmt, mc *syntax.MultiClassStmt, e
 	for i, e := range elems {
 		// A loop variable is known at parse time only when the loop was
 		// unrolled then *and* this element was a literal at that point.
-		known := outerLocs != nil && (st.Range != nil || l.parseTimeList(st.List, env))
+		known := loopParseTime && (st.Range != nil || l.parseTimeList(st.List, env))
 		if lit, ok := st.List.(*syntax.ListValue); ok {
 			known = known && i < len(lit.Elems) && l.parseTimeKnown(lit.Elems[i], env)
 		}
@@ -1924,6 +1943,15 @@ func (l *Lowerer) parseTimeList(v syntax.Value, env *Env) bool {
 					}
 				}
 			}
+		}
+		// `foreach sew = SchedSEWSet<mx, isF>.val in ...`: VarDefInit::Fold
+		// instantiates the class application while the loop is parsed, then
+		// FieldInit::Fold reads the field, so the list is already a ListInit
+		// when the enclosing loop closes (RISCVScheduleV.td:197). The base is
+		// concrete exactly when valueSafe holds: its free names are literals,
+		// global defs, or parse-time loop substitutions.
+		if l.valueSafe(t.Base, env, 0) {
+			return true
 		}
 	case *syntax.BangValue:
 		if t.Op == syntax.XListConcat && len(t.Args) == 2 {
@@ -2780,6 +2808,9 @@ func (l *Lowerer) bindingSafe(b Binding, depth int) bool {
 	case b.Val != nil:
 		return !hasReference(b.Val)
 	case b.V != nil:
+		if !b.ParseTime {
+			l.sawArgBinding = true
+		}
 		return l.valueSafe(b.V, b.Env, depth+1)
 	default:
 		return b.Rec != nil
